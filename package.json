@@ -9,6 +9,9 @@
     "db:seed": "turbo run db:seed --filter=web",
     "db:studio": "turbo run db:studio --filter=web"
   },
+  "dependencies": {
+    "next": "14.2.5"
+  },
   "devDependencies": {
     "turbo": "^2.3.3",
     "typescript": "^5.4.5"
