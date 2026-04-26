@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Pour la prod Vercel/Neon : changer "sqlite" → "postgresql"
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  firstName     String?
+  lastName      String?
+  matricule     String?  @unique
+  password      String
+  role          String   @default("USER")
+  suspended     Boolean  @default(false)
+  emailVerified Boolean  @default(true)
+  location      String   @default("Joinville")
+  createdAt     DateTime @default(now())
+
+  loans              Loan[]
+  ratings            Rating[]
+  emailVerifications EmailVerification[]
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Game {
+  id         String   @id @default(cuid())
+  bggId      String?  @unique
+  name       String
+  type       String
+  category   String   @default("famille")
+  summary    String?
+  minAge     Int?
+  minPlayers Int?
+  maxPlayers Int?
+  duration   Int?
+  coverUrl   String?
+  barcode    String?  @unique
+  status     String   @default("AVAILABLE")
+  location   String   @default("Joinville")
+  addedAt    DateTime @default(now())
+
+  loans   Loan[]
+  ratings Rating[]
+}
+
+model Loan {
+  id             String    @id @default(cuid())
+  userId         String
+  gameId         String
+  borrowedAt     DateTime  @default(now())
+  dueAt          DateTime
+  returnedAt     DateTime?
+  extendedCount  Int       @default(0)
+  reminderSentAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@index([userId])
+  @@index([gameId])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@unique([userId, gameId])
+  @@index([gameId])
+}

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+dist/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Prisma
+apps/web/prisma/migrations/dev.db
+
+# Turbo
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Expo
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
+
+# Claude Code
+.claude/

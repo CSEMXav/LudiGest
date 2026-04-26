@@ -1,0 +1,23 @@
+import { useEffect } from "react";
+import { Stack, useRouter } from "expo-router";
+import { clearAuth } from "@/lib/auth";
+
+export default function RootLayout() {
+  const router = useRouter();
+
+  useEffect(() => {
+    clearAuth().then(() => {
+      router.replace("/(auth)/login");
+    });
+  }, []);
+
+  return (
+    <Stack screenOptions={{ headerStyle: { backgroundColor: "#C8102E" }, headerTintColor: "#fff", headerTitleStyle: { fontWeight: "bold" } }}>
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="game/[id]" options={{ title: "Détail du jeu" }} />
+      <Stack.Screen name="account" options={{ title: "Mon compte" }} />
+      <Stack.Screen name="admin/add-game" options={{ title: "Ajouter un jeu" }} />
+    </Stack>
+  );
+}

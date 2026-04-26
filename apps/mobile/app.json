@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "LudiGest",
+    "slug": "ludigest",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "ludigest",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#C8102E"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "fr.bred.ludigest"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#C8102E"
+      },
+      "package": "fr.bred.ludigest"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LudiGest utilise la caméra pour scanner les codes-barres des jeux."
+        }
+      ],
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
