@@ -2,9 +2,8 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Pour la prod Vercel/Neon : changer "sqlite" → "postgresql"
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
