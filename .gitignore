@@ -13,7 +13,9 @@ out/
 .env.*.local
 
 # Prisma
-apps/web/prisma/migrations/dev.db
+apps/web/prisma/dev.db
+apps/web/prisma/*.db
+apps/web/tsconfig.tsbuildinfo
 
 # Turbo
 .turbo/
