@@ -3,11 +3,13 @@
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { LOCATIONS } from "@ludigest/types";
 import { useState } from "react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session, update } = useSession();
+  const pathname = usePathname();
   const [switching, setSwitching] = useState(false);
 
   async function switchLocation(loc: string) {
@@ -23,30 +25,46 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const currentLocation = session?.user.location ?? "Joinville";
 
+  const navItems = [
+    { href: "/admin", label: "Tableau de bord" },
+    { href: "/admin/games", label: "Jeux" },
+    { href: "/admin/loans", label: "Emprunts" },
+    { href: "/admin/users", label: "Utilisateurs" },
+    { href: "/admin/import", label: "Import Excel" },
+  ];
+
   return (
     <>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <nav className="flex gap-4 border-b border-gray-200 pb-4 flex-1">
-            {[
-              { href: "/admin", label: "Tableau de bord" },
-              { href: "/admin/games", label: "Jeux" },
-              { href: "/admin/loans", label: "Emprunts" },
-              { href: "/admin/users", label: "Utilisateurs" },
-              { href: "/admin/import", label: "Import Excel" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-sm font-medium text-gray-600 hover:text-[#C8102E] transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2 pb-4 ml-6 flex-shrink-0">
-            <span className="text-xs text-gray-500">Ludothèque :</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Barre de navigation admin */}
+        <div className="mb-6 space-y-3">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <nav className="flex gap-1 border-b border-gray-200 pb-0 min-w-max sm:min-w-0">
+              {navItems.map((item) => {
+                const active = item.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-px ${
+                      active
+                        ? "border-[#C8102E] text-[#C8102E]"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Sélecteur de ludothèque */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-500 flex-shrink-0">Ludothèque :</span>
             {LOCATIONS.map((loc) => (
               <button
                 key={loc}
@@ -63,6 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </div>
         </div>
+
         {children}
       </div>
     </>

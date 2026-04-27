@@ -91,7 +91,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
           {/* Nom + Catégorie */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Nom</label>
               <input value={form.name} onChange={(e) => set("name", e.target.value)}
@@ -109,7 +109,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
           </div>
 
           {/* Type + Date entrée */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Type (ex : Stratégie)</label>
               <input value={form.type} onChange={(e) => set("type", e.target.value)}
@@ -123,7 +123,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
           </div>
 
           {/* Joueurs + Durée + Âge */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Joueurs min</label>
               <input type="number" min="1" value={form.minPlayers} onChange={(e) => set("minPlayers", e.target.value)}
@@ -159,7 +159,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
             <input value={form.coverUrl} onChange={(e) => set("coverUrl", e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 font-mono text-xs" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Code-barre</label>
               <input value={form.barcode} onChange={(e) => set("barcode", e.target.value)}
@@ -460,8 +460,8 @@ export default function AdminGamesPage() {
       {loading ? (
         <div className="animate-pulse space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-white rounded-xl" />)}</div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="px-4 py-3 text-left">Jeu</th>
