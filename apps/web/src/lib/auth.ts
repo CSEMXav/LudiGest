@@ -48,6 +48,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) throw new Error("Email ou mot de passe incorrect.");
         if (user.suspended) throw new Error("Ce compte est suspendu.");
+        if (!user.emailVerified) throw new Error("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail @bred.fr.");
 
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) throw new Error("Email ou mot de passe incorrect.");
