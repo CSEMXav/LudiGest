@@ -167,14 +167,25 @@ async function lookupBarcodeFromUPC(gameName: string): Promise<string | null> {
     if (!res.ok) return null;
     const data = await res.json();
     const items: any[] = data.items ?? [];
-    const match = items.find((i: any) => {
+
+    const nameWords = gameName.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    const relevant = items.filter((i: any) => {
       const title = (i.title ?? "").toLowerCase();
-      const name = gameName.toLowerCase();
-      return title.includes(name) || name.split(" ").every((w: string) => title.includes(w.toLowerCase()));
+      return nameWords.every((w) => title.includes(w));
     });
-    const ean = match?.ean ?? items[0]?.ean ?? null;
-    if (!ean) return null;
-    return String(ean).replace(/^0+/, "").trim() || null;
+    const pool = relevant.length > 0 ? relevant : items;
+    if (pool.length === 0) return null;
+
+    // Préférer la version française : EAN commençant par 3 (préfixe GS1 France 300-379)
+    const frenchItem = pool.find((i: any) => {
+      const ean = String(i.ean ?? "").replace(/^0+/, "");
+      const code = parseInt(ean.slice(0, 3));
+      return code >= 300 && code <= 379;
+    });
+
+    const best = frenchItem ?? pool[0];
+    const ean = String(best.ean ?? "").replace(/^0+/, "").trim();
+    return ean.length >= 8 ? ean : null;
   } catch {
     return null;
   }

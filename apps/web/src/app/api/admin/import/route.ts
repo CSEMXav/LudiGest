@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
           type:       details?.type      ?? "Jeu de société",
           category:   row.category,
           location:   session.user.location,
+          addedAt:    row.addedAt,
           bggId:      details?.bggId     ?? bggResults[0]?.bggId ?? null,
           summary:    summaryFr,
           minAge:     details?.minAge    ?? null,
