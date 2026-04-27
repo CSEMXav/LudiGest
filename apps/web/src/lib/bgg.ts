@@ -160,13 +160,42 @@ async function searchBGGViaWikidata(query: string): Promise<BggSearchResult[]> {
   }
 }
 
+async function lookupBarcodeFromUPC(gameName: string): Promise<string | null> {
+  try {
+    const url = `https://api.upcitemdb.com/prod/trial/search?s=${encodeURIComponent(gameName)}&type=product`;
+    const res = await fetch(url, { cache: "no-store", headers: { "User-Agent": "LudiGest/1.0", "Accept": "application/json" } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items: any[] = data.items ?? [];
+    const match = items.find((i: any) => {
+      const title = (i.title ?? "").toLowerCase();
+      const name = gameName.toLowerCase();
+      return title.includes(name) || name.split(" ").every((w: string) => title.includes(w.toLowerCase()));
+    });
+    const ean = match?.ean ?? items[0]?.ean ?? null;
+    if (!ean) return null;
+    return String(ean).replace(/^0+/, "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getGameDetails(bggId: string): Promise<BggGameDetails | null> {
   // Try geekdo JSON API first (more reliable, no Cloudflare block)
   const details = await getGameDetailsFromGeekdo(bggId);
-  if (details) return details;
+  if (details) {
+    if (!details.barcode) {
+      details.barcode = await lookupBarcodeFromUPC(details.name);
+    }
+    return details;
+  }
 
   // Fallback: XML API v2
-  return getGameDetailsFromXml(bggId);
+  const xmlDetails = await getGameDetailsFromXml(bggId);
+  if (xmlDetails && !xmlDetails.barcode) {
+    xmlDetails.barcode = await lookupBarcodeFromUPC(xmlDetails.name);
+  }
+  return xmlDetails;
 }
 
 async function getGameDetailsFromGeekdo(bggId: string): Promise<BggGameDetails | null> {
