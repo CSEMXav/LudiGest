@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator, RefreshControl, Modal,
+  View, Text, FlatList, SectionList, TouchableOpacity, Image, StyleSheet, Alert,
+  ActivityIndicator, RefreshControl, Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { apiGet, apiPost } from "@/lib/api";
@@ -17,15 +18,20 @@ function isDueSoon(dueAt: string) {
 
 export default function LoansTab() {
   const router = useRouter();
-  const [loans, setLoans] = useState<LoanDTO[]>([]);
+  const [active, setActive] = useState<LoanDTO[]>([]);
+  const [history, setHistory] = useState<LoanDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [returnLoan, setReturnLoan] = useState<LoanDTO | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   async function load() {
     try {
-      const data = await apiGet<LoanDTO[]>("/api/loans");
-      setLoans(data);
+      const data = await apiGet<LoanDTO[]>("/api/loans?all=true");
+      setActive(data.filter((l) => !l.returnedAt));
+      setHistory(data.filter((l) => !!l.returnedAt).sort(
+        (a, b) => new Date(b.returnedAt!).getTime() - new Date(a.returnedAt!).getTime()
+      ));
     } catch {}
     setLoading(false);
     setRefreshing(false);
@@ -59,12 +65,12 @@ export default function LoansTab() {
   return (
     <>
       <FlatList
-        data={loans}
+        data={active}
         keyExtractor={(l) => l.id}
         contentContainerStyle={{ padding: 16 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C8102E" />}
         ListHeaderComponent={
-          <Text style={s.activeCount}>{loans.length}/5 emprunt{loans.length > 1 ? "s" : ""} en cours</Text>
+          <Text style={s.activeCount}>{active.length}/5 emprunt{active.length > 1 ? "s" : ""} en cours</Text>
         }
         ListEmptyComponent={
           <View style={s.empty}>
@@ -111,6 +117,33 @@ export default function LoansTab() {
             </View>
           );
         }}
+        ListFooterComponent={
+          history.length > 0 ? (
+            <View style={s.historySection}>
+              <TouchableOpacity style={s.historyToggle} onPress={() => setShowHistory((v) => !v)}>
+                <Text style={s.historyToggleText}>
+                  {showHistory ? "▲" : "▼"} Historique ({history.length} emprunt{history.length > 1 ? "s" : ""})
+                </Text>
+              </TouchableOpacity>
+              {showHistory && history.map((item) => (
+                <View key={item.id} style={s.historyCard}>
+                  <TouchableOpacity onPress={() => router.push(`/game/${item.gameId}`)} style={s.cardTop}>
+                    {item.gameCoverUrl ? (
+                      <Image source={{ uri: item.gameCoverUrl }} style={s.coverSmall} />
+                    ) : (
+                      <View style={[s.coverSmall, s.coverPlaceholder]}><Text style={{ fontSize: 16 }}>🎲</Text></View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.gameName}>{item.gameName}</Text>
+                      <Text style={s.historyDate}>Emprunté le {formatDate(item.borrowedAt)}</Text>
+                      <Text style={s.historyDate}>Rendu le {formatDate(item.returnedAt!)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : null
+        }
       />
 
       <Modal visible={!!returnLoan} transparent animationType="fade">
@@ -145,6 +178,7 @@ const s = StyleSheet.create({
   cardWarn: { backgroundColor: "#fefce8", borderWidth: 1, borderColor: "#fde68a" },
   cardTop: { flexDirection: "row", gap: 12, marginBottom: 12 },
   cover: { width: 60, height: 60, borderRadius: 10 },
+  coverSmall: { width: 44, height: 44, borderRadius: 8 },
   coverPlaceholder: { backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" },
   gameName: { fontSize: 15, fontWeight: "600", color: "#111827", marginBottom: 4 },
   dueDate: { fontSize: 13, color: "#6b7280" },
@@ -160,6 +194,11 @@ const s = StyleSheet.create({
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { color: "#9ca3af", fontSize: 15 },
   link: { color: "#C8102E", fontSize: 14, marginTop: 8 },
+  historySection: { marginTop: 8 },
+  historyToggle: { paddingVertical: 12, alignItems: "center" },
+  historyToggleText: { fontSize: 13, color: "#6b7280", fontWeight: "600" },
+  historyCard: { backgroundColor: "#f9fafb", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: "#e5e7eb" },
+  historyDate: { fontSize: 12, color: "#9ca3af", marginTop: 1 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
   modalBox: { backgroundColor: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 },
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginBottom: 10 },

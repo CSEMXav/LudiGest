@@ -288,12 +288,28 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
   );
 }
 
+const STATUS_FILTERS: { value: "" | "AVAILABLE" | "BORROWED" | "SUSPENDED"; label: string }[] = [
+  { value: "", label: "Tous" },
+  { value: "AVAILABLE", label: "Disponible" },
+  { value: "BORROWED", label: "Emprunté" },
+  { value: "SUSPENDED", label: "Suspendu" },
+];
+
+const SORTS: { value: string; label: string }[] = [
+  { value: "name_asc", label: "A → Z" },
+  { value: "name_desc", label: "Z → A" },
+  { value: "recent", label: "Plus récents" },
+];
+
 export default function AdminGamesPage() {
   const { data: session } = useSession();
   const [games, setGames]       = useState<GameDTO[]>([]);
   const [loading, setLoading]   = useState(true);
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [search, setSearch]     = useState("");
+  const [filterStatus, setFilterStatus] = useState<"" | "AVAILABLE" | "BORROWED" | "SUSPENDED">("");
+  const [filterCategory, setFilterCategory] = useState<GameCategory | "">("");
+  const [sort, setSort]         = useState("name_asc");
   const [enriching, setEnriching] = useState<Record<string, boolean>>({});
   const [editingGame, setEditingGame] = useState<GameDTO | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -301,13 +317,20 @@ export default function AdminGamesPage() {
   const currentLocation = session?.user.location;
 
   async function loadGames() {
-    const params = search ? `?search=${encodeURIComponent(search)}` : "";
-    const res = await fetch(`/api/games${params}`);
-    setGames(await res.json());
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (filterStatus) params.set("status", filterStatus);
+    if (filterCategory) params.set("category", filterCategory);
+    const res = await fetch(`/api/games?${params}`);
+    let data: GameDTO[] = await res.json();
+    if (sort === "name_desc") data = [...data].sort((a, b) => b.name.localeCompare(a.name, "fr"));
+    else if (sort === "recent") data = [...data].sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+    else data = [...data].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    setGames(data);
     setLoading(false);
   }
 
-  useEffect(() => { loadGames(); }, [search, currentLocation]);
+  useEffect(() => { loadGames(); }, [search, filterStatus, filterCategory, sort, currentLocation]);
 
   async function toggleSuspend(game: GameDTO) {
     const newStatus = game.status === "SUSPENDED" ? "AVAILABLE" : "SUSPENDED";
@@ -366,13 +389,61 @@ export default function AdminGamesPage() {
         </div>
       </div>
 
-      <input
-        type="search"
-        placeholder="Rechercher..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-      />
+      <div className="space-y-3 mb-5">
+        <input
+          type="search"
+          placeholder="Rechercher..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+        />
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Statut */}
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilterStatus(f.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                filterStatus === f.value
+                  ? "bg-[#C8102E] text-white border-[#C8102E]"
+                  : "border-gray-300 text-gray-600 hover:border-gray-400 bg-white"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          <div className="w-px h-5 bg-gray-200 mx-1" />
+          {/* Catégorie */}
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => setFilterCategory(filterCategory === c.value ? "" : c.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border-2 transition-colors ${
+                filterCategory === c.value
+                  ? `${c.color} border-transparent`
+                  : "border-gray-200 text-gray-600 bg-white hover:border-gray-300"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+          <div className="w-px h-5 bg-gray-200 mx-1" />
+          {/* Tri */}
+          {SORTS.map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setSort(s.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                sort === s.value
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "border-gray-300 text-gray-600 hover:border-gray-400 bg-white"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {loading ? (
         <div className="animate-pulse space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-white rounded-xl" />)}</div>

@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity, Image, StyleSheet,
   ActivityIndicator, ScrollView, RefreshControl,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { apiGet } from "@/lib/api";
 import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
@@ -58,6 +58,21 @@ export default function GamesTab() {
     getStoredUser().then((u) => { if (u?.role === "ADMIN") setIsAdmin(true); });
     getStoredLocation().then(setLocation);
   }, []);
+
+  // Recharge les jeux quand on revient sur cet onglet (ex: après changement de lieu)
+  useFocusEffect(
+    useCallback(() => {
+      getStoredLocation().then((loc) => {
+        setLocation((prev) => {
+          if (loc && loc !== prev) {
+            load(search, status, category);
+            return loc;
+          }
+          return prev;
+        });
+      });
+    }, [search, status, category])
+  );
 
   async function load(q: string, s: string, cat: string, isRefresh = false) {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -114,7 +129,7 @@ export default function GamesTab() {
             style={[s.chip, category === c.key && s.chipActive]}
             onPress={() => setCategory(c.key as GameCategory | "")}
           >
-            <Text style={[s.chipText, category === c.key && s.chipTextActive]}>{c.label}</Text>
+            <Text style={[s.chipText, category === c.key && s.chipTextActive]} numberOfLines={1}>{c.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -123,7 +138,7 @@ export default function GamesTab() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
         {(["", "AVAILABLE", "BORROWED"] as const).map((f) => (
           <TouchableOpacity key={f} style={[s.filterBtn, status === f && s.filterActive]} onPress={() => setStatus(f)}>
-            <Text style={[s.filterText, status === f && s.filterTextActive]}>
+            <Text style={[s.filterText, status === f && s.filterTextActive]} numberOfLines={1}>
               {f === "" ? "Tous" : STATUS_LABELS[f]}
             </Text>
           </TouchableOpacity>
@@ -131,7 +146,7 @@ export default function GamesTab() {
         <View style={s.divider} />
         {SORTS.map((so) => (
           <TouchableOpacity key={so.key} style={[s.filterBtn, sort === so.key && s.sortActive]} onPress={() => setSort(so.key)}>
-            <Text style={[s.filterText, sort === so.key && s.sortTextActive]}>{so.label}</Text>
+            <Text style={[s.filterText, sort === so.key && s.sortTextActive]} numberOfLines={1}>{so.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -186,11 +201,11 @@ const s = StyleSheet.create({
   addBtnText: { color: "#fff", fontSize: 22, lineHeight: 28 },
   chipRow: { marginTop: 10, flexGrow: 0 },
   filterRow: { paddingVertical: 8, flexGrow: 0 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff" },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff", flexShrink: 0 },
   chipActive: { backgroundColor: "#7c3aed", borderColor: "#7c3aed" },
   chipText: { fontSize: 12, color: "#374151" },
   chipTextActive: { color: "#fff" },
-  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff" },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff", flexShrink: 0 },
   filterActive: { backgroundColor: "#C8102E", borderColor: "#C8102E" },
   sortActive: { backgroundColor: "#1d4ed8", borderColor: "#1d4ed8" },
   filterText: { fontSize: 12, color: "#374151" },
