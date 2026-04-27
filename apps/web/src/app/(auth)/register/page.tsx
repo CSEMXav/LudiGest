@@ -55,41 +55,43 @@ export default function RegisterPage() {
           <p className="text-gray-500 text-sm mt-1">Réservé aux collaborateurs BRED</p>
         </div>
 
+        <p className="text-xs text-gray-400 mb-4"><span className="text-red-500">*</span> Champs obligatoires</p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom <span className="text-red-500">*</span></label>
               <input type="text" value={form.firstName} onChange={(e) => set("firstName", e.target.value)}
                 placeholder="Jean" required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom <span className="text-red-500">*</span></label>
               <input type="text" value={form.lastName} onChange={(e) => set("lastName", e.target.value)}
                 placeholder="Dupont" required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email (@bred.fr)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
-              placeholder="jean.dupont@bred.fr" required
+              placeholder="jean.dupont@exemple.fr" required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span></label>
             <input type="text" value={form.matricule} onChange={(e) => set("matricule", e.target.value)}
               placeholder="12345" required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe (min. 8 caractères)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe <span className="text-red-500">*</span> <span className="font-normal text-gray-400">(min. 8 caractères)</span></label>
             <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)}
               minLength={8} required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Ludothèque</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ludothèque <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-2 gap-3">
               {LOCATIONS.map((loc) => (
                 <button
@@ -107,6 +109,7 @@ export default function RegisterPage() {
               ))}
             </div>
             {!form.location && <p className="text-xs text-gray-400 mt-1">Choisissez votre ludothèque</p>}
+            <p className="text-xs text-gray-400 mt-1">Vous pourrez changer de ludothèque directement depuis l&apos;application.</p>
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">{error}</div>}

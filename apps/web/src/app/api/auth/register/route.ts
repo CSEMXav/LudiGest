@@ -11,9 +11,6 @@ export async function POST(req: NextRequest) {
   if (!email || !firstName || !lastName || !matricule || !password || !location) {
     return NextResponse.json({ error: "Tous les champs sont requis." }, { status: 400 });
   }
-  if (!email.toLowerCase().endsWith("@bred.fr")) {
-    return NextResponse.json({ error: "Seuls les emails @bred.fr sont autorisés." }, { status: 400 });
-  }
   if (password.length < 8) {
     return NextResponse.json({ error: "Le mot de passe doit contenir au moins 8 caractères." }, { status: 400 });
   }

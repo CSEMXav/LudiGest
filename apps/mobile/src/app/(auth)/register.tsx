@@ -22,9 +22,6 @@ export default function RegisterScreen() {
     if (!firstName || !lastName || !email || !matricule || !password || !location) {
       return Alert.alert("Erreur", "Tous les champs sont requis, y compris la ludothèque.");
     }
-    if (!email.toLowerCase().endsWith("@bred.fr")) {
-      return Alert.alert("Erreur", "Seuls les emails @bred.fr sont autorisés.");
-    }
     if (password.length < 8) {
       return Alert.alert("Erreur", "Le mot de passe doit contenir au moins 8 caractères.");
     }
@@ -58,20 +55,22 @@ export default function RegisterScreen() {
         <Text style={s.title}>Créer un compte</Text>
         <Text style={s.subtitle}>Réservé aux collaborateurs BRED</Text>
 
+        <Text style={s.required}><Text style={s.star}>*</Text> Champs obligatoires</Text>
+
         <View style={s.row}>
-          <TextInput style={[s.input, s.half]} placeholder="Prénom" value={form.firstName}
+          <TextInput style={[s.input, s.half]} placeholder="Prénom *" value={form.firstName}
             onChangeText={(v) => set("firstName", v)} autoCapitalize="words" />
-          <TextInput style={[s.input, s.half]} placeholder="Nom" value={form.lastName}
+          <TextInput style={[s.input, s.half]} placeholder="Nom *" value={form.lastName}
             onChangeText={(v) => set("lastName", v)} autoCapitalize="words" />
         </View>
-        <TextInput style={s.input} placeholder="prenom.nom@bred.fr" value={form.email}
+        <TextInput style={s.input} placeholder="Email *" value={form.email}
           onChangeText={(v) => set("email", v)} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-        <TextInput style={s.input} placeholder="Matricule" value={form.matricule}
+        <TextInput style={s.input} placeholder="Matricule *" value={form.matricule}
           onChangeText={(v) => set("matricule", v)} autoCapitalize="none" />
-        <TextInput style={s.input} placeholder="Mot de passe (min. 8 caractères)" value={form.password}
+        <TextInput style={s.input} placeholder="Mot de passe * (min. 8 caractères)" value={form.password}
           onChangeText={(v) => set("password", v)} secureTextEntry />
 
-        <Text style={s.locationLabel}>Votre ludothèque</Text>
+        <Text style={s.locationLabel}>Votre ludothèque <Text style={s.star}>*</Text></Text>
         <View style={s.locationRow}>
           {LOCATIONS.map((loc) => (
             <TouchableOpacity
@@ -85,6 +84,8 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <Text style={s.locationHint}>Vous pourrez changer de ludothèque directement depuis l'application.</Text>
 
         <TouchableOpacity style={[s.button, loading && s.buttonDisabled]} onPress={register} disabled={loading}>
           <Text style={s.buttonText}>{loading ? "Inscription..." : "Créer mon compte"}</Text>
@@ -112,6 +113,9 @@ const s = StyleSheet.create({
   locationBtnActive:   { borderColor: "#C8102E", backgroundColor: "#fff5f5" },
   locationBtnText:     { fontSize: 14, color: "#6b7280", fontWeight: "500" },
   locationBtnTextActive: { color: "#C8102E", fontWeight: "700" },
+  locationHint:          { fontSize: 12, color: "#9ca3af", textAlign: "center", marginBottom: 12 },
+  required:              { fontSize: 12, color: "#9ca3af", marginBottom: 16 },
+  star:                  { color: "#ef4444" },
   button:              { backgroundColor: "#C8102E", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 4 },
   buttonDisabled:      { opacity: 0.6 },
   buttonText:          { color: "#fff", fontSize: 16, fontWeight: "600" },

@@ -9,10 +9,6 @@ export async function POST(req: NextRequest) {
   if (!email || !password) {
     return NextResponse.json({ error: "Email et mot de passe requis." }, { status: 400 });
   }
-  if (!email.toLowerCase().endsWith("@bred.fr")) {
-    return NextResponse.json({ error: "Email @bred.fr requis." }, { status: 403 });
-  }
-
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user || user.suspended) {
     return NextResponse.json({ error: "Identifiants invalides." }, { status: 401 });

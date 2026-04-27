@@ -116,6 +116,18 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function verifyEmail(user: UserAdminDTO) {
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emailVerified: true }),
+    });
+    if (res.ok) {
+      setActionMsg((m) => ({ ...m, [user.id]: "Email validé" }));
+      loadUsers();
+    }
+  }
+
   function exportExcel() {
     window.location.href = "/api/admin/users/export";
   }
@@ -196,23 +208,32 @@ export default function AdminUsersPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="flex items-center gap-1 justify-end">
                     {actionMsg[u.id] && (
-                      <span className="text-xs text-green-600">{actionMsg[u.id]}</span>
+                      <span className="text-xs text-green-600 mr-1">{actionMsg[u.id]}</span>
+                    )}
+                    {!u.emailVerified && (
+                      <button
+                        onClick={() => verifyEmail(u)}
+                        title="Valider l'email manuellement"
+                        className="p-2 rounded-lg hover:bg-yellow-50 text-yellow-600 transition-colors text-xl leading-none"
+                      >
+                        ✉️
+                      </button>
                     )}
                     <button
                       onClick={() => toggleRole(u)}
                       title={u.role === "ADMIN" ? "Rétrograder en USER" : "Promouvoir en ADMIN"}
-                      className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors"
+                      className="p-2 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors text-xl leading-none"
                     >
-                      {u.role === "ADMIN" ? "⬇" : "⬆"}
+                      {u.role === "ADMIN" ? "👤" : "⭐"}
                     </button>
                     <button
                       onClick={() => toggleSuspend(u)}
-                      title={u.suspended ? "Réactiver" : "Suspendre"}
-                      className={`p-1.5 rounded-lg transition-colors ${u.suspended ? "hover:bg-green-50 text-green-600" : "hover:bg-red-50 text-red-600"}`}
+                      title={u.suspended ? "Réactiver le compte" : "Suspendre le compte"}
+                      className={`p-2 rounded-lg transition-colors text-xl leading-none ${u.suspended ? "hover:bg-green-50 text-green-600" : "hover:bg-red-50 text-red-600"}`}
                     >
-                      {u.suspended ? "✓" : "⊘"}
+                      {u.suspended ? "🔓" : "🔒"}
                     </button>
                   </div>
                 </td>

@@ -11,11 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
+
+  const emailNotVerified = error.toLowerCase().includes("confirmer votre email");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setResendDone(false);
 
     const res = await signIn("credentials", {
       email,
@@ -31,6 +36,17 @@ export default function LoginPage() {
     }
   }
 
+  async function resendVerification() {
+    setResendLoading(true);
+    await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    setResendLoading(false);
+    setResendDone(true);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
@@ -43,13 +59,13 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email (@bred.fr)
+              Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="prenom.nom@bred.fr"
+              placeholder="prenom.nom@exemple.fr"
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
             />
@@ -70,6 +86,22 @@ export default function LoginPage() {
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
               {error}
+              {emailNotVerified && (
+                <div className="mt-2">
+                  {resendDone ? (
+                    <p className="text-green-700 font-medium">✓ Email de confirmation renvoyé.</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={resendVerification}
+                      disabled={resendLoading}
+                      className="underline font-medium hover:text-red-900 disabled:opacity-50"
+                    >
+                      {resendLoading ? "Envoi..." : "Renvoyer l'email de confirmation"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

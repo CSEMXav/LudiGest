@@ -10,11 +10,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { role, suspended } = body;
+  const { role, suspended, emailVerified } = body;
 
   const data: Record<string, unknown> = {};
   if (role !== undefined) data.role = role;
   if (suspended !== undefined) data.suspended = suspended;
+  if (emailVerified !== undefined) data.emailVerified = emailVerified;
 
   const user = await prisma.user.update({ where: { id: params.id }, data });
 

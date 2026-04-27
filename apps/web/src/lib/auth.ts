@@ -38,17 +38,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        if (!credentials.email.toLowerCase().endsWith("@bred.fr")) {
-          throw new Error("Seuls les emails @bred.fr sont autorisés.");
-        }
-
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() },
         });
 
         if (!user) throw new Error("Email ou mot de passe incorrect.");
         if (user.suspended) throw new Error("Ce compte est suspendu.");
-        if (!user.emailVerified) throw new Error("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail @bred.fr.");
+        if (!user.emailVerified) throw new Error("Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail.");
 
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) throw new Error("Email ou mot de passe incorrect.");
