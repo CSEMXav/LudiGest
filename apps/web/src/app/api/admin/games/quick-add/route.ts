@@ -16,17 +16,31 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
-  const { name, category } = await req.json();
+  const { name, category, bggId: bggIdInput } = await req.json();
   if (!name || !category) {
     return NextResponse.json({ error: "Nom et catégorie requis." }, { status: 400 });
   }
 
-  // Recherche BGG
+  // Parse BGG ID from URL or raw ID
+  function parseBggId(input: string): string | null {
+    if (!input) return null;
+    const m = input.match(/boardgame(?:expansion)?\/(\d+)/);
+    if (m) return m[1];
+    if (/^\d+$/.test(input.trim())) return input.trim();
+    return null;
+  }
+
+  // Recherche BGG — utilise l'ID fourni si disponible, sinon recherche par nom
   let bggDetails = null;
   try {
-    const results = await searchBGG(name);
-    if (results.length > 0) {
-      bggDetails = await getGameDetails(results[0].bggId);
+    const manualId = parseBggId(bggIdInput ?? "");
+    if (manualId) {
+      bggDetails = await getGameDetails(manualId);
+    } else {
+      const results = await searchBGG(name);
+      if (results.length > 0) {
+        bggDetails = await getGameDetails(results[0].bggId);
+      }
     }
   } catch {
     // BGG unavailable — on crée le jeu avec le minimum

@@ -192,6 +192,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
 function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<GameCategory | "">("");
+  const [bggId, setBggId] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ name: string; bggFound: boolean } | null>(null);
   const [error, setError] = useState("");
@@ -203,7 +204,7 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
     const res = await fetch("/api/admin/games/quick-add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), category }),
+      body: JSON.stringify({ name: name.trim(), category, bggId: bggId.trim() || undefined }),
     });
     const data = await res.json();
     setLoading(false);
@@ -248,6 +249,17 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
                 placeholder="Ex : Catan, Ticket to Ride..."
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
                 autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                URL ou ID BoardGameGeek <span className="font-normal text-gray-400">(optionnel — si la recherche auto échoue)</span>
+              </label>
+              <input
+                value={bggId}
+                onChange={(e) => setBggId(e.target.value)}
+                placeholder="Ex : 13 ou boardgamegeek.com/boardgame/13/catan"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 font-mono text-xs"
               />
             </div>
             <div>
