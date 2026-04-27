@@ -36,18 +36,26 @@ export default function AdminImportPage() {
       <p className="text-sm text-gray-500 mb-3">
         Le fichier doit avoir une <strong>ligne de titre</strong> puis les données :
       </p>
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6 text-sm font-mono">
-        <div className="grid grid-cols-2 gap-2 text-center mb-1 text-xs font-sans font-semibold text-gray-500">
-          <div>Colonne A</div><div>Colonne B</div>
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-3 text-sm font-mono">
+        <div className="grid grid-cols-3 gap-2 text-center mb-1 text-xs font-sans font-semibold text-gray-500">
+          <div>Colonne A</div><div>Colonne B</div><div>Colonne C</div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-center">
+        <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-white border rounded px-3 py-2 text-gray-700">Nom du jeu</div>
           <div className="bg-white border rounded px-3 py-2 text-gray-700">Catégorie</div>
+          <div className="bg-white border rounded px-3 py-2 text-gray-400 italic">Date d&apos;entrée</div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center mt-2 text-xs text-gray-500">
+          <div>Catan</div><div>famille</div><div>15/01/2024</div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center mt-1 text-xs text-gray-500">
+          <div>Azul</div><div>expert</div><div className="italic text-gray-400">vide = aujourd&apos;hui</div>
         </div>
       </div>
       <p className="text-xs text-gray-400 mb-6">
         Catégories valides : <span className="font-medium">escape, famille, ambiance, enfant, initié, expert</span>.
-        Toutes les autres infos (résumé, image, joueurs, durée, âge) sont récupérées automatiquement sur BoardGameGeek.
+        La date d&apos;entrée accepte les formats <span className="font-medium">JJ/MM/AAAA</span> ou <span className="font-medium">AAAA-MM-JJ</span> — si absente, la date du jour est utilisée.
+        Les autres infos (résumé, image, joueurs, durée, âge) sont récupérées automatiquement sur BoardGameGeek.
       </p>
 
       <div
