@@ -21,7 +21,7 @@ export function BarcodeScannerModal({ onClose }: Props) {
     const reader = new BrowserMultiFormatReader();
     readerRef.current = reader;
 
-    reader.decodeFromVideoDevice(undefined, videoRef.current!, async (result, err) => {
+    reader.decodeFromVideoDevice(null, videoRef.current!, async (result, err) => {
       if (result) {
         const barcode = result.getText();
         reader.reset();
@@ -59,7 +59,7 @@ export function BarcodeScannerModal({ onClose }: Props) {
     setStatus("scanning");
     const reader = new BrowserMultiFormatReader();
     readerRef.current = reader;
-    reader.decodeFromVideoDevice(undefined, videoRef.current!, async (result, err) => {
+    reader.decodeFromVideoDevice(null, videoRef.current!, async (result, err) => {
       if (result) {
         const barcode = result.getText();
         reader.reset();
