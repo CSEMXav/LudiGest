@@ -106,7 +106,7 @@ const s = StyleSheet.create({
   subtitle:            { fontSize: 13, textAlign: "center", color: "#9ca3af", marginBottom: 28 },
   row:                 { flexDirection: "row", gap: 10 },
   half:                { flex: 1 },
-  input:               { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12 },
+  input:               { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12, color: "#111827" },
   locationLabel:       { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 8 },
   locationRow:         { flexDirection: "row", gap: 12, marginBottom: 16 },
   locationBtn:         { flex: 1, borderWidth: 2, borderColor: "#e5e7eb", borderRadius: 12, padding: 14, alignItems: "center" },

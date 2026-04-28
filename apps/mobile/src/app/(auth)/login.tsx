@@ -109,7 +109,7 @@ const s = StyleSheet.create({
   emoji:          { fontSize: 64, textAlign: "center", marginBottom: 8 },
   title:          { fontSize: 28, fontWeight: "bold", textAlign: "center", color: "#111" },
   subtitle:       { fontSize: 14, textAlign: "center", color: "#9ca3af", marginBottom: 32 },
-  input:          { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12 },
+  input:          { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12, color: "#111827" },
   button:         { backgroundColor: "#C8102E", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 4 },
   buttonDisabled: { opacity: 0.6 },
   buttonText:     { color: "#fff", fontSize: 16, fontWeight: "600" },

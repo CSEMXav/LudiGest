@@ -19,7 +19,11 @@
       "adaptiveIcon": {
         "backgroundColor": "#C8102E"
       },
-      "package": "fr.bred.ludigest"
+      "package": "fr.bred.ludigest",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -33,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c6beaf44-8c96-42de-ab1d-61eb6744f8ea"
+      }
     }
   }
 }

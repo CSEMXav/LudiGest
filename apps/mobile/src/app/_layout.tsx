@@ -1,13 +1,17 @@
 import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
-import { clearAuth } from "@/lib/auth";
+import { getToken } from "@/lib/auth";
 
 export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    clearAuth().then(() => {
-      router.replace("/(auth)/login");
+    getToken().then((token) => {
+      if (token) {
+        router.replace("/(tabs)");
+      } else {
+        router.replace("/(auth)/login");
+      }
     });
   }, []);
 

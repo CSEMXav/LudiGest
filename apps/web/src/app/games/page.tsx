@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { GameCard, GameListRow } from "@/components/GameCard";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -82,6 +83,7 @@ export default function GamesPage() {
   const [players,     setPlayers]     = useState("");
   const [fromDate,    setFromDate]    = useState("");
   const [toDate,      setToDate]      = useState("");
+  const [showScanner, setShowScanner] = useState(false);
 
   const hasActiveFilters = !!(category || minStars || maxDuration || players || fromDate || toDate);
 
@@ -135,13 +137,27 @@ export default function GamesPage() {
 
       {/* Search + status bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <input
-          type="search"
-          placeholder="Rechercher un jeu..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
-        />
+        <div className="flex gap-2 flex-1">
+          <input
+            type="search"
+            placeholder="Rechercher un jeu..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
+          />
+          <button
+            onClick={() => setShowScanner(true)}
+            title="Scanner un code-barres"
+            className="sm:hidden flex items-center justify-center w-11 h-11 bg-[#C8102E] text-white rounded-xl hover:bg-red-700 transition-colors flex-shrink-0"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+              <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
+              <line x1="13" y1="8" x2="13" y2="16" /><line x1="16" y1="8" x2="16" y2="16" />
+            </svg>
+          </button>
+        </div>
         <div className="flex gap-2 flex-wrap">
           {Object.entries(STATUS_LABELS).map(([val, label]) => (
             <button
@@ -179,6 +195,21 @@ export default function GamesPage() {
             <option value="duration">Durée ↑</option>
             <option value="recent">Plus récents</option>
           </select>
+
+          {/* Scanner button — desktop */}
+          <button
+            onClick={() => setShowScanner(true)}
+            title="Scanner un code-barres"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:border-red-300 bg-white transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+              <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
+              <line x1="13" y1="8" x2="13" y2="16" /><line x1="16" y1="8" x2="16" y2="16" />
+            </svg>
+            Scanner
+          </button>
 
           {/* View toggle */}
           <div className="flex border border-gray-300 rounded-xl overflow-hidden">
@@ -342,6 +373,8 @@ export default function GamesPage() {
           {sortedGames.map((g) => <GameListRow key={g.id} game={g} />)}
         </div>
       )}
+
+      {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} />}
     </div>
   );
 }

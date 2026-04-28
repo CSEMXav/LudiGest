@@ -25,11 +25,13 @@ export async function GET(req: NextRequest) {
   const fromDate     = searchParams.get("fromDate");
   const toDate       = searchParams.get("toDate");
   const locationParam = searchParams.get("location");
+  const barcodeParam  = searchParams.get("barcode");
   const userLocation = (locationParam && user.role === "ADMIN") ? locationParam : user.location;
 
   const games = await prisma.game.findMany({
     where: {
       location: userLocation,
+      ...(barcodeParam ? { barcode: barcodeParam } : {}),
       ...(user.role !== "ADMIN" ? { status: { not: "SUSPENDED" } } : {}),
       ...(statusFilter ? { status: statusFilter as any } : {}),
       ...(search ? { OR: [{ name: { contains: search } }, { type: { contains: search } }] } : {}),
