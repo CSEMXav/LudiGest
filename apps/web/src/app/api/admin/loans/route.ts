@@ -34,6 +34,9 @@ export async function GET(req: NextRequest) {
       dueAt: l.dueAt.toISOString(),
       returnedAt: l.returnedAt?.toISOString() ?? null,
       extendedCount: l.extendedCount,
+      wasLate: l.returnedAt
+        ? new Date(l.returnedAt) > new Date(l.dueAt)
+        : new Date() > new Date(l.dueAt),
     }))
   );
 }

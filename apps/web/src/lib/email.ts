@@ -61,3 +61,26 @@ export async function sendReminderEmail(to: string, name: string, gameName: stri
     `,
   });
 }
+
+export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {
+  const dateStr = dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Retard pour ${to} : emprunt de "${gameName}" dû le ${dateStr}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `⚠ Retard : veuillez rendre "${gameName}"`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E">🎲 LudiGest — Retard d'emprunt</h1>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Le jeu <strong>"${gameName}"</strong> aurait dû être rendu le <strong>${dateStr}</strong>.</p>
+        <p>Merci de le rapporter à la ludothèque dès que possible.</p>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}

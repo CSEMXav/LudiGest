@@ -71,6 +71,7 @@ export interface UserAdminDTO {
   createdAt: string;
   totalLoans: number;
   activeLoans: number;
+  lateReturns: number;
 }
 
 export interface RatingDTO {

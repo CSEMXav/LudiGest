@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { BarcodeInputScanner } from "@/components/BarcodeInputScanner";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 
 const STATUS_LABELS = { AVAILABLE: "Disponible", BORROWED: "Emprunté", SUSPENDED: "Suspendu" };
@@ -50,6 +51,7 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   function set(field: keyof EditState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -162,9 +164,30 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Code-barre</label>
-              <input value={form.barcode} onChange={(e) => set("barcode", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200" />
+              <div className="flex gap-2">
+                <input value={form.barcode} onChange={(e) => set("barcode", e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200" />
+                <button
+                  type="button"
+                  onClick={() => setShowBarcodeScanner(true)}
+                  title="Scanner avec la caméra"
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
+                    <line x1="13" y1="8" x2="13" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/>
+                  </svg>
+                </button>
+              </div>
             </div>
+            {showBarcodeScanner && (
+              <BarcodeInputScanner
+                onScan={(value) => { set("barcode", value); setShowBarcodeScanner(false); }}
+                onClose={() => setShowBarcodeScanner(false)}
+              />
+            )}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">BGG ID</label>
               <input value={form.bggId} onChange={(e) => set("bggId", e.target.value)}
@@ -492,9 +515,14 @@ export default function AdminGamesPage() {
                         >
                           {g.name}
                         </button>
-                        {!g.coverUrl && (
-                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Non enrichi</span>
-                        )}
+                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                          {!g.coverUrl && (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Non enrichi</span>
+                          )}
+                          {!g.barcode && (
+                            <span title="Code-barres manquant" className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">📵 Sans code-barres</span>
+                          )}
+                        </div>
                         {messages[g.id] && <p className="text-xs mt-0.5 text-gray-500">{messages[g.id]}</p>}
                       </div>
                     </div>

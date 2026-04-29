@@ -13,7 +13,13 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { loans: true } },
-      loans: { where: { returnedAt: null }, select: { id: true } },
+      loans: {
+        select: {
+          id: true,
+          returnedAt: true,
+          dueAt: true,
+        },
+      },
     },
   });
 
@@ -31,7 +37,10 @@ export async function GET(req: NextRequest) {
       createdAt: u.createdAt.toISOString(),
       location: u.location,
       totalLoans: u._count.loans,
-      activeLoans: u.loans.length,
+      activeLoans: u.loans.filter((l) => !l.returnedAt).length,
+      lateReturns: u.loans.filter(
+        (l) => l.returnedAt && new Date(l.returnedAt) > new Date(l.dueAt)
+      ).length,
     }))
   );
 }

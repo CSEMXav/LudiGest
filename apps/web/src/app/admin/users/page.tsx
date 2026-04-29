@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { UserAdminDTO } from "@ludigest/types";
 
 interface LoanItem {
@@ -17,6 +17,9 @@ interface LoanItem {
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
+
+type SortKey = "name" | "location" | "totalLoans" | "activeLoans" | "lateReturns" | "status";
+type SortDir = "asc" | "desc";
 
 function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => void }) {
   const [loans, setLoans] = useState<LoanItem[]>([]);
@@ -81,6 +84,9 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserAdminDTO | null>(null);
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   async function loadUsers() {
     const res = await fetch("/api/admin/users");
@@ -128,6 +134,45 @@ export default function AdminUsersPage() {
     }
   }
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  function SortIcon({ k }: { k: SortKey }) {
+    if (sortKey !== k) return <span className="text-gray-300 ml-1">↕</span>;
+    return <span className="text-[#C8102E] ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  }
+
+  const filtered = useMemo(() => {
+    let result = users;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.firstName?.toLowerCase() ?? "").includes(q) ||
+        (u.lastName?.toLowerCase() ?? "").includes(q) ||
+        u.email.toLowerCase().includes(q)
+      );
+    }
+    return [...result].sort((a, b) => {
+      let va: string | number, vb: string | number;
+      if (sortKey === "name") { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+      else if (sortKey === "location") { va = a.location; vb = b.location; }
+      else if (sortKey === "totalLoans") { va = a.totalLoans; vb = b.totalLoans; }
+      else if (sortKey === "activeLoans") { va = a.activeLoans; vb = b.activeLoans; }
+      else if (sortKey === "lateReturns") { va = a.lateReturns; vb = b.lateReturns; }
+      else { va = a.suspended ? 1 : 0; vb = b.suspended ? 1 : 0; }
+
+      if (typeof va === "number" && typeof vb === "number") {
+        return sortDir === "asc" ? va - vb : vb - va;
+      }
+      return sortDir === "asc"
+        ? String(va).localeCompare(String(vb))
+        : String(vb).localeCompare(String(va));
+    });
+  }, [users, search, sortKey, sortDir]);
+
   function exportExcel() {
     window.location.href = "/api/admin/users/export";
   }
@@ -140,7 +185,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Utilisateurs inscrits</h1>
         <button
           onClick={exportExcel}
@@ -150,23 +195,44 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
+      <input
+        type="search"
+        placeholder="Rechercher par nom ou email..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-red-300"
+      />
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="w-full text-sm min-w-[800px]">
-          <thead className="bg-gray-50 border-b border-gray-100">
+        <table className="w-full text-sm min-w-[900px]">
+          <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase">
             <tr>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Utilisateur</th>
+              <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                Utilisateur <SortIcon k="name" />
+              </th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Matricule</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Ludothèque</th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("location")}>
+                Ludothèque <SortIcon k="location" />
+              </th>
               <th className="text-center px-4 py-3 font-semibold text-gray-600">Inscription</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Emprunts</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">En cours</th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("totalLoans")}>
+                Emprunts <SortIcon k="totalLoans" />
+              </th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("activeLoans")}>
+                En cours <SortIcon k="activeLoans" />
+              </th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("lateReturns")}>
+                Retards <SortIcon k="lateReturns" />
+              </th>
               <th className="text-center px-4 py-3 font-semibold text-gray-600">Rôle</th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Statut</th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("status")}>
+                Statut <SortIcon k="status" />
+              </th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {users.map((u) => (
+            {filtered.map((u) => (
               <tr
                 key={u.id}
                 className={`hover:bg-gray-50 transition-colors ${u.suspended ? "opacity-60" : ""}`}
@@ -194,6 +260,12 @@ export default function AdminUsersPage() {
                 <td className="px-4 py-3 text-center">
                   {u.activeLoans > 0
                     ? <span className="inline-block bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">{u.activeLoans}</span>
+                    : <span className="text-gray-400">0</span>
+                  }
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {u.lateReturns > 0
+                    ? <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">{u.lateReturns}</span>
                     : <span className="text-gray-400">0</span>
                   }
                 </td>
@@ -242,8 +314,8 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
 
-        {users.length === 0 && (
-          <p className="text-center py-12 text-gray-400">Aucun utilisateur inscrit.</p>
+        {filtered.length === 0 && (
+          <p className="text-center py-12 text-gray-400">Aucun utilisateur{search ? " correspondant" : " inscrit"}.</p>
         )}
       </div>
 

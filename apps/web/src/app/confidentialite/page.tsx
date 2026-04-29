@@ -113,8 +113,11 @@ export default function ConfidentialitePage() {
         </p>
       </Section>
 
-      <footer style={{ marginTop: 56, paddingTop: 24, borderTop: "1px solid #e5e7eb", fontSize: 13, color: "#9ca3af", fontFamily: "sans-serif" }}>
-        © {new Date().getFullYear()} LudiGest — BRED Banque Populaire. Tous droits réservés.
+      <footer style={{ marginTop: 56, paddingTop: 24, borderTop: "1px solid #e5e7eb", fontSize: 13, color: "#9ca3af", fontFamily: "sans-serif", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+        <span>© {new Date().getFullYear()} LudiGest — BRED Banque Populaire. Tous droits réservés.</span>
+        <a href="/comment-ca-marche" style={{ color: "#C8102E", textDecoration: "none", fontWeight: 600 }}>
+          Comment ça marche ?
+        </a>
       </footer>
     </main>
   );

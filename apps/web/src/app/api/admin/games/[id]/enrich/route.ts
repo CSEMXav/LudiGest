@@ -32,14 +32,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Impossible de récupérer les détails BGG." }, { status: 502 });
   }
 
-  const summaryFr = details.summary ? await translateToFrench(details.summary) : null;
+  const [summaryFr, typeFr] = await Promise.all([
+    details.summary ? translateToFrench(details.summary) : Promise.resolve(null),
+    details.type ? translateToFrench(details.type) : Promise.resolve(game.type),
+  ]);
 
   const updated = await prisma.game.update({
     where: { id: params.id },
     data: {
       bggId:      details.bggId,
       name:       details.name || game.name,
-      type:       details.type || game.type,
+      type:       typeFr || details.type || game.type,
       summary:    summaryFr,
       minAge:     details.minAge,
       minPlayers: details.minPlayers,
