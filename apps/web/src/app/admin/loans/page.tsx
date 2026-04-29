@@ -67,7 +67,7 @@ export default function AdminLoansPage() {
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((l) =>
-        l.userName.toLowerCase().includes(q) || l.userEmail.toLowerCase().includes(q)
+        (l.userName?.toLowerCase() ?? "").includes(q) || (l.userEmail?.toLowerCase() ?? "").includes(q)
       );
     }
     if (overdueOnly) {
@@ -75,7 +75,7 @@ export default function AdminLoansPage() {
     }
     return [...result].sort((a, b) => {
       let va: string, vb: string;
-      if (sortKey === "userName") { va = a.userName; vb = b.userName; }
+      if (sortKey === "userName") { va = a.userName ?? ""; vb = b.userName ?? ""; }
       else if (sortKey === "borrowedAt") { va = a.borrowedAt; vb = b.borrowedAt; }
       else if (sortKey === "dueAt") { va = a.dueAt; vb = b.dueAt; }
       else { va = a.returnedAt ?? ""; vb = b.returnedAt ?? ""; }
