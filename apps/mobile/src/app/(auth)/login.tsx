@@ -59,6 +59,7 @@ export default function LoginScreen() {
         <Text style={s.emoji}>🎲</Text>
         <Text style={s.title}>LudiGest</Text>
         <Text style={s.subtitle}>Ludothèque BRED</Text>
+        <Text style={s.version}>v0.40</Text>
 
         <TextInput
           style={s.input}
@@ -108,7 +109,8 @@ const s = StyleSheet.create({
   linkText:       { color: "#C8102E", fontSize: 14 },
   emoji:          { fontSize: 64, textAlign: "center", marginBottom: 8 },
   title:          { fontSize: 28, fontWeight: "bold", textAlign: "center", color: "#111" },
-  subtitle:       { fontSize: 14, textAlign: "center", color: "#9ca3af", marginBottom: 32 },
+  subtitle:       { fontSize: 14, textAlign: "center", color: "#9ca3af", marginBottom: 4 },
+  version:        { fontSize: 11, textAlign: "center", color: "#d1d5db", marginBottom: 28 },
   input:          { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 12, color: "#111827" },
   button:         { backgroundColor: "#C8102E", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 4 },
   buttonDisabled: { opacity: 0.6 },

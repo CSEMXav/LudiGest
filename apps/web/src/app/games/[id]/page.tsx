@@ -233,7 +233,7 @@ export default function GameDetailPage() {
             )}
 
             <div className="flex gap-3 flex-wrap">
-              {game.status === "AVAILABLE" && isAdmin && (
+              {game.status === "AVAILABLE" && !game.activeLoan && (
                 <button
                   onClick={borrow}
                   disabled={borrowing}
@@ -241,11 +241,6 @@ export default function GameDetailPage() {
                 >
                   {borrowing ? "Emprunt en cours..." : "Emprunter ce jeu"}
                 </button>
-              )}
-              {game.status === "AVAILABLE" && !isAdmin && (
-                <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
-                  Scannez le code-barre du jeu pour l&apos;emprunter
-                </p>
               )}
               {isAdmin && (
                 <button
