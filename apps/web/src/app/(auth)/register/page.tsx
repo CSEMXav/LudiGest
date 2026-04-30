@@ -79,9 +79,9 @@ export default function RegisterPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span> <span className="font-normal text-gray-400">(uniquement les 5 chiffres)</span></label>
             <input type="text" value={form.matricule} onChange={(e) => set("matricule", e.target.value)}
-              placeholder="12345" required
+              placeholder="12345" required pattern="\d{5}" maxLength={5}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>

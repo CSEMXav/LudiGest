@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/games", label: "Jeux" },
     { href: "/admin/loans", label: "Emprunts" },
     { href: "/admin/users", label: "Utilisateurs" },
+    { href: "/admin/email-settings", label: "📧 Emails" },
     { href: "/admin/import", label: "Import Excel" },
   ];
 

@@ -128,12 +128,17 @@ export default function GamesPage() {
 
   return (
     <div>
-      {/* Location badge */}
-      {session?.user.location && (
-        <div className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 text-[#C8102E] text-sm font-semibold px-3 py-1.5 rounded-full mb-4">
-          📍 {session.user.location}
-        </div>
-      )}
+      {/* Top bar: location badge + how-it-works link */}
+      <div className="flex items-center justify-between mb-4">
+        {session?.user.location ? (
+          <div className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 text-[#C8102E] text-sm font-semibold px-3 py-1.5 rounded-full">
+            📍 {session.user.location}
+          </div>
+        ) : <div />}
+        <a href="/comment-ca-marche" className="text-xs text-gray-400 hover:text-[#C8102E] hover:underline transition-colors">
+          Comment ça marche ?
+        </a>
+      </div>
 
       {/* Search + status bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">

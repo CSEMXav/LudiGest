@@ -23,6 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const isOverdue = new Date(loan.dueAt) < new Date();
+  const type = isOverdue ? "overdue" : "reminder";
 
   if (isOverdue) {
     await sendOverdueEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
@@ -30,5 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await sendReminderEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
   }
 
-  return NextResponse.json({ success: true, type: isOverdue ? "overdue" : "reminder" });
+  await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
+
+  return NextResponse.json({ success: true, type });
 }

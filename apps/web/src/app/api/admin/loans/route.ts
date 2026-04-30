@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     include: {
       user: { select: { name: true, email: true } },
       game: { select: { name: true, coverUrl: true } },
+      reminders: { select: { type: true, sentAt: true }, orderBy: { sentAt: "asc" } },
     },
     orderBy: { borrowedAt: "desc" },
   });
@@ -37,6 +38,10 @@ export async function GET(req: NextRequest) {
       wasLate: l.returnedAt
         ? new Date(l.returnedAt) > new Date(l.dueAt)
         : new Date() > new Date(l.dueAt),
+      reminders: l.reminders.map((r) => ({
+        type: r.type,
+        sentAt: r.sentAt.toISOString(),
+      })),
     }))
   );
 }

@@ -69,11 +69,34 @@ model Loan {
   extendedCount  Int       @default(0)
   reminderSentAt DateTime?
 
-  user User @relation(fields: [userId], references: [id])
-  game Game @relation(fields: [gameId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
+  game      Game           @relation(fields: [gameId], references: [id])
+  reminders LoanReminder[]
 
   @@index([userId])
   @@index([gameId])
+}
+
+model LoanReminder {
+  id     String   @id @default(cuid())
+  loanId String
+  type   String
+  sentAt DateTime @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+}
+
+model EmailConfig {
+  id                   String   @id @default("singleton")
+  reminderDaysBefore   Int      @default(2)
+  overdueFrequencyDays Int      @default(3)
+  reminderSubject      String   @default("Rappel : rendez \"{{gameName}}\" avant le {{dueAt}}")
+  reminderBody         String   @default("Bonjour {{userName}},\n\nVotre emprunt du jeu \"{{gameName}}\" arrive à échéance le {{dueAt}}.\nPensez à le rendre à la ludothèque ou à le prolonger depuis l'application.\n\nLudothèque BRED")
+  overdueSubject       String   @default("⚠ Retard : veuillez rendre \"{{gameName}}\"")
+  overdueBody          String   @default("Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED")
+  updatedAt            DateTime @updatedAt
 }
 
 model Rating {

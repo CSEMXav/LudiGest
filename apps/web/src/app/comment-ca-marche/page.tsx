@@ -1,130 +1,141 @@
-export const metadata = {
-  title: "Comment ça marche — LudiGest",
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Comment ça marche — LudiGest" };
+
+const CATEGORY_META: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  escape:   { label: "Escape",   color: "#7c3aed", bg: "#ede9fe", icon: "🔐" },
+  famille:  { label: "Famille",  color: "#ea580c", bg: "#ffedd5", icon: "👨‍👩‍👧‍👦" },
+  ambiance: { label: "Ambiance", color: "#2563eb", bg: "#dbeafe", icon: "🎉" },
+  enfant:   { label: "Enfant",   color: "#d97706", bg: "#fef3c7", icon: "🧸" },
+  "initié": { label: "Initié",   color: "#475569", bg: "#f1f5f9", icon: "🧠" },
+  expert:   { label: "Expert",   color: "#16a34a", bg: "#dcfce7", icon: "🏆" },
 };
 
-function Step({ num, title, children }: { num: number; title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", gap: 20, marginBottom: 32 }}>
-      <div style={{ flexShrink: 0, width: 40, height: 40, borderRadius: "50%", backgroundColor: "#C8102E", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", fontWeight: 700, fontSize: 16 }}>
-        {num}
-      </div>
-      <div>
-        <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: "sans-serif", color: "#111", margin: "0 0 8px" }}>{title}</h3>
-        <div style={{ color: "#374151", lineHeight: 1.8 }}>{children}</div>
-      </div>
-    </div>
-  );
-}
+export default async function CommentCaMarchePage() {
+  const [categoryGroups, totalGames] = await Promise.all([
+    prisma.game.groupBy({
+      by: ["category"],
+      _count: { id: true },
+      where: { status: { not: "SUSPENDED" } },
+    }),
+    prisma.game.count({ where: { status: { not: "SUSPENDED" } } }),
+  ]);
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 48 }}>
-      <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: "sans-serif", color: "#111", borderBottom: "2px solid #C8102E", paddingBottom: 10, marginBottom: 24 }}>
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
+    <main style={{ maxWidth: 780, margin: "0 auto", padding: "48px 24px 80px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1a1a1a" }}>
 
-export default function CommentCaMarchePage() {
-  return (
-    <main style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px", fontFamily: "Georgia, serif", color: "#1a1a1a", lineHeight: 1.8 }}>
-      <div style={{ marginBottom: 40 }}>
-        <span style={{ display: "inline-block", backgroundColor: "#C8102E", color: "#fff", fontFamily: "sans-serif", fontWeight: 700, fontSize: 13, padding: "4px 12px", borderRadius: 4, marginBottom: 16, letterSpacing: 1 }}>
-          LUDIGEST
-        </span>
-        <h1 style={{ fontSize: 32, fontWeight: 700, fontFamily: "sans-serif", color: "#111", margin: "0 0 8px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 48 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundColor: "#C8102E", color: "#fff", fontWeight: 700, fontSize: 12, padding: "5px 14px", borderRadius: 20, marginBottom: 20, letterSpacing: 1.5, textTransform: "uppercase" }}>
+          🎲 LudiGest
+        </div>
+        <h1 style={{ fontSize: 38, fontWeight: 800, color: "#111", margin: "0 0 12px", lineHeight: 1.15 }}>
           Comment ça marche ?
         </h1>
-        <p style={{ fontSize: 15, color: "#6b7280", fontFamily: "sans-serif", margin: 0 }}>
-          Tout ce qu'il faut savoir pour utiliser la ludothèque BRED.
+        <p style={{ fontSize: 17, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
+          La ludothèque BRED est gratuite et accessible à tous les collaborateurs.<br />
+          Empruntez un jeu en quelques clics depuis votre ordinateur ou votre smartphone.
         </p>
       </div>
 
-      <Section title="La ludothèque BRED">
-        <p>
-          La ludothèque BRED est un service gratuit mis à disposition des collaborateurs de la BRED Banque Populaire.
-          Elle propose une sélection de jeux de société disponibles à l'emprunt dans plusieurs sites.
-        </p>
-        <p>
-          LudiGest est l'application qui permet de consulter le catalogue, d'emprunter un jeu et de suivre vos emprunts en cours,
-          depuis un ordinateur ou un smartphone.
-        </p>
-      </Section>
+      {/* Steps */}
+      <div style={{ marginBottom: 56 }}>
+        {[
+          {
+            num: 1, color: "#C8102E", bg: "#fff0f0",
+            title: "Créez votre compte",
+            text: "Inscrivez-vous sur ludigest.fr avec votre adresse email professionnelle. Renseignez votre nom, prénom, matricule (5 chiffres) et le site où vous travaillez. Un email de confirmation active votre compte.",
+          },
+          {
+            num: 2, color: "#2563eb", bg: "#eff6ff",
+            title: "Choisissez un jeu",
+            text: "Parcourez le catalogue dans la section Jeux. Filtrez par catégorie, nombre de joueurs ou durée de partie. Sur mobile, scannez directement le code-barres d'une boîte pour accéder à sa fiche.",
+          },
+          {
+            num: 3, color: "#16a34a", bg: "#f0fdf4",
+            title: "Empruntez pour 4 semaines",
+            text: "Cliquez sur « Emprunter ce jeu » sur la fiche d'un jeu disponible. La durée d'emprunt est de 4 semaines. Vous pouvez prolonger deux fois d'une semaine supplémentaire si personne d'autre ne le réserve. Récupérez la boîte auprès du référent de votre site.",
+          },
+          {
+            num: 4, color: "#ea580c", bg: "#fff7ed",
+            title: "Rendez le jeu à temps",
+            text: "Remettez la boîte au référent avant la date de retour affichée dans votre profil. Vous recevrez un rappel automatique 2 jours avant l'échéance. En cas de retard, une relance est envoyée tous les 3 jours.",
+          },
+        ].map(({ num, color, bg, title, text }) => (
+          <div key={num} style={{ display: "flex", gap: 20, marginBottom: 28, backgroundColor: bg, borderRadius: 16, padding: "20px 24px" }}>
+            <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", backgroundColor: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18 }}>
+              {num}
+            </div>
+            <div>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111", margin: "0 0 6px" }}>{title}</h3>
+              <p style={{ fontSize: 14, color: "#4b5563", margin: 0, lineHeight: 1.7 }}>{text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <Section title="Emprunter un jeu">
-        <Step num={1} title="Créez votre compte">
-          <p>
-            Inscrivez-vous sur <strong>ludigest.fr</strong> avec votre adresse email professionnelle.
-            Renseignez votre nom, prénom, matricule et le site où vous travaillez.
-            Un email de confirmation vous sera envoyé — cliquez sur le lien pour activer votre compte.
-          </p>
-        </Step>
-        <Step num={2} title="Trouvez un jeu">
-          <p>
-            Parcourez le catalogue depuis la page <strong>Jeux</strong>.
-            Vous pouvez filtrer par catégorie, nombre de joueurs ou durée de partie.
-            Sur mobile, utilisez le bouton Scanner pour identifier directement un jeu par son code-barres.
-          </p>
-        </Step>
-        <Step num={3} title="Empruntez">
-          <p>
-            Sur la fiche d'un jeu disponible, cliquez sur <strong>Emprunter ce jeu</strong>.
-            La durée standard d'un emprunt est de <strong>14 jours</strong>.
-            Récupérez physiquement la boîte auprès du référent ludothèque de votre site.
-          </p>
-        </Step>
-        <Step num={4} title="Rendez le jeu">
-          <p>
-            Remettez la boîte au référent ludothèque avant la date de retour affichée dans votre profil.
-            Le référent enregistrera le retour dans l'application.
-            En cas d'oubli, vous recevrez un email de rappel automatique.
-          </p>
-        </Step>
-      </Section>
-
-      <Section title="Scanner un code-barres">
-        <p>
-          L'application propose deux façons d'utiliser le scanner :
+      {/* Catalogue */}
+      <div style={{ marginBottom: 56 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#111", margin: "0 0 6px" }}>
+          Le catalogue — <span style={{ color: "#C8102E" }}>{totalGames} jeux</span>
+        </h2>
+        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 0, marginBottom: 24 }}>
+          Répartis en {categoryGroups.length} catégories dans les ludothèques BRED.
         </p>
-        <ul style={{ paddingLeft: 20, margin: "12px 0" }}>
-          <li style={{ marginBottom: 8 }}>
-            <strong>Recherche rapide</strong> — depuis la page Jeux, cliquez sur l'icône caméra pour scanner
-            le code-barres d'une boîte et accéder directement à sa fiche.
-          </li>
-          <li>
-            <strong>Application mobile</strong> — l'application Android (disponible en interne) intègre le même scanner
-            pour une expérience optimale sur smartphone.
-          </li>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+          {categoryGroups
+            .sort((a, b) => b._count.id - a._count.id)
+            .map(({ category, _count }) => {
+              const meta = CATEGORY_META[category] ?? { label: category, color: "#6b7280", bg: "#f3f4f6", icon: "🎲" };
+              return (
+                <div key={category} style={{ backgroundColor: meta.bg, borderRadius: 14, padding: "16px 18px", textAlign: "center" }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>{meta.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: meta.color, marginBottom: 2 }}>{meta.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>{_count.id}</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af" }}>{_count.id > 1 ? "jeux" : "jeu"}</div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Scanner */}
+      <div style={{ backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 16, padding: "24px 28px", marginBottom: 40 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0c4a6e", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>
+          📷 Scanner un code-barres
+        </h2>
+        <p style={{ fontSize: 14, color: "#075985", margin: "0 0 10px", lineHeight: 1.7 }}>
+          Sur la page Jeux, l'icône caméra permet de scanner le code-barres d'une boîte pour accéder directement à sa fiche.
+          Votre navigateur demandera l'accès à la caméra la première fois. Aucune image n'est enregistrée.
+        </p>
+        <p style={{ fontSize: 13, color: "#0369a1", margin: 0 }}>
+          Compatible avec tous les smartphones modernes (Chrome, Safari, Firefox).
+        </p>
+      </div>
+
+      {/* Rules */}
+      <div style={{ backgroundColor: "#fefce8", border: "1px solid #fde68a", borderRadius: 16, padding: "24px 28px", marginBottom: 48 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#92400e", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>
+          📋 Règles d'utilisation
+        </h2>
+        <ul style={{ paddingLeft: 20, margin: 0, color: "#78350f", fontSize: 14, lineHeight: 2 }}>
+          <li>Un seul jeu emprunté à la fois par personne.</li>
+          <li>Durée d'emprunt : <strong>4 semaines</strong> — prolongeable 2× d'une semaine.</li>
+          <li>Les jeux doivent être rendus en bon état, avec toutes leurs pièces.</li>
+          <li>En cas de perte ou dégradation, contacter le référent ludothèque.</li>
+          <li>Service réservé aux collaborateurs BRED Banque Populaire.</li>
         </ul>
-        <p style={{ fontSize: 13, color: "#6b7280", fontFamily: "sans-serif" }}>
-          Le scanner utilise la caméra de votre appareil. Votre navigateur vous demandera l'autorisation la première fois.
-          Aucune image n'est enregistrée ou transmise.
-        </p>
-      </Section>
+      </div>
 
-      <Section title="Règles d'utilisation">
-        <ul style={{ paddingLeft: 20 }}>
-          <li style={{ marginBottom: 8 }}>Un seul jeu emprunté à la fois par personne.</li>
-          <li style={{ marginBottom: 8 }}>Durée maximale : 14 jours. Un rappel par email est envoyé à J-2.</li>
-          <li style={{ marginBottom: 8 }}>Les jeux doivent être rendus en bon état, avec toutes leurs pièces.</li>
-          <li style={{ marginBottom: 8 }}>En cas de perte ou dégradation, contacter le référent ludothèque de votre site.</li>
-          <li>Le service est réservé aux collaborateurs de la BRED Banque Populaire.</li>
-        </ul>
-      </Section>
-
-      <Section title="Contacter le référent">
-        <p>
-          Chaque site dispose d'un référent ludothèque qui gère les boîtes physiques et peut répondre à vos questions.
-          Pour tout problème avec votre compte ou un emprunt, vous pouvez également contacter l'administrateur via
-          l'adresse affichée dans l'application.
-        </p>
-      </Section>
-
-      <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid #e5e7eb", fontFamily: "sans-serif", fontSize: 13, color: "#9ca3af", display: "flex", gap: 24, flexWrap: "wrap" }}>
-        <a href="/confidentialite" style={{ color: "#6b7280", textDecoration: "none" }}>Politique de confidentialité</a>
-        <a href="/login" style={{ color: "#C8102E", textDecoration: "none" }}>Se connecter</a>
+      {/* Footer */}
+      <div style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 13, color: "#9ca3af" }}>© 2026 LudiGest — BRED Banque Populaire</span>
+        <div style={{ display: "flex", gap: 20 }}>
+          <a href="/confidentialite" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>Politique de confidentialité</a>
+          <a href="/login" style={{ fontSize: 13, color: "#C8102E", fontWeight: 600, textDecoration: "none" }}>Se connecter →</a>
+        </div>
       </div>
     </main>
   );

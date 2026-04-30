@@ -3,16 +3,68 @@
 import { useEffect, useState, useMemo } from "react";
 import type { LoanDTO } from "@ludigest/types";
 
+interface ReminderLog {
+  type: "reminder" | "overdue";
+  sentAt: string;
+}
+
 interface AdminLoanDTO extends LoanDTO {
   wasLate: boolean;
+  reminders: ReminderLog[];
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
 type SortKey = "userName" | "borrowedAt" | "dueAt" | "returnedAt";
 type SortDir = "asc" | "desc";
+
+function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
+  const hasReminders = reminders.length > 0;
+  return (
+    <div className="relative group/tooltip">
+      <button
+        className={`text-base leading-none transition-colors ${
+          hasReminders ? "text-blue-400 hover:text-blue-600" : "text-gray-200 hover:text-gray-300"
+        }`}
+        title={hasReminders ? `${reminders.length} rappel(s) envoyé(s)` : "Aucun rappel envoyé"}
+      >
+        📬
+      </button>
+      {/* Tooltip */}
+      <div className="absolute right-0 bottom-full mb-2 hidden group-hover/tooltip:block z-20 w-56 bg-gray-900 text-white rounded-lg shadow-xl text-xs p-3">
+        {hasReminders ? (
+          <>
+            <p className="font-semibold mb-2 text-gray-300">{reminders.length} rappel(s) envoyé(s)</p>
+            <ul className="space-y-1.5">
+              {reminders.map((r, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className={r.type === "overdue" ? "text-red-400" : "text-blue-400"}>
+                    {r.type === "overdue" ? "⚠️" : "📧"}
+                  </span>
+                  <span>
+                    <span className="font-medium">{r.type === "overdue" ? "Retard" : "Rappel"}</span>
+                    <br />
+                    <span className="text-gray-400">{formatDateTime(r.sentAt)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-gray-400">Aucun email de rappel envoyé pour cet emprunt.</p>
+        )}
+        {/* Arrow */}
+        <div className="absolute bottom-[-4px] right-3 w-2 h-2 bg-gray-900 rotate-45" />
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLoansPage() {
   const [loans, setLoans] = useState<AdminLoanDTO[]>([]);
@@ -45,6 +97,7 @@ export default function AdminLoansPage() {
     const data = await res.json();
     if (res.ok) {
       setMessages((m) => ({ ...m, [loanId]: data.type === "overdue" ? "✓ Mail retard envoyé" : "✓ Mail rappel envoyé" }));
+      loadLoans();
     } else {
       setMessages((m) => ({ ...m, [loanId]: data.error ?? "Erreur envoi" }));
     }
@@ -112,7 +165,7 @@ export default function AdminLoansPage() {
         <div className="animate-pulse space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-14 bg-white rounded-xl" />)}</div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
+          <table className="w-full text-sm min-w-[800px]">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="px-4 py-3 text-left cursor-pointer select-none" onClick={() => toggleSort("userName")}>
@@ -157,10 +210,11 @@ export default function AdminLoansPage() {
                       {l.returnedAt ? formatDate(l.returnedAt) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex gap-1.5 justify-end flex-wrap">
+                      <div className="flex gap-1.5 justify-end flex-wrap items-center">
                         {messages[l.id] && (
                           <span className="text-xs text-green-600 self-center">{messages[l.id]}</span>
                         )}
+                        <ReminderIcon reminders={l.reminders} />
                         {!l.returnedAt && (
                           <>
                             <button
