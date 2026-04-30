@@ -31,7 +31,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await sendReminderEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
   }
 
-  await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
+  try {
+    await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
+  } catch { /* LoanReminder table may not exist yet */ }
 
   return NextResponse.json({ success: true, type });
 }

@@ -18,8 +18,12 @@ export async function GET() {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } });
-  return NextResponse.json(config ?? { id: "singleton", ...DEFAULTS });
+  try {
+    const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } });
+    return NextResponse.json(config ?? { id: "singleton", ...DEFAULTS });
+  } catch {
+    return NextResponse.json({ id: "singleton", ...DEFAULTS });
+  }
 }
 
 export async function PATCH(req: NextRequest) {
@@ -35,11 +39,14 @@ export async function PATCH(req: NextRequest) {
     if (key in body) data[key] = body[key];
   }
 
-  const config = await prisma.emailConfig.upsert({
-    where: { id: "singleton" },
-    update: data,
-    create: { id: "singleton", ...DEFAULTS, ...data },
-  });
-
-  return NextResponse.json(config);
+  try {
+    const config = await prisma.emailConfig.upsert({
+      where: { id: "singleton" },
+      update: data,
+      create: { id: "singleton", ...DEFAULTS, ...data },
+    });
+    return NextResponse.json(config);
+  } catch {
+    return NextResponse.json({ error: "Table non disponible — déployez d'abord le schéma." }, { status: 503 });
+  }
 }

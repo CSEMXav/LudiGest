@@ -11,16 +11,31 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const activeOnly = searchParams.get("active") === "true";
+  const where = activeOnly ? { returnedAt: null } : {};
 
-  const loans = await prisma.loan.findMany({
-    where: activeOnly ? { returnedAt: null } : {},
-    include: {
-      user: { select: { name: true, email: true } },
-      game: { select: { name: true, coverUrl: true } },
-      reminders: { select: { type: true, sentAt: true }, orderBy: { sentAt: "asc" } },
-    },
-    orderBy: { borrowedAt: "desc" },
-  });
+  // Try with reminders; fall back silently if LoanReminder table doesn't exist yet
+  let loans;
+  try {
+    loans = await prisma.loan.findMany({
+      where,
+      include: {
+        user: { select: { name: true, email: true } },
+        game: { select: { name: true, coverUrl: true } },
+        reminders: { select: { type: true, sentAt: true }, orderBy: { sentAt: "asc" } },
+      },
+      orderBy: { borrowedAt: "desc" },
+    });
+  } catch {
+    const raw = await prisma.loan.findMany({
+      where,
+      include: {
+        user: { select: { name: true, email: true } },
+        game: { select: { name: true, coverUrl: true } },
+      },
+      orderBy: { borrowedAt: "desc" },
+    });
+    loans = raw.map((l) => ({ ...l, reminders: [] as { type: string; sentAt: Date }[] }));
+  }
 
   return NextResponse.json(
     loans.map((l) => ({
