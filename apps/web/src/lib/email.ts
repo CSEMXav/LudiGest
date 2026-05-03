@@ -62,6 +62,100 @@ export async function sendReminderEmail(to: string, name: string, gameName: stri
   });
 }
 
+export async function sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const link = `${baseUrl}/reset-password?token=${token}`;
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Lien de réinitialisation pour ${to} :\n  ${link}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Réinitialisation de votre mot de passe LudiGest",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous :</p>
+        <a href="${link}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Réinitialiser mon mot de passe
+        </a>
+        <p style="color:#9ca3af;font-size:12px">Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendSessionInviteEmail(to: string, name: string, sessionName: string, sessionDate: Date, sessionLocation: string, sessionTime: string, registerUrl: string): Promise<void> {
+  const dateStr = sessionDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Invitation soirée ludique pour ${to} : "${sessionName}" le ${dateStr}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎲 Soirée ludique : "${sessionName}" — Inscrivez-vous !`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Soirée Ludique</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Une nouvelle soirée ludique est disponible !</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
+          <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
+          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+        </div>
+        <a href="${registerUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Je m'inscris
+        </a>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendSessionReminderEmail(to: string, name: string, sessionName: string, sessionDate: Date, sessionLocation: string, sessionTime: string): Promise<void> {
+  const dateStr = sessionDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Rappel soirée pour ${to} : "${sessionName}" le ${dateStr}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `⏰ Rappel : Soirée ludique "${sessionName}" bientôt !`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Rappel Soirée</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Rappel : vous êtes inscrit(e) à la soirée ludique suivante :</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
+          <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
+          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {
   const dateStr = dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const resend = getResend();

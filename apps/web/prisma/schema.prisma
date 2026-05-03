@@ -3,27 +3,33 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  firstName     String?
-  lastName      String?
-  matricule     String?  @unique
-  password      String
-  role          String   @default("USER")
-  suspended     Boolean  @default(false)
-  emailVerified Boolean  @default(true)
-  location      String   @default("Joinville")
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  firstName        String?
+  lastName         String?
+  matricule        String?  @unique
+  password         String
+  role             String   @default("USER")
+  suspended        Boolean  @default(false)
+  emailVerified    Boolean  @default(true)
+  location         String   @default("Joinville")
+  nickname         String?
+  visibleInMembers Boolean  @default(true)
+  pushToken        String?
+  createdAt        DateTime @default(now())
 
-  loans              Loan[]
-  ratings            Rating[]
-  emailVerifications EmailVerification[]
+  loans                  Loan[]
+  ratings                Rating[]
+  emailVerifications     EmailVerification[]
+  passwordResetTokens    PasswordResetToken[]
+  sessionRegistrations   GameSessionRegistration[]
+  notifications          UserNotification[]
 }
 
 model EmailVerification {
@@ -97,6 +103,63 @@ model EmailConfig {
   overdueSubject       String   @default("⚠ Retard : veuillez rendre \"{{gameName}}\"")
   overdueBody          String   @default("Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED")
   updatedAt            DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model GameSession {
+  id        String   @id @default(cuid())
+  name      String
+  date      DateTime
+  location  String
+  startTime String
+  imageUrl  String?
+  info      String?
+  createdAt DateTime @default(now())
+
+  registrations  GameSessionRegistration[]
+  notifications  UserNotification[]
+}
+
+model GameSessionRegistration {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  guestName   String?
+  registeredAt DateTime @default(now())
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model UserNotification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  sessionId String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session GameSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model Rating {

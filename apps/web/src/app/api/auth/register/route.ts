@@ -6,7 +6,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import { LOCATIONS } from "@ludigest/types";
 
 export async function POST(req: NextRequest) {
-  const { email, firstName, lastName, matricule, password, location } = await req.json();
+  const { email, firstName, lastName, matricule, password, location, nickname, visibleInMembers } = await req.json();
 
   if (!email || !firstName || !lastName || !matricule || !password || !location) {
     return NextResponse.json({ error: "Tous les champs sont requis." }, { status: 400 });
@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
       password: hashed,
       emailVerified: false,
       location,
+      nickname: nickname || email.toLowerCase(),
+      visibleInMembers: visibleInMembers !== false,
     },
   });
 

@@ -1,8 +1,15 @@
+import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Text, TouchableOpacity } from "react-native";
+import { getStoredUser } from "@/lib/auth";
 
 export default function TabsLayout() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    getStoredUser().then((u) => { if (u?.role === "ADMIN") setIsAdmin(true); });
+  }, []);
 
   return (
     <Tabs
@@ -26,7 +33,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Liste des jeux",
-          tabBarLabel: "Liste des jeux",
+          tabBarLabel: "Jeux",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎲</Text>,
         }}
       />
@@ -34,7 +41,7 @@ export default function TabsLayout() {
         name="scan"
         options={{
           title: "Emprunter un jeu",
-          tabBarLabel: "Emprunter un jeu",
+          tabBarLabel: "Emprunter",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📷</Text>,
         }}
       />
@@ -42,8 +49,33 @@ export default function TabsLayout() {
         name="loans"
         options={{
           title: "Mes emprunts",
-          tabBarLabel: "Mes emprunts",
+          tabBarLabel: "Emprunts",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📚</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="sessions"
+        options={{
+          title: "Sessions ludiques",
+          tabBarLabel: "Sessions",
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎉</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="members"
+        options={{
+          title: "Membres",
+          tabBarLabel: "Membres",
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👥</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-panel"
+        options={{
+          href: isAdmin ? undefined : null,
+          title: "Admin",
+          tabBarLabel: "Admin",
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚙️</Text>,
         }}
       />
     </Tabs>

@@ -93,11 +93,25 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
+  const { searchParams } = new URL(req.url);
+  const force = searchParams.get("force") === "1";
+
   const activeLoan = await prisma.loan.findFirst({
     where: { gameId: params.id, returnedAt: null },
   });
-  if (activeLoan) {
+  if (activeLoan && !force) {
     return NextResponse.json({ error: "Ce jeu est actuellement emprunté." }, { status: 409 });
+  }
+
+  if (force) {
+    // Delete loan reminders first (via loans), then loans, then ratings, then game
+    const loans = await prisma.loan.findMany({ where: { gameId: params.id }, select: { id: true } });
+    const loanIds = loans.map((l) => l.id);
+    if (loanIds.length > 0) {
+      await prisma.loanReminder.deleteMany({ where: { loanId: { in: loanIds } } });
+      await prisma.loan.deleteMany({ where: { id: { in: loanIds } } });
+    }
+    await prisma.rating.deleteMany({ where: { gameId: params.id } });
   }
 
   await prisma.game.delete({ where: { id: params.id } });

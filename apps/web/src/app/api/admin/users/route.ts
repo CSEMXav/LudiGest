@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
       firstName: u.firstName,
       lastName: u.lastName,
       matricule: u.matricule,
+      nickname: u.nickname,
+      visibleInMembers: u.visibleInMembers,
       role: u.role,
       suspended: u.suspended,
       emailVerified: u.emailVerified,

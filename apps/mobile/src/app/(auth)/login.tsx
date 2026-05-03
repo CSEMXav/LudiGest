@@ -1,9 +1,10 @@
 import { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { saveAuth } from "@/lib/auth";
+import { registerPushToken } from "@/lib/push";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -36,6 +37,7 @@ export default function LoginScreen() {
         return;
       }
       await saveAuth(data.token, data.user);
+      registerPushToken(); // fire-and-forget, non-blocking
       router.replace("/(tabs)");
     } catch {
       Alert.alert("Erreur de connexion", "Une erreur est survenue.");
@@ -95,8 +97,15 @@ export default function LoginScreen() {
           <Text style={s.buttonText}>{loading ? "Connexion..." : "Se connecter"}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          onPress={() => Linking.openURL(`${BASE_URL}/forgot-password`)}
+          style={s.forgotBtn}
+        >
+          <Text style={s.forgotText}>J'ai oublié mon mot de passe</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.push("/(auth)/register")} style={s.linkBtn}>
-          <Text style={s.linkText}>Pas encore de compte ? S&apos;inscrire</Text>
+          <Text style={s.linkText}>Pas encore de compte ? S'inscrire</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -105,7 +114,9 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   container:      { flexGrow: 1, justifyContent: "center", padding: 24, backgroundColor: "#f9fafb" },
-  linkBtn:        { marginTop: 20, alignItems: "center" as const },
+  forgotBtn:      { marginTop: 12, alignItems: "center" as const },
+  forgotText:     { color: "#6b7280", fontSize: 13, textDecorationLine: "underline" as const },
+  linkBtn:        { marginTop: 16, alignItems: "center" as const },
   linkText:       { color: "#C8102E", fontSize: 14 },
   emoji:          { fontSize: 64, textAlign: "center", marginBottom: 8 },
   title:          { fontSize: 28, fontWeight: "bold", textAlign: "center", color: "#111" },

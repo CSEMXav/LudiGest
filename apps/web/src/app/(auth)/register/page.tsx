@@ -7,21 +7,26 @@ import { LOCATIONS } from "@ludigest/types";
 export default function RegisterPage() {
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", matricule: "", password: "", location: "",
+    nickname: "", visibleInMembers: true,
   });
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  function set(field: string, value: string) { setForm((f) => ({ ...f, [field]: value })); }
+  function set(field: string, value: string | boolean) { setForm((f) => ({ ...f, [field]: value })); }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    const payload = {
+      ...form,
+      nickname: form.nickname.trim() || form.email,
+    };
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
     setLoading(false);
     if (res.ok) { setSuccess(true); }
@@ -74,10 +79,36 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
-            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+            <input type="email" value={form.email} onChange={(e) => { set("email", e.target.value); if (!form.nickname) set("nickname", e.target.value); }}
               placeholder="jean.dupont@exemple.fr" required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Surnom <span className="text-red-500">*</span> <span className="font-normal text-gray-400">(affiché dans la liste des membres)</span></label>
+            <input type="text" value={form.nickname} onChange={(e) => set("nickname", e.target.value)}
+              placeholder={form.email || "Votre surnom…"}
+              required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
+          </div>
+
+          {/* Visibility toggle — directly below nickname */}
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <div className="relative mt-0.5 flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={form.visibleInMembers}
+                onChange={(e) => set("visibleInMembers", e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-6 bg-gray-200 peer-checked:bg-[#C8102E] rounded-full transition-colors" />
+              <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Visible dans la liste des membres</p>
+              <p className="text-xs text-gray-400">Votre surnom et nombre d&apos;emprunts seront visibles par les autres membres.</p>
+            </div>
+          </label>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span> <span className="font-normal text-gray-400">(uniquement les 5 chiffres)</span></label>
             <input type="text" value={form.matricule} onChange={(e) => set("matricule", e.target.value)}

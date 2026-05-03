@@ -64,6 +64,8 @@ export interface UserAdminDTO {
   firstName?: string | null;
   lastName?: string | null;
   matricule?: string | null;
+  nickname?: string | null;
+  visibleInMembers?: boolean;
   role: Role;
   suspended: boolean;
   emailVerified: boolean;
@@ -72,6 +74,47 @@ export interface UserAdminDTO {
   totalLoans: number;
   activeLoans: number;
   lateReturns: number;
+}
+
+export interface GameSessionDTO {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  startTime: string;
+  imageUrl?: string | null;
+  info?: string | null;
+  createdAt: string;
+  registrationCount: number;
+  myRegistration?: GameSessionRegistrationDTO | null;
+}
+
+export interface GameSessionRegistrationDTO {
+  id: string;
+  sessionId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userNickname?: string | null;
+  guestName?: string | null;
+  registeredAt: string;
+}
+
+export interface MemberDTO {
+  id: string;
+  nickname: string;
+  totalLoans: number;
+  visibleInMembers?: boolean;
+}
+
+export interface UserNotificationDTO {
+  id: string;
+  type: "SESSION_INVITE" | "SESSION_REMINDER" | "LOAN_REMINDER";
+  title: string;
+  message: string;
+  sessionId?: string | null;
+  loanId?: string | null;
+  createdAt: string;
 }
 
 export interface RatingDTO {

@@ -1,6 +1,15 @@
 import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { getToken } from "@/lib/auth";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   const router = useRouter();

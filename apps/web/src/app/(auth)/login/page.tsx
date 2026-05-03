@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetSuccess = searchParams.get("reset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -54,8 +56,14 @@ export default function LoginPage() {
           <div className="text-5xl mb-3">🎲</div>
           <h1 className="text-2xl font-bold text-gray-900">LudiGest</h1>
           <p className="text-gray-500 text-sm mt-1">Ludothèque BRED</p>
-          <p className="text-gray-400 text-xs mt-1">v0.42</p>
+          <p className="text-gray-400 text-xs mt-1">v0.43</p>
         </div>
+
+        {resetSuccess && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm mb-4">
+            ✓ Mot de passe mis à jour. Vous pouvez vous connecter.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -115,7 +123,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center mt-4">
+          <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-[#C8102E] hover:underline transition-colors">
+            J&apos;ai oublié mon mot de passe
+          </Link>
+        </p>
+
+        <p className="text-center text-sm text-gray-500 mt-4">
           Pas encore de compte ?{" "}
           <Link href="/register" className="text-[#C8102E] font-medium hover:underline">
             Créer un compte
@@ -128,5 +142,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-gray-400">Chargement...</div></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

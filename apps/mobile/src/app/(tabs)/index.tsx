@@ -62,24 +62,19 @@ export default function GamesTab() {
   // Recharge les jeux quand on revient sur cet onglet (ex: après changement de lieu)
   useFocusEffect(
     useCallback(() => {
-      getStoredLocation().then((loc) => {
-        setLocation((prev) => {
-          if (loc && loc !== prev) {
-            load(search, status, category);
-            return loc;
-          }
-          return prev;
-        });
-      });
+      load(search, status, category);
     }, [search, status, category])
   );
 
   async function load(q: string, s: string, cat: string, isRefresh = false) {
     if (isRefresh) setRefreshing(true); else setLoading(true);
+    const loc = await getStoredLocation();
+    setLocation(loc);
     const params = new URLSearchParams();
     if (q) params.set("search", q);
     if (s) params.set("status", s);
     if (cat) params.set("category", cat);
+    params.set("location", loc);
     try {
       const data = await apiGet<GameDTO[]>(`/api/games?${params}`);
       setGames(data);
@@ -134,19 +129,22 @@ export default function GamesTab() {
         ))}
       </ScrollView>
 
-      {/* Filtres statut + tri */}
+      {/* Filtres statut */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
         {(["", "AVAILABLE", "BORROWED"] as const).map((f) => (
           <TouchableOpacity key={f} style={[s.filterBtn, status === f && s.filterActive]} onPress={() => setStatus(f)}>
-            <Text style={[s.filterText, status === f && s.filterTextActive]} numberOfLines={1}>
+            <Text style={[s.filterText, status === f && s.filterTextActive]}>
               {f === "" ? "Tous" : STATUS_LABELS[f]}
             </Text>
           </TouchableOpacity>
         ))}
-        <View style={s.divider} />
+      </ScrollView>
+
+      {/* Tri */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
         {SORTS.map((so) => (
           <TouchableOpacity key={so.key} style={[s.filterBtn, sort === so.key && s.sortActive]} onPress={() => setSort(so.key)}>
-            <Text style={[s.filterText, sort === so.key && s.sortTextActive]} numberOfLines={1}>{so.label}</Text>
+            <Text style={[s.filterText, sort === so.key && s.sortTextActive]}>{so.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -199,8 +197,8 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 12, fontSize: 15 },
   addBtn: { backgroundColor: "#C8102E", width: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   addBtnText: { color: "#fff", fontSize: 22, lineHeight: 28 },
-  chipRow: { marginTop: 10, flexGrow: 0 },
-  filterRow: { paddingVertical: 8, flexGrow: 0 },
+  chipRow: { marginTop: 10, flexGrow: 0, flexShrink: 0 },
+  filterRow: { paddingVertical: 8, flexGrow: 0, flexShrink: 0 },
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff", flexShrink: 0 },
   chipActive: { backgroundColor: "#7c3aed", borderColor: "#7c3aed" },
   chipText: { fontSize: 12, color: "#374151" },
@@ -211,8 +209,7 @@ const s = StyleSheet.create({
   filterText: { fontSize: 12, color: "#374151" },
   filterTextActive: { color: "#fff" },
   sortTextActive: { color: "#fff" },
-  divider: { width: 1, backgroundColor: "#e5e7eb", marginHorizontal: 4, alignSelf: "stretch" },
-  card: { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+card: { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
   cover: { width: "100%", aspectRatio: 1 },
   coverPlaceholder: { backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" },
   cardBody: { padding: 10 },

@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const toDate       = searchParams.get("toDate");
   const locationParam = searchParams.get("location");
   const barcodeParam  = searchParams.get("barcode");
-  const userLocation = (locationParam && user.role === "ADMIN") ? locationParam : user.location;
+  const userLocation = locationParam || user.location;
 
   const games = await prisma.game.findMany({
     where: {

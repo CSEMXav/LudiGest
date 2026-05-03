@@ -210,6 +210,7 @@ export default function AdminUsersPage() {
               <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("name")}>
                 Utilisateur <SortIcon k="name" />
               </th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">Surnom</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Matricule</th>
               <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("location")}>
                 Ludothèque <SortIcon k="location" />
@@ -251,6 +252,7 @@ export default function AdminUsersPage() {
                     )}
                   </button>
                 </td>
+                <td className="px-4 py-3 text-gray-500 max-w-[120px] truncate">{u.nickname ?? <span className="text-gray-300">—</span>}</td>
                 <td className="px-4 py-3 text-gray-500">{u.matricule ?? "—"}</td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-xs text-gray-600">📍 {u.location}</span>

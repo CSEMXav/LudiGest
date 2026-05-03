@@ -65,6 +65,8 @@ export function Navbar() {
               <div className="hidden sm:flex items-center gap-2">
                 <Link href="/games" className={linkClass("/games")}>Jeux</Link>
                 <Link href="/loans" className={linkClass("/loans")}>Mes emprunts</Link>
+                <Link href="/sessions" className={linkClass("/sessions")}>🎲 Sessions</Link>
+                <Link href="/members" className={linkClass("/members")}>👥 Membres</Link>
                 {session.user.role === "ADMIN" && (
                   <Link href="/admin" className={linkClass("/admin")}>Administration</Link>
                 )}
@@ -80,7 +82,7 @@ export function Navbar() {
                   onClick={() => setMenuOpen((v) => !v)}
                   className="flex items-center gap-2 text-red-100 hover:text-white text-sm px-3 py-2 rounded-md hover:bg-red-700 transition-colors"
                 >
-                  <span className="max-w-[140px] truncate">👤 {session.user.name}</span>
+                  <Link href="/account" onClick={(e) => e.stopPropagation()} className="max-w-[140px] truncate hover:underline">👤 {session.user.name}</Link>
                   <span className="text-xs opacity-70">▾</span>
                 </button>
 
@@ -163,6 +165,9 @@ export function Navbar() {
           <div className="px-3 py-2 space-y-1">
             <Link href="/games" className={mobileLinkClass("/games")}>🎲 Jeux</Link>
             <Link href="/loans" className={mobileLinkClass("/loans")}>📋 Mes emprunts</Link>
+            <Link href="/sessions" className={mobileLinkClass("/sessions")}>🎲 Sessions</Link>
+            <Link href="/members" className={mobileLinkClass("/members")}>👥 Membres</Link>
+            <Link href="/account" className={mobileLinkClass("/account")}>👤 Mon compte</Link>
             {session.user.role === "ADMIN" && (
               <Link href="/admin" className={mobileLinkClass("/admin")}>⚙️ Administration</Link>
             )}
