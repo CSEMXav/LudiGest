@@ -16,16 +16,23 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
   const sessions = await prisma.gameSession.findMany({
+    where: {
+      OR: [
+        { isPrivate: false },
+        { createdByUserId: userId },
+        { invitations: { some: { userId, status: { not: "DECLINED" } } } },
+      ],
+    },
     orderBy: { date: "asc" },
     include: {
-      registrations: {
-        select: { id: true, userId: true, guestName: true, registeredAt: true },
-      },
+      registrations: { select: { id: true, userId: true, guestName: true, registeredAt: true } },
+      invitations: { where: { userId }, select: { status: true } },
     },
   });
 
   const result = sessions.map((s) => {
     const mine = s.registrations.find((r) => r.userId === userId);
+    const myInv = s.invitations[0] ?? null;
     return {
       id: s.id,
       name: s.name,
@@ -39,8 +46,57 @@ export async function GET(req: NextRequest) {
       myRegistration: mine
         ? { id: mine.id, sessionId: s.id, userId: mine.userId, guestName: mine.guestName, registeredAt: mine.registeredAt.toISOString() }
         : null,
+      isPrivate: s.isPrivate,
+      createdByUserId: s.createdByUserId,
+      maxParticipants: s.maxParticipants,
+      isCreator: s.createdByUserId === userId,
+      myInvitation: myInv ? { status: myInv.status } : null,
     };
   });
 
   return NextResponse.json(result);
+}
+
+export async function POST(req: NextRequest) {
+  const userId = await getUserId(req);
+  if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+
+  const body = await req.json();
+  const { name, date, location, startTime, imageUrl, info, maxParticipants } = body;
+
+  if (!name || !date || !location || !startTime) {
+    return NextResponse.json({ error: "Champs obligatoires manquants." }, { status: 400 });
+  }
+
+  const session = await prisma.gameSession.create({
+    data: {
+      name,
+      date: new Date(date),
+      location,
+      startTime,
+      imageUrl: imageUrl || null,
+      info: info || null,
+      maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+      isPrivate: true,
+      createdByUserId: userId,
+    },
+  });
+
+  return NextResponse.json({
+    id: session.id,
+    name: session.name,
+    date: session.date.toISOString(),
+    location: session.location,
+    startTime: session.startTime,
+    imageUrl: session.imageUrl,
+    info: session.info,
+    createdAt: session.createdAt.toISOString(),
+    registrationCount: 0,
+    myRegistration: null,
+    isPrivate: true,
+    createdByUserId: session.createdByUserId,
+    maxParticipants: session.maxParticipants,
+    isCreator: true,
+    myInvitation: null,
+  }, { status: 201 });
 }

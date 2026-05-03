@@ -87,6 +87,21 @@ export interface GameSessionDTO {
   createdAt: string;
   registrationCount: number;
   myRegistration?: GameSessionRegistrationDTO | null;
+  isPrivate: boolean;
+  createdByUserId?: string | null;
+  maxParticipants?: number | null;
+  isCreator?: boolean;
+  myInvitation?: { status: string } | null;
+}
+
+export interface PrivateSessionInvitationDTO {
+  id: string;
+  sessionId: string;
+  userId: string;
+  nickname: string;
+  email: string;
+  status: string;
+  invitedAt: string;
 }
 
 export interface GameSessionRegistrationDTO {

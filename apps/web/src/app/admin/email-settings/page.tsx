@@ -9,9 +9,12 @@ interface EmailConfig {
   reminderBody: string;
   overdueSubject: string;
   overdueBody: string;
+  sessionInviteSubject: string;
+  sessionInviteBody: string;
 }
 
 const VARS_HINT = "Variables disponibles : {{userName}}, {{gameName}}, {{dueAt}}";
+const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -167,13 +170,44 @@ export default function EmailSettingsPage() {
           </div>
         </div>
 
+        {/* Session invite email */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="text-xl">🎲</span> Email d&apos;invitation aux sessions
+          </h2>
+          <p className="text-xs text-gray-400 mb-4">Utilisé lors des invitations admin et des sessions privées créées par les membres.</p>
+          <div className="space-y-4">
+            <Field label="Objet" hint={SESSION_VARS_HINT}>
+              <input
+                type="text"
+                value={config.sessionInviteSubject ?? ""}
+                onChange={(e) => set("sessionInviteSubject", e.target.value)}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Corps du message" hint={SESSION_VARS_HINT}>
+              <textarea
+                value={config.sessionInviteBody ?? ""}
+                onChange={(e) => set("sessionInviteBody", e.target.value)}
+                className={textareaCls}
+              />
+            </Field>
+          </div>
+        </div>
+
         {/* Preview */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
           <p className="font-medium mb-1">💡 Variables disponibles dans les emails</p>
           <ul className="space-y-0.5 text-xs text-blue-600">
-            <li><code className="bg-blue-100 px-1 rounded">{"{{userName}}"}</code> — Prénom et nom de l'emprunteur</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{userName}}"}</code> — Prénom et nom</li>
             <li><code className="bg-blue-100 px-1 rounded">{"{{gameName}}"}</code> — Nom du jeu emprunté</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{dueAt}}"}</code> — Date limite de retour (ex : 15 mai 2026)</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{dueAt}}"}</code> — Date limite de retour</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionName}}"}</code> — Nom de la session</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionDate}}"}</code> — Date de la session</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionTime}}"}</code> — Heure de début</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionLocation}}"}</code> — Lieu</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{registerUrl}}"}</code> — Lien d&apos;inscription</li>
+            <li><code className="bg-blue-100 px-1 rounded">{"{{inviterName}}"}</code> — Nom de la personne qui invite (sessions privées)</li>
           </ul>
         </div>
       </div>

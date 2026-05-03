@@ -1,6 +1,19 @@
 import { Resend } from "resend";
+import { prisma } from "@/lib/prisma";
 
 const FROM = process.env.RESEND_FROM ?? "LudiGest <onboarding@resend.dev>";
+
+function applyTemplate(template: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce((t, [k, v]) => t.replaceAll(`{{${k}}}`, v), template);
+}
+
+function templateToHtml(body: string): string {
+  return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+    <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
+    <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+    ${body.split("\n").map((l) => l.trim() ? `<p style="margin:4px 0">${l}</p>` : "<br>").join("")}
+  </div>`;
+}
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -154,6 +167,30 @@ export async function sendSessionReminderEmail(to: string, name: string, session
       </div>
     `,
   });
+}
+
+export async function sendConfiguredSessionInviteEmail(
+  to: string,
+  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; registerUrl: string; inviterName?: string }
+): Promise<void> {
+  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const defaultSubject = `🎲 Invitation session : "${vars.sessionName}" — le ${vars.sessionDate}`;
+  const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
+
+  const subject = config?.sessionInviteSubject
+    ? applyTemplate(config.sessionInviteSubject, vars as Record<string, string>)
+    : defaultSubject;
+  const bodyText = config?.sessionInviteBody
+    ? applyTemplate(config.sessionInviteBody, vars as Record<string, string>)
+    : defaultBody;
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Invitation session pour ${to} :\n  ${vars.registerUrl}\n`);
+    return;
+  }
+
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
 }
 
 export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {

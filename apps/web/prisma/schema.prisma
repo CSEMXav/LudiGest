@@ -30,6 +30,8 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   sessionRegistrations   GameSessionRegistration[]
   notifications          UserNotification[]
+  createdSessions        GameSession[]              @relation("CreatedSessions")
+  privateInvitations     PrivateSessionInvitation[]
 }
 
 model EmailVerification {
@@ -102,6 +104,8 @@ model EmailConfig {
   reminderBody         String   @default("Bonjour {{userName}},\n\nVotre emprunt du jeu \"{{gameName}}\" arrive à échéance le {{dueAt}}.\nPensez à le rendre à la ludothèque ou à le prolonger depuis l'application.\n\nLudothèque BRED")
   overdueSubject       String   @default("⚠ Retard : veuillez rendre \"{{gameName}}\"")
   overdueBody          String   @default("Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED")
+  sessionInviteSubject String   @default("🎲 Invitation session : \"{{sessionName}}\" — le {{sessionDate}}")
+  sessionInviteBody    String   @default("Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED")
   updatedAt            DateTime @updatedAt
 }
 
@@ -118,25 +122,45 @@ model PasswordResetToken {
 }
 
 model GameSession {
-  id        String   @id @default(cuid())
-  name      String
-  date      DateTime
-  location  String
-  startTime String
-  imageUrl  String?
-  info      String?
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String
+  date            DateTime
+  location        String
+  startTime       String
+  imageUrl        String?
+  info            String?
+  isPrivate       Boolean  @default(false)
+  createdByUserId String?
+  maxParticipants Int?
+  createdAt       DateTime @default(now())
 
+  createdBy      User?                      @relation("CreatedSessions", fields: [createdByUserId], references: [id], onDelete: SetNull)
   registrations  GameSessionRegistration[]
   notifications  UserNotification[]
+  invitations    PrivateSessionInvitation[]
 }
 
 model GameSessionRegistration {
-  id          String   @id @default(cuid())
-  sessionId   String
-  userId      String
-  guestName   String?
+  id           String   @id @default(cuid())
+  sessionId    String
+  userId       String
+  guestName    String?
   registeredAt DateTime @default(now())
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model PrivateSessionInvitation {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  status    String   @default("PENDING")
+  invitedAt DateTime @default(now())
 
   session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
