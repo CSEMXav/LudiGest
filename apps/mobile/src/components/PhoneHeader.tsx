@@ -13,29 +13,26 @@ interface PhoneHeaderProps {
 function HexPattern() {
   const hexes: { r: number; c: number }[] = [];
   for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
+    for (let c = 0; c < 4; c++) {
       hexes.push({ r, c });
     }
   }
   return (
-    <Svg
-      width={120}
-      height={80}
-      viewBox="0 0 120 80"
-      style={{ position: "absolute", right: -10, top: -8, opacity: 0.18 }}
-    >
-      {hexes.map(({ r, c }) => (
-        <Polygon
-          key={`${r}-${c}`}
-          points="14,1 26,8 26,22 14,29 2,22 2,8"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="1.2"
-          translateX={c * 24 + (r % 2) * 12}
-          translateY={r * 22}
-        />
-      ))}
-    </Svg>
+    <View style={{ position: "absolute", right: -10, top: -8, opacity: 0.2 }} pointerEvents="none">
+      <Svg width={140} height={90} viewBox="0 0 140 90">
+        {hexes.map(({ r, c }) => (
+          <Polygon
+            key={`${r}-${c}`}
+            points="16,1 30,9 30,25 16,33 2,25 2,9"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="1.4"
+            translateX={c * 28 + (r % 2) * 14}
+            translateY={r * 26}
+          />
+        ))}
+      </Svg>
+    </View>
   );
 }
 
