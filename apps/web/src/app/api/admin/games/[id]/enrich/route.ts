@@ -41,7 +41,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     where: { id: params.id },
     data: {
       bggId:      details.bggId,
-      name:       details.name || game.name,
+      name:       game.name,
       type:       typeFr || details.type || game.type,
       summary:    summaryFr,
       minAge:     details.minAge,

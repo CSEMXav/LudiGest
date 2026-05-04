@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       },
     },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, pushToken: true } },
       game: { select: { name: true } },
     },
   });
@@ -71,6 +71,21 @@ export async function GET(req: NextRequest) {
         },
       });
     } catch { /* LoanReminder / UserNotification table may not exist yet */ }
+
+    if (loan.user.pushToken) {
+      try {
+        await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: loan.user.pushToken,
+            title: "⏰ Rappel d'emprunt",
+            body: `Pensez à rendre "${gameName}" avant le ${dateStr}`,
+            data: { type: "loan_reminder", loanId: loan.id },
+          }),
+        });
+      } catch { /* push failure non-bloquant */ }
+    }
   }
 
   // ── 2. Overdue reminders ───────────────────────────────────────────────────
@@ -80,7 +95,7 @@ export async function GET(req: NextRequest) {
       dueAt: { lt: now },
     },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, pushToken: true } },
       game: { select: { name: true } },
     },
   });
@@ -123,6 +138,21 @@ export async function GET(req: NextRequest) {
         },
       });
     } catch { /* LoanReminder / UserNotification table may not exist yet */ }
+
+    if (loan.user.pushToken) {
+      try {
+        await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: loan.user.pushToken,
+            title: "⚠️ Emprunt en retard",
+            body: `"${gameName}" aurait dû être rendu le ${dateStr}`,
+            data: { type: "loan_reminder", loanId: loan.id },
+          }),
+        });
+      } catch { /* push failure non-bloquant */ }
+    }
   }
 
   return NextResponse.json({ sent, remindersCount, overdueCount });

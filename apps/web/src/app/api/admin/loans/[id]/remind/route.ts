@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const loan = await prisma.loan.findUnique({
     where: { id: params.id },
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, pushToken: true } },
       game: { select: { name: true } },
     },
   });
@@ -34,6 +34,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
   } catch { /* LoanReminder table may not exist yet */ }
+
+  const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const gameName = loan.game.name;
+
+  try {
+    await prisma.userNotification.create({
+      data: {
+        userId: loan.user.id,
+        type: "LOAN_REMINDER",
+        title: `⏰ Rappel : rendez "${gameName}" avant le ${dateStr}`,
+        message: `Votre emprunt arrive à échéance le ${dateStr}`,
+      },
+    });
+  } catch { /* ignore */ }
+
+  if (loan.user.pushToken) {
+    try {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: loan.user.pushToken,
+          title: isOverdue ? "⚠️ Emprunt en retard" : "⏰ Rappel d'emprunt",
+          body: isOverdue
+            ? `"${gameName}" aurait dû être rendu le ${dateStr}`
+            : `Pensez à rendre "${gameName}" avant le ${dateStr}`,
+          data: { type: "loan_reminder", loanId: loan.id },
+        }),
+      });
+    } catch { /* push failure non-bloquant */ }
+  }
 
   return NextResponse.json({ success: true, type });
 }

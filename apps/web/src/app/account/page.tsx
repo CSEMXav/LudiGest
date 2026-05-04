@@ -8,6 +8,8 @@ import type { UserNotificationDTO } from "@ludigest/types";
 interface UserProfile {
   id: string;
   name: string;
+  firstName: string | null;
+  lastName: string | null;
   email: string;
   nickname: string | null;
   visibleInMembers: boolean;
@@ -40,6 +42,8 @@ function UnreadDot() {
 export default function AccountPage() {
   const { data: session } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [nickname, setNickname] = useState("");
   const [visibleInMembers, setVisibleInMembers] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +56,8 @@ export default function AccountPage() {
       .then((r) => r.json())
       .then((d: UserProfile) => {
         setProfile(d);
+        setFirstName(d.firstName ?? "");
+        setLastName(d.lastName ?? "");
         setNickname(d.nickname ?? "");
         setVisibleInMembers(d.visibleInMembers);
       });
@@ -67,10 +73,12 @@ export default function AccountPage() {
     const res = await fetch("/api/user/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nickname: nickname.trim() || null, visibleInMembers }),
+      body: JSON.stringify({ firstName: firstName.trim() || null, lastName: lastName.trim() || null, nickname: nickname.trim() || null, visibleInMembers }),
     });
     setSaving(false);
     if (res.ok) {
+      const updated = await res.json();
+      if (updated.name) setProfile((p) => p ? { ...p, name: updated.name, firstName: updated.firstName, lastName: updated.lastName } : p);
       setSavedMsg("Profil mis à jour !");
       setTimeout(() => setSavedMsg(""), 3000);
     }
@@ -112,6 +120,28 @@ export default function AccountPage() {
               <label className="block text-sm font-medium text-gray-600 mb-1">Matricule</label>
               <div className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-200">
                 {profile.matricule ?? <span className="text-gray-400">Non renseigné</span>}
+              </div>
+            </div>
+
+            {/* First name + Last name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Prénom</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                />
               </div>
             </div>
 

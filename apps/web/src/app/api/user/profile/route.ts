@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       name: true,
+      firstName: true,
+      lastName: true,
       email: true,
       nickname: true,
       visibleInMembers: true,
@@ -38,16 +40,31 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
   const body = await req.json();
-  const { nickname, visibleInMembers } = body;
+  const { nickname, visibleInMembers, firstName, lastName } = body;
 
   const data: Record<string, unknown> = {};
   if (nickname !== undefined) data.nickname = String(nickname).trim() || null;
   if (visibleInMembers !== undefined) data.visibleInMembers = Boolean(visibleInMembers);
 
+  if (firstName !== undefined || lastName !== undefined) {
+    let fn = firstName !== undefined ? String(firstName).trim() : undefined;
+    let ln = lastName !== undefined ? String(lastName).trim() : undefined;
+
+    if (fn === undefined || ln === undefined) {
+      const current = await prisma.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true } });
+      if (fn === undefined) fn = current?.firstName ?? "";
+      if (ln === undefined) ln = current?.lastName ?? "";
+    }
+
+    data.firstName = fn || null;
+    data.lastName = ln || null;
+    data.name = [fn, ln].filter(Boolean).join(" ") || null;
+  }
+
   const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { id: true, nickname: true, visibleInMembers: true, matricule: true },
+    select: { id: true, name: true, firstName: true, lastName: true, nickname: true, visibleInMembers: true, matricule: true },
   });
 
   return NextResponse.json(user);
