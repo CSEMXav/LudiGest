@@ -52,10 +52,15 @@ export default function SessionsPage() {
   const [inviting, setInviting] = useState(false);
 
   async function load() {
-    const res = await fetch("/api/sessions");
-    const data = await res.json();
-    setSessions(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/sessions");
+      const data = await res.json();
+      setSessions(Array.isArray(data) ? data : []);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

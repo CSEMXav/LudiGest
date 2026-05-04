@@ -13,24 +13,35 @@ export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
-  const sessions = await prisma.gameSession.findMany({
-    orderBy: { date: "asc" },
-    include: { _count: { select: { registrations: true } } },
-  });
+  try {
+    const sessions = await prisma.gameSession.findMany({
+      orderBy: { date: "asc" },
+      include: { _count: { select: { registrations: true } } },
+    });
 
-  return NextResponse.json(
-    sessions.map((s) => ({
-      id: s.id,
-      name: s.name,
-      date: s.date.toISOString(),
-      location: s.location,
-      startTime: s.startTime,
-      imageUrl: s.imageUrl,
-      info: s.info,
-      createdAt: s.createdAt.toISOString(),
-      registrationCount: s._count.registrations,
-    }))
-  );
+    return NextResponse.json(
+      sessions.map((s) => ({
+        id: s.id,
+        name: s.name,
+        date: s.date.toISOString(),
+        location: s.location,
+        startTime: s.startTime,
+        imageUrl: s.imageUrl,
+        info: s.info,
+        createdAt: s.createdAt.toISOString(),
+        registrationCount: s._count.registrations,
+        isPrivate: false,
+        createdByUserId: null,
+        maxParticipants: null,
+        isCreator: false,
+        myInvitation: null,
+        myRegistration: null,
+      }))
+    );
+  } catch (err) {
+    console.error("GET /api/admin/sessions error:", err);
+    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

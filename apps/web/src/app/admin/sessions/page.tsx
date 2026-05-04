@@ -188,10 +188,15 @@ export default function AdminSessionsPage() {
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
 
   async function load() {
-    const res = await fetch("/api/admin/sessions");
-    const data = await res.json();
-    setSessions(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/sessions");
+      const data = await res.json();
+      setSessions(Array.isArray(data) ? data : []);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
