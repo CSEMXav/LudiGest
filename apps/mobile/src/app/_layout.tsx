@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { getToken } from "@/lib/auth";
+import { registerPushToken } from "@/lib/push";
 import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
@@ -18,6 +19,7 @@ export default function RootLayout() {
     getToken().then((token) => {
       if (token) {
         router.replace("/(tabs)");
+        registerPushToken(); // re-register on every app start to keep DB token fresh
       } else {
         router.replace("/(auth)/login");
       }

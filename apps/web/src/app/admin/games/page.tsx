@@ -517,12 +517,22 @@ export default function AdminGamesPage() {
                         )}
                       </div>
                       <div>
-                        <button
-                          onClick={() => setEditingGame(g)}
-                          className="font-medium text-gray-900 hover:text-[#C8102E] hover:underline text-left"
-                        >
-                          {g.name}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setEditingGame(g)}
+                            className="font-medium text-gray-900 hover:text-[#C8102E] hover:underline text-left"
+                          >
+                            {g.name}
+                          </button>
+                          {(g.reportCount ?? 0) > 0 && (
+                            <a
+                              href={`/games/${g.id}`}
+                              className="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                              style={{ background: "#fde2d2", color: "#d24a1f" }}
+                              title={`${g.reportCount} signalement${(g.reportCount ?? 0) > 1 ? "s" : ""}`}
+                            >🚨</a>
+                          )}
+                        </div>
                         <div className="flex gap-1 mt-0.5 flex-wrap">
                           {!g.coverUrl && (
                             <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">Non enrichi</span>

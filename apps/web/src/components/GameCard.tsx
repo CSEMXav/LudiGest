@@ -164,13 +164,6 @@ export function GameCard({ game, dense = false }: { game: GameDTO; dense?: boole
             </div>
           )}
 
-          {/* Report badge */}
-          {(game.reportCount ?? 0) > 0 && (
-            <span
-              className="absolute bottom-2 right-2 text-xs font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }}
-            >🚨</span>
-          )}
         </div>
 
         {/* Bandeau catégorie pleine largeur */}
@@ -196,16 +189,25 @@ export function GameCard({ game, dense = false }: { game: GameDTO; dense?: boole
 
         {/* Corps texte */}
         <div style={{ padding: dense ? "10px 12px 12px" : "12px 14px 14px" }}>
-          <div
-            className="font-bold leading-tight mb-0.5"
-            style={{
-              fontFamily: "var(--font-display, system-ui)",
-              fontSize: dense ? 14 : 16,
-              lineHeight: 1.15,
-              color: "var(--p-ink)",
-            }}
-          >
-            {game.name}
+          <div className="flex items-start justify-between gap-1 mb-0.5">
+            <div
+              className="font-bold leading-tight"
+              style={{
+                fontFamily: "var(--font-display, system-ui)",
+                fontSize: dense ? 14 : 16,
+                lineHeight: 1.15,
+                color: "var(--p-ink)",
+              }}
+            >
+              {game.name}
+            </div>
+            {(game.reportCount ?? 0) > 0 && (
+              <span
+                className="flex-shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }}
+                title="Un signalement existe pour ce jeu"
+              >🚨</span>
+            )}
           </div>
           <div className="text-[10px] mb-1.5" style={{ color: "var(--p-ink3)" }}>{game.type}</div>
           <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--p-ink2)" }}>

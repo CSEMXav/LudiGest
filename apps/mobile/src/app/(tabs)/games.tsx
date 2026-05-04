@@ -4,6 +4,7 @@ import {
   ActivityIndicator, ScrollView, RefreshControl,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import Svg, { Defs, Pattern, Rect, Line } from "react-native-svg";
 import { apiGet } from "@/lib/api";
 import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
@@ -20,7 +21,7 @@ const CAT_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 const CATEGORIES: { key: GameCategory | ""; label: string }[] = [
-  { key: "", label: "Tous" },
+  { key: "", label: "Toutes" },
   { key: "famille", label: "Famille" },
   { key: "initié", label: "Initié" },
   { key: "expert", label: "Expert" },
@@ -49,16 +50,40 @@ function sortGames(games: GameDTO[], sort: string): GameDTO[] {
   });
 }
 
-function GameThumb({ game }: { game: GameDTO }) {
-  const cat = CAT_CONFIG[game.category] ?? { color: "#9a8b7c" };
-  if (game.coverUrl) {
-    return <Image source={{ uri: game.coverUrl }} style={s.thumbImg} resizeMode="cover" />;
-  }
+function BorrowedOverlay() {
   return (
-    <View style={[s.thumbPlaceholder, { backgroundColor: cat.color }]}>
-      <Pion tint={cat.color} kind={CAT_PION[game.category] ?? "meeple"} w={56} h={56} />
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Svg style={StyleSheet.absoluteFill}>
+        <Defs>
+          <Pattern id="hatch" width="28" height="28" patternTransform="rotate(135)" patternUnits="userSpaceOnUse">
+            <Rect width="28" height="28" fill="rgba(30,22,16,0.52)" />
+            <Line x1="0" y1="14" x2="28" y2="14" stroke="rgba(30,22,16,0.28)" strokeWidth="14" />
+          </Pattern>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#hatch)" />
+      </Svg>
+      <View style={s.borrowedStampWrap}>
+        <View style={s.borrowedStamp}>
+          <Text style={s.borrowedStampText}>EMPRUNTÉ</Text>
+        </View>
+      </View>
     </View>
   );
+}
+
+function GameVisual({ game, color }: { game: GameDTO; color: string }) {
+  if (game.coverUrl) {
+    return <Image source={{ uri: game.coverUrl }} style={s.visual} resizeMode="cover" />;
+  }
+  return (
+    <View style={[s.visual, { backgroundColor: color, alignItems: "center", justifyContent: "center" }]}>
+      <Pion tint={color} kind={CAT_PION[game.category] ?? "meeple"} w={64} h={64} />
+    </View>
+  );
+}
+
+function formatDueShort(dueAt: string) {
+  return new Date(dueAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(".", "");
 }
 
 export default function GamesTab() {
@@ -139,18 +164,22 @@ export default function GamesTab() {
 
       {/* Chips catégorie */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
-        {CATEGORIES.map((c) => (
-          <TouchableOpacity
-            key={c.key}
-            style={[s.chip, category === c.key && s.chipActive]}
-            onPress={() => setCategory(c.key as GameCategory | "")}
-          >
-            <Text style={[s.chipText, category === c.key && s.chipTextActive]}>{c.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {CATEGORIES.map((c) => {
+          const isActive = category === c.key;
+          const color = c.key ? CAT_CONFIG[c.key]?.color : undefined;
+          return (
+            <TouchableOpacity
+              key={c.key}
+              style={[s.chip, isActive && { backgroundColor: color ?? "#1e1610", borderColor: color ?? "#1e1610" }]}
+              onPress={() => setCategory(c.key as GameCategory | "")}
+            >
+              <Text style={[s.chipText, isActive && s.chipTextActive]}>{c.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* Filtre statut */}
+      {/* Filtre statut + Tri */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
         {(["", "AVAILABLE", "BORROWED"] as const).map((f) => (
           <TouchableOpacity key={f} style={[s.filterBtn, status === f && s.filterActive]} onPress={() => setStatus(f)}>
@@ -159,10 +188,7 @@ export default function GamesTab() {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
-
-      {/* Tri */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
+        <View style={s.divider} />
         {SORTS.map((so) => (
           <TouchableOpacity key={so.key} style={[s.filterBtn, sort === so.key && s.sortActive]} onPress={() => setSort(so.key)}>
             <Text style={[s.filterText, sort === so.key && s.sortTextActive]}>{so.label}</Text>
@@ -182,23 +208,38 @@ export default function GamesTab() {
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
           renderItem={({ item }) => {
-            const cat = CAT_CONFIG[item.category] ?? { label: item.category, color: "#9a8b7c", emoji: "🎲" };
+            const cat = CAT_CONFIG[item.category] ?? { label: item.category, color: "#9a8b7c" };
             const isAvailable = item.status === "AVAILABLE";
+            const activeLoan = (item as GameDTO & { activeLoan?: { dueAt: string } }).activeLoan;
             return (
-              <TouchableOpacity style={s.card} onPress={() => router.push(`/game/${item.id}`)} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={[s.card, { borderTopColor: cat.color }]}
+                onPress={() => router.push(`/game/${item.id}`)}
+                activeOpacity={0.85}
+              >
+                {/* Zone visuelle */}
                 <View style={s.cardVisual}>
-                  <GameThumb game={item} />
-                  <View style={[s.catBadge, { backgroundColor: cat.color }]}>
-                    <Text style={s.catBadgeText}>{cat.label}</Text>
-                  </View>
+                  <GameVisual game={item} color={cat.color} />
+                  {!isAvailable && <BorrowedOverlay />}
                 </View>
+
+                {/* Bandeau catégorie */}
+                <View style={[s.catBanner, { backgroundColor: cat.color }]}>
+                  <Text style={s.catBannerLabel}>{cat.label.toUpperCase()}</Text>
+                  <Text style={s.catBannerStatus} numberOfLines={1}>
+                    {isAvailable
+                      ? "● Disponible"
+                      : activeLoan?.dueAt
+                        ? `Retour ${formatDueShort(activeLoan.dueAt)}`
+                        : "Emprunté"}
+                  </Text>
+                </View>
+
+                {/* Corps */}
                 <View style={s.cardBody}>
                   <Text style={s.cardName} numberOfLines={2}>{item.name}</Text>
-                  <Text style={[s.statusText, { color: isAvailable ? "#16a34a" : "#ea580c" }]}>
-                    ● {isAvailable ? "Disponible" : "Emprunté"}
-                  </Text>
                   {item.averageRating != null && (
-                    <Text style={s.rating}>{"★".repeat(Math.round(item.averageRating))} {item.averageRating}/5</Text>
+                    <Text style={s.rating}>{"★".repeat(Math.round(item.averageRating))} {item.averageRating}</Text>
                   )}
                 </View>
               </TouchableOpacity>
@@ -217,32 +258,37 @@ export default function GamesTab() {
 }
 
 const s = StyleSheet.create({
-  searchRow:        { flexDirection: "row", paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4, gap: 8 },
-  searchWrap:       { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, paddingHorizontal: 10, height: 44 },
-  searchIcon:       { fontSize: 14, marginRight: 6 },
-  searchInput:      { flex: 1, fontSize: 14, color: "#1e1610" },
-  addBtn:           { backgroundColor: "#d24a1f", width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  addBtnText:       { color: "#fff", fontSize: 22, lineHeight: 28 },
-  chipRow:          { flexGrow: 0, flexShrink: 0, paddingVertical: 8 },
-  filterRow:        { flexGrow: 0, flexShrink: 0, paddingVertical: 4 },
-  chip:             { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
-  chipActive:       { backgroundColor: "#1e1610", borderColor: "#1e1610" },
-  chipText:         { fontSize: 12, fontWeight: "500", color: "#1e1610" },
-  chipTextActive:   { color: "#fff", fontWeight: "600" },
-  filterBtn:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
-  filterActive:     { backgroundColor: "#1e1610", borderColor: "#1e1610" },
-  sortActive:       { backgroundColor: "#e8a82f", borderColor: "#e8a82f" },
-  filterText:       { fontSize: 12, fontWeight: "500", color: "#1e1610" },
-  filterTextActive: { color: "#fff", fontWeight: "600" },
-  sortTextActive:   { color: "#fff", fontWeight: "600" },
-  card:             { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", borderWidth: 1.5, borderColor: "#ece1cd" },
-  cardVisual:       { position: "relative" },
-  thumbImg:         { width: "100%", aspectRatio: 1 },
-  thumbPlaceholder: { width: "100%", aspectRatio: 1, alignItems: "center", justifyContent: "center" },
-  catBadge:         { position: "absolute", top: 8, right: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  catBadgeText:     { color: "#fff", fontSize: 10, fontWeight: "700" },
-  cardBody:         { padding: 10 },
-  cardName:         { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 3 },
-  statusText:       { fontSize: 11, fontWeight: "500", marginBottom: 2 },
-  rating:           { fontSize: 10, color: "#e8a82f" },
+  searchRow:         { flexDirection: "row", paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4, gap: 8 },
+  searchWrap:        { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, paddingHorizontal: 10, height: 44 },
+  searchIcon:        { fontSize: 14, marginRight: 6 },
+  searchInput:       { flex: 1, fontSize: 14, color: "#1e1610" },
+  addBtn:            { backgroundColor: "#d24a1f", width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  addBtnText:        { color: "#fff", fontSize: 22, lineHeight: 28 },
+  chipRow:           { flexGrow: 0, flexShrink: 0, paddingVertical: 8 },
+  filterRow:         { flexGrow: 0, flexShrink: 0, paddingVertical: 4, marginBottom: 4 },
+  chip:              { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
+  chipText:          { fontSize: 12, fontWeight: "500", color: "#1e1610" },
+  chipTextActive:    { color: "#fff", fontWeight: "700" },
+  filterBtn:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
+  filterActive:      { backgroundColor: "#1e1610", borderColor: "#1e1610" },
+  sortActive:        { backgroundColor: "#e8a82f", borderColor: "#e8a82f" },
+  filterText:        { fontSize: 12, fontWeight: "500", color: "#1e1610" },
+  filterTextActive:  { color: "#fff", fontWeight: "700" },
+  sortTextActive:    { color: "#fff", fontWeight: "700" },
+  divider:           { width: 1, backgroundColor: "#ece1cd", marginVertical: 4 },
+
+  card:              { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", borderWidth: 1.5, borderColor: "#ece1cd", borderTopWidth: 4 },
+  cardVisual:        { position: "relative" },
+  visual:            { width: "100%", aspectRatio: 1 },
+  borrowedStampWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  borrowedStamp:     { backgroundColor: "#1e1610", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, transform: [{ rotate: "-12deg" }] },
+  borrowedStampText: { color: "#fff", fontWeight: "800", fontSize: 12, letterSpacing: 1 },
+
+  catBanner:         { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingVertical: 5 },
+  catBannerLabel:    { fontSize: 10, fontWeight: "800", color: "#fff", letterSpacing: 0.4 },
+  catBannerStatus:   { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.85)", letterSpacing: 0, flexShrink: 1, textAlign: "right" },
+
+  cardBody:          { padding: 10 },
+  cardName:          { fontSize: 13, fontWeight: "700", color: "#1e1610", lineHeight: 17, marginBottom: 3 },
+  rating:            { fontSize: 10, color: "#e8a82f", fontWeight: "600" },
 });
