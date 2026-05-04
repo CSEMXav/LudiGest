@@ -5,6 +5,25 @@ import {
 import { apiGet } from "@/lib/api";
 import type { MemberDTO } from "@ludigest/types";
 
+const P = {
+  bg:      "#fef9f0",
+  card:    "#ffffff",
+  ink:     "#1e1610",
+  ink2:    "#5b4d40",
+  ink3:    "#9a8b7c",
+  rule:    "#ece1cd",
+  primary: "#d24a1f",
+};
+
+const AVATAR_TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
+
+function getRank(index: number) {
+  if (index === 0) return "🥇";
+  if (index === 1) return "🥈";
+  if (index === 2) return "🥉";
+  return null;
+}
+
 export default function MembersScreen() {
   const [members, setMembers] = useState<MemberDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,57 +43,73 @@ export default function MembersScreen() {
   useEffect(() => { load(); }, []);
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
-  const filtered = members.filter((m) =>
+  const sorted = [...members].sort((a, b) => b.totalLoans - a.totalLoans);
+  const filtered = sorted.filter((m) =>
     m.nickname.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#C8102E" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color={P.primary} />;
 
   return (
-    <View style={s.container}>
-      <TextInput
-        style={s.search}
-        placeholder="Rechercher un membre…"
-        value={search}
-        onChangeText={setSearch}
-        clearButtonMode="while-editing"
-      />
+    <View style={st.container}>
+      <View style={st.searchWrap}>
+        <TextInput
+          style={st.search}
+          placeholder="Rechercher un membre…"
+          placeholderTextColor={P.ink3}
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+        />
+      </View>
       <FlatList
         data={filtered}
         keyExtractor={(m) => m.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C8102E" />}
-        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={P.primary} />}
+        contentContainerStyle={filtered.length === 0 ? st.emptyContainer : { paddingBottom: 32 }}
         ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyEmoji}>👥</Text>
-            <Text style={s.emptyText}>{search ? "Aucun membre trouvé." : "Aucun membre visible."}</Text>
+          <View style={st.empty}>
+            <Text style={st.emptyEmoji}>👥</Text>
+            <Text style={st.emptyText}>{search ? "Aucun membre trouvé." : "Aucun membre visible."}</Text>
           </View>
         }
-        renderItem={({ item: m, index }) => (
-          <View style={[s.row, index > 0 && s.rowBorder]}>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{m.nickname.charAt(0).toUpperCase()}</Text>
+        renderItem={({ item: m, index }) => {
+          const rank = getRank(index);
+          const tint = AVATAR_TINTS[index % AVATAR_TINTS.length];
+          return (
+            <View style={[st.row, index > 0 && st.rowBorder]}>
+              <View style={[st.avatar, { backgroundColor: tint + "22" }]}>
+                <Text style={[st.avatarText, { color: tint }]}>{m.nickname.charAt(0).toUpperCase()}</Text>
+              </View>
+              <Text style={st.nickname}>{m.nickname}</Text>
+              {rank ? (
+                <Text style={st.rank}>{rank}</Text>
+              ) : null}
+              <View style={st.loansBadge}>
+                <Text style={st.loansText}>{m.totalLoans}</Text>
+              </View>
             </View>
-            <Text style={s.nickname}>{m.nickname}</Text>
-            <Text style={s.loans}>{m.totalLoans} emprunt{m.totalLoans > 1 ? "s" : ""}</Text>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: "#f9fafb" },
-  search:         { backgroundColor: "#fff", margin: 16, marginBottom: 8, borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 12, fontSize: 15 },
-  row:            { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
-  rowBorder:      { borderTopWidth: 1, borderTopColor: "#f3f4f6" },
-  avatar:         { width: 36, height: 36, borderRadius: 18, backgroundColor: "#fee2e2", alignItems: "center", justifyContent: "center" },
-  avatarText:     { color: "#C8102E", fontSize: 15, fontWeight: "700" },
-  nickname:       { flex: 1, fontSize: 15, fontWeight: "500", color: "#111827" },
-  loans:          { fontSize: 12, color: "#9ca3af" },
+const st = StyleSheet.create({
+  container:      { flex: 1, backgroundColor: P.bg },
+  searchWrap:     { padding: 16, paddingBottom: 8 },
+  search:         { backgroundColor: P.card, borderWidth: 1.5, borderColor: P.rule, borderRadius: 14, padding: 12, fontSize: 15, color: P.ink },
+  row:            { flexDirection: "row", alignItems: "center", backgroundColor: P.card, paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
+  rowBorder:      { borderTopWidth: 1, borderTopColor: P.rule },
+  avatar:         { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  avatarText:     { fontSize: 16, fontWeight: "700" },
+  nickname:       { flex: 1, fontSize: 15, fontWeight: "600", color: P.ink },
+  rank:           { fontSize: 18, marginRight: 2 },
+  loansBadge:     { backgroundColor: P.bg, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, borderColor: P.rule },
+  loansText:      { fontSize: 12, color: P.ink3, fontWeight: "600" },
   emptyContainer: { flex: 1 },
   empty:          { alignItems: "center", marginTop: 80 },
   emptyEmoji:     { fontSize: 48, marginBottom: 12 },
-  emptyText:      { color: "#9ca3af", fontSize: 15 },
+  emptyText:      { color: P.ink3, fontSize: 15 },
 });

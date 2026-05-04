@@ -39,3 +39,5 @@ apps/mobile/ios/
 
 # Claude Code
 .claude/
+
+.vercel

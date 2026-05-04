@@ -6,6 +6,23 @@ import {
 import { apiGet, apiFetch } from "@/lib/api";
 import type { GameSessionDTO } from "@ludigest/types";
 
+const P = {
+  bg:          "#fef9f0",
+  bgAlt:       "#1e1610",
+  card:        "#ffffff",
+  ink:         "#1e1610",
+  ink2:        "#5b4d40",
+  ink3:        "#9a8b7c",
+  rule:        "#ece1cd",
+  primary:     "#d24a1f",
+  primarySoft: "#fde2d2",
+  ocre:        "#e8a82f",
+  vert:        "#6a8f3c",
+  bleu:        "#286b7a",
+};
+
+const TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
@@ -31,16 +48,15 @@ export default function SessionsScreen() {
 
   useEffect(() => {
     load();
-    // Mark session notifications as read
     apiFetch("/api/user/notifications/read-sessions", { method: "POST" }).catch(() => {});
   }, []);
 
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
-  async function register(s: GameSessionDTO, guestName: string) {
-    setRegistering(s.id);
+  async function register(session: GameSessionDTO, guestName: string) {
+    setRegistering(session.id);
     try {
-      const res = await apiFetch(`/api/sessions/${s.id}/register`, {
+      const res = await apiFetch(`/api/sessions/${session.id}/register`, {
         method: "POST",
         body: JSON.stringify({ guestName: guestName.trim() || null }),
       });
@@ -50,15 +66,15 @@ export default function SessionsScreen() {
     setRegistering(null);
   }
 
-  async function unregister(s: GameSessionDTO) {
-    Alert.alert("Se désinscrire", `Vous désinscrire de "${s.name}" ?`, [
+  async function unregister(session: GameSessionDTO) {
+    Alert.alert("Se désinscrire", `Vous désinscrire de "${session.name}" ?`, [
       { text: "Annuler", style: "cancel" },
       {
         text: "Se désinscrire", style: "destructive",
         onPress: async () => {
-          setRegistering(s.id);
+          setRegistering(session.id);
           try {
-            const res = await apiFetch(`/api/sessions/${s.id}/register`, { method: "DELETE" });
+            const res = await apiFetch(`/api/sessions/${session.id}/register`, { method: "DELETE" });
             if (res.ok) load(true);
             else { const d = await res.json(); Alert.alert("Erreur", d.error ?? "Erreur."); }
           } catch { Alert.alert("Erreur", "Problème réseau."); }
@@ -71,69 +87,87 @@ export default function SessionsScreen() {
   const upcoming = sessions.filter((s) => !isPast(s.date));
   const past = sessions.filter((s) => isPast(s.date));
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#C8102E" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color={P.primary} />;
 
   return (
     <ScrollView
-      style={s.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C8102E" />}
+      style={st.container}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={P.primary} />}
     >
       {sessions.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyEmoji}>🎲</Text>
-          <Text style={s.emptyText}>Aucune soirée prévue pour l'instant.</Text>
+        <View style={st.empty}>
+          <Text style={st.emptyEmoji}>🎲</Text>
+          <Text style={st.emptyText}>Aucune soirée prévue pour l'instant.</Text>
         </View>
       ) : (
         <>
-          {upcoming.map((s) => {
-            const registered = !!s.myRegistration;
-            const isGuestInput = guestInput?.id === s.id;
-            const busy = registering === s.id;
+          {upcoming.map((session, idx) => {
+            const registered = !!session.myRegistration;
+            const isGuestInput = guestInput?.id === session.id;
+            const busy = registering === session.id;
+            const tint = TINTS[idx % TINTS.length];
             return (
-              <View key={s.id} style={[s2.card, registered && s2.cardRegistered]}>
-                {s.imageUrl ? (
-                  <Image source={{ uri: s.imageUrl }} style={s2.image} resizeMode="cover" />
-                ) : null}
-                <View style={s2.body}>
-                  <View style={s2.row}>
-                    <Text style={s2.name}>{s.name}</Text>
-                    {registered && <Text style={s2.badge}>✓ Inscrit(e)</Text>}
+              <View key={session.id} style={[st.card, registered && { borderColor: P.vert, borderWidth: 1.5 }]}>
+                {/* Colored band / image */}
+                {session.imageUrl ? (
+                  <Image source={{ uri: session.imageUrl }} style={st.image} resizeMode="cover" />
+                ) : (
+                  <View style={[st.colorBand, { backgroundColor: tint }]}>
+                    <Text style={st.colorBandEmoji}>🎲</Text>
                   </View>
-                  <Text style={s2.meta}>📅 {formatDate(s.date)}</Text>
-                  <Text style={s2.meta}>🕐 {s.startTime}  📍 {s.location}</Text>
-                  <Text style={s2.count}>👥 {s.registrationCount} inscrit(s)</Text>
-                  {s.myRegistration?.guestName ? (
-                    <Text style={s2.guest}>Avec : {s.myRegistration.guestName}</Text>
+                )}
+
+                <View style={st.body}>
+                  <View style={st.row}>
+                    <Text style={st.name} numberOfLines={2}>{session.name}</Text>
+                    {registered && (
+                      <View style={[st.badge, { backgroundColor: P.vert + "22" }]}>
+                        <Text style={[st.badgeText, { color: P.vert }]}>✓ Inscrit(e)</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={st.meta}>📅 {formatDate(session.date)}</Text>
+                  <Text style={st.meta}>🕐 {session.startTime}  ·  📍 {session.location}</Text>
+
+                  {/* Registration count pill */}
+                  <View style={st.countPill}>
+                    <Text style={st.countText}>👥 {session.registrationCount} inscrit{session.registrationCount > 1 ? "s" : ""}</Text>
+                  </View>
+
+                  {session.myRegistration?.guestName ? (
+                    <Text style={st.guest}>Avec : {session.myRegistration.guestName}</Text>
                   ) : null}
-                  {s.info ? <Text style={s2.info}>{s.info}</Text> : null}
+                  {session.info ? <Text style={st.info}>{session.info}</Text> : null}
 
                   {busy ? (
-                    <ActivityIndicator style={{ marginTop: 12 }} color="#C8102E" />
+                    <ActivityIndicator style={{ marginTop: 12 }} color={P.primary} />
                   ) : registered ? (
-                    <TouchableOpacity style={s2.btnOutline} onPress={() => unregister(s)}>
-                      <Text style={s2.btnOutlineText}>Se désinscrire</Text>
+                    <TouchableOpacity style={st.btnOutline} onPress={() => unregister(session)}>
+                      <Text style={st.btnOutlineText}>Se désinscrire</Text>
                     </TouchableOpacity>
                   ) : isGuestInput ? (
-                    <View style={s2.guestBox}>
+                    <View style={st.guestBox}>
                       <TextInput
-                        style={s2.guestInput}
+                        style={st.guestInput}
                         placeholder="Accompagnant(e) ? (optionnel)"
+                        placeholderTextColor={P.ink3}
                         value={guestInput.value}
-                        onChangeText={(v) => setGuestInput({ id: s.id, value: v })}
+                        onChangeText={(v) => setGuestInput({ id: session.id, value: v })}
                         autoFocus
                       />
-                      <View style={s2.guestActions}>
-                        <TouchableOpacity style={s2.btnCancel} onPress={() => setGuestInput(null)}>
-                          <Text style={s2.btnCancelText}>Annuler</Text>
+                      <View style={st.guestActions}>
+                        <TouchableOpacity style={st.btnCancel} onPress={() => setGuestInput(null)}>
+                          <Text style={st.btnCancelText}>Annuler</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={s2.btnPrimary} onPress={() => register(s, guestInput.value)}>
-                          <Text style={s2.btnPrimaryText}>Confirmer</Text>
+                        <TouchableOpacity style={[st.btnPrimary, { backgroundColor: tint }]} onPress={() => register(session, guestInput.value)}>
+                          <Text style={st.btnPrimaryText}>Confirmer</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ) : (
-                    <TouchableOpacity style={s2.btnPrimary} onPress={() => setGuestInput({ id: s.id, value: "" })}>
-                      <Text style={s2.btnPrimaryText}>S'inscrire</Text>
+                    <TouchableOpacity style={[st.btnPrimary, { backgroundColor: tint }]} onPress={() => setGuestInput({ id: session.id, value: "" })}>
+                      <Text style={st.btnPrimaryText}>S'inscrire</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -143,12 +177,12 @@ export default function SessionsScreen() {
 
           {past.length > 0 && (
             <>
-              <Text style={s2.pastTitle}>Sessions passées</Text>
+              <Text style={st.pastTitle}>Sessions passées</Text>
               {past.map((p) => (
-                <View key={p.id} style={s2.pastCard}>
-                  <Text style={s2.pastName}>{p.name}</Text>
-                  <Text style={s2.pastMeta}>{formatDate(p.date)}  ·  {p.registrationCount} inscrit(s)</Text>
-                  {p.myRegistration && <Text style={s2.pastBadge}>✓ Vous étiez inscrit(e)</Text>}
+                <View key={p.id} style={st.pastCard}>
+                  <Text style={st.pastName}>{p.name}</Text>
+                  <Text style={st.pastMeta}>{formatDate(p.date)}  ·  {p.registrationCount} inscrit(s)</Text>
+                  {p.myRegistration && <Text style={[st.pastBadge, { color: P.vert }]}>✓ Vous étiez inscrit(e)</Text>}
                 </View>
               ))}
             </>
@@ -160,37 +194,37 @@ export default function SessionsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
-  empty:     { alignItems: "center", marginTop: 80 },
-  emptyEmoji:{ fontSize: 48, marginBottom: 12 },
-  emptyText: { color: "#9ca3af", fontSize: 15 },
-});
-
-const s2 = StyleSheet.create({
-  card:           { backgroundColor: "#fff", borderRadius: 20, margin: 16, marginBottom: 8, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  cardRegistered: { borderWidth: 2, borderColor: "#86efac" },
-  image:          { width: "100%", height: 160 },
-  body:           { padding: 16 },
-  row:            { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 },
-  name:           { fontSize: 18, fontWeight: "700", color: "#111827", flex: 1 },
-  badge:          { fontSize: 12, backgroundColor: "#dcfce7", color: "#166534", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, fontWeight: "600", marginLeft: 8 },
-  meta:           { fontSize: 13, color: "#6b7280", marginBottom: 2 },
-  count:          { fontSize: 13, color: "#2563eb", fontWeight: "600", marginTop: 2 },
-  guest:          { fontSize: 13, color: "#374151", marginTop: 4 },
-  info:           { fontSize: 13, color: "#6b7280", marginTop: 6, lineHeight: 18 },
-  btnPrimary:     { backgroundColor: "#C8102E", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 12 },
-  btnPrimaryText: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  btnOutline:     { borderWidth: 1.5, borderColor: "#fca5a5", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 12 },
-  btnOutlineText: { color: "#dc2626", fontWeight: "600", fontSize: 14 },
-  btnCancel:      { flex: 1, borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 10, alignItems: "center" },
-  btnCancelText:  { color: "#6b7280", fontWeight: "500", fontSize: 14 },
-  guestBox:       { marginTop: 12 },
-  guestInput:     { backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 8 },
-  guestActions:   { flexDirection: "row", gap: 8 },
-  pastTitle:      { fontSize: 16, fontWeight: "700", color: "#6b7280", paddingHorizontal: 16, paddingTop: 12, marginBottom: 4 },
-  pastCard:       { backgroundColor: "#f3f4f6", borderRadius: 14, marginHorizontal: 16, marginBottom: 8, padding: 14, opacity: 0.8 },
-  pastName:       { fontSize: 15, fontWeight: "600", color: "#374151" },
-  pastMeta:       { fontSize: 12, color: "#9ca3af", marginTop: 2 },
-  pastBadge:      { fontSize: 12, color: "#16a34a", marginTop: 4 },
+const st = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: P.bg },
+  empty:        { alignItems: "center", marginTop: 80 },
+  emptyEmoji:   { fontSize: 48, marginBottom: 12 },
+  emptyText:    { color: P.ink3, fontSize: 15 },
+  card:         { backgroundColor: P.card, borderRadius: 20, margin: 16, marginBottom: 8, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  colorBand:    { width: "100%", height: 96, alignItems: "center", justifyContent: "center" },
+  colorBandEmoji: { fontSize: 36, opacity: 0.4 },
+  image:        { width: "100%", height: 140 },
+  body:         { padding: 16 },
+  row:          { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 },
+  name:         { fontSize: 18, fontWeight: "700", color: P.ink, flex: 1, lineHeight: 24 },
+  badge:        { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 8 },
+  badgeText:    { fontSize: 11, fontWeight: "700" },
+  meta:         { fontSize: 13, color: P.ink2, marginBottom: 2 },
+  countPill:    { flexDirection: "row", alignSelf: "flex-start", backgroundColor: P.bgAlt, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginTop: 6, marginBottom: 2 },
+  countText:    { fontSize: 12, color: "#fff", fontWeight: "600" },
+  guest:        { fontSize: 13, color: P.ink2, marginTop: 4 },
+  info:         { fontSize: 13, color: P.ink3, marginTop: 6, lineHeight: 18 },
+  btnPrimary:   { borderRadius: 100, padding: 12, alignItems: "center", marginTop: 12 },
+  btnPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  btnOutline:   { borderWidth: 1.5, borderColor: P.primary, borderRadius: 100, padding: 12, alignItems: "center", marginTop: 12 },
+  btnOutlineText: { color: P.primary, fontWeight: "600", fontSize: 14 },
+  btnCancel:    { flex: 1, borderWidth: 1, borderColor: P.rule, borderRadius: 100, padding: 10, alignItems: "center" },
+  btnCancelText: { color: P.ink3, fontWeight: "500", fontSize: 14 },
+  guestBox:     { marginTop: 12 },
+  guestInput:   { backgroundColor: P.bg, borderWidth: 1, borderColor: P.rule, borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 8, color: P.ink },
+  guestActions: { flexDirection: "row", gap: 8 },
+  pastTitle:    { fontSize: 13, fontWeight: "700", color: P.ink3, paddingHorizontal: 16, paddingTop: 12, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 },
+  pastCard:     { backgroundColor: P.bg, borderRadius: 14, marginHorizontal: 16, marginBottom: 8, padding: 14, borderWidth: 1, borderColor: P.rule },
+  pastName:     { fontSize: 15, fontWeight: "600", color: P.ink2 },
+  pastMeta:     { fontSize: 12, color: P.ink3, marginTop: 2 },
+  pastBadge:    { fontSize: 12, marginTop: 4, fontWeight: "600" },
 });

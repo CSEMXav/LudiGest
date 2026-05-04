@@ -60,7 +60,7 @@ export default function LoansTab() {
     }
   }
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#C8102E" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#d24a1f" />;
 
   return (
     <>
@@ -68,7 +68,7 @@ export default function LoansTab() {
         data={active}
         keyExtractor={(l) => l.id}
         contentContainerStyle={{ padding: 16 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C8102E" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
         ListHeaderComponent={
           <Text style={s.activeCount}>{active.length}/5 emprunt{active.length > 1 ? "s" : ""} en cours</Text>
         }
@@ -187,13 +187,13 @@ const s = StyleSheet.create({
   extended: { fontSize: 11, color: "#3b82f6", marginTop: 2 },
   borrowedDate: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
   actions: { flexDirection: "row", gap: 10 },
-  btnReturn: { flex: 1, backgroundColor: "#C8102E", padding: 10, borderRadius: 10, alignItems: "center" },
+  btnReturn: { flex: 1, backgroundColor: "#d24a1f", padding: 10, borderRadius: 10, alignItems: "center" },
   btnReturnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
   btnExtend: { flex: 1, borderWidth: 1, borderColor: "#d1d5db", padding: 10, borderRadius: 10, alignItems: "center" },
   btnExtendText: { color: "#374151", fontWeight: "500", fontSize: 14 },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { color: "#9ca3af", fontSize: 15 },
-  link: { color: "#C8102E", fontSize: 14, marginTop: 8 },
+  link: { color: "#d24a1f", fontSize: 14, marginTop: 8 },
   historySection: { marginTop: 8 },
   historyToggle: { paddingVertical: 12, alignItems: "center" },
   historyToggleText: { fontSize: 13, color: "#6b7280", fontWeight: "600" },
@@ -206,6 +206,6 @@ const s = StyleSheet.create({
   modalBtns: { flexDirection: "row", gap: 10 },
   modalCancel: { flex: 1, borderWidth: 1, borderColor: "#d1d5db", padding: 12, borderRadius: 12, alignItems: "center" },
   modalCancelText: { color: "#374151", fontWeight: "500" },
-  modalConfirm: { flex: 1, backgroundColor: "#C8102E", padding: 12, borderRadius: 12, alignItems: "center" },
+  modalConfirm: { flex: 1, backgroundColor: "#d24a1f", padding: 12, borderRadius: 12, alignItems: "center" },
   modalConfirmText: { color: "#fff", fontWeight: "600" },
 });

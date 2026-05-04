@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type React from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { RatingForm } from "@/components/RatingForm";
@@ -35,20 +36,20 @@ interface LoanHistoryItem {
   extendedCount: number;
 }
 
-const CATEGORY_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  escape:   { label: "Escape",   bg: "bg-red-500",    text: "text-white" },
-  famille:  { label: "Famille",  bg: "bg-orange-400", text: "text-white" },
-  ambiance: { label: "Ambiance", bg: "bg-blue-500",   text: "text-white" },
-  enfant:   { label: "Enfant",   bg: "bg-yellow-400", text: "text-white" },
-  "initié": { label: "Initié",   bg: "bg-gray-500",   text: "text-white" },
-  expert:   { label: "Expert",   bg: "bg-green-500",  text: "text-white" },
+const CATEGORY_CONFIG: Record<string, { label: string; color: string }> = {
+  escape:   { label: "Escape",   color: "#d24a1f" },
+  famille:  { label: "Famille",  color: "#e8a82f" },
+  ambiance: { label: "Ambiance", color: "#286b7a" },
+  enfant:   { label: "Enfant",   color: "#f4c430" },
+  "initié": { label: "Initié",   color: "#5b4d40" },
+  expert:   { label: "Expert",   color: "#6a8f3c" },
 };
 
 const STATUS_LABELS = { AVAILABLE: "Disponible", BORROWED: "Emprunté", SUSPENDED: "Suspendu" };
-const STATUS_STYLES = {
-  AVAILABLE: "bg-green-100 text-green-800",
-  BORROWED:  "bg-orange-100 text-orange-800",
-  SUSPENDED: "bg-gray-100 text-gray-600",
+const STATUS_STYLES: Record<string, React.CSSProperties> = {
+  AVAILABLE: { background: "#e8f4ec", color: "#3a6a3e" },
+  BORROWED:  { background: "rgba(30,22,16,.12)", color: "#1e1610" },
+  SUSPENDED: { background: "var(--p-rule)", color: "var(--p-ink3)" },
 };
 
 function formatDate(iso: string) {
@@ -146,14 +147,17 @@ function ReportModal({ gameId, gameName, onClose }: { gameId: string; gameName: 
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Décrivez le problème..."
                 rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none resize-none"
+                style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
               />
               <div className="flex gap-3 mt-4">
-                <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+                <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm"
+                  style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}>Annuler</button>
                 <button
                   onClick={submit}
                   disabled={sending || !text.trim()}
-                  className="flex-1 bg-[#C8102E] text-white py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                  className="flex-1 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  style={{ background: "var(--p-primary)" }}
                 >
                   {sending ? "Envoi..." : "Envoyer le signalement"}
                 </button>
@@ -234,17 +238,19 @@ export default function GameDetailPage() {
         ← Retour
       </button>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--p-card)", border: "1.5px solid var(--p-rule)" }}>
         <div className="flex flex-col md:flex-row">
           {/* Image */}
-          <div className="relative w-full md:w-64 h-72 bg-gray-100 flex-shrink-0">
+          <div className="relative w-full md:w-72 h-72 flex-shrink-0 flex items-center justify-center"
+            style={{ background: game.coverUrl ? undefined : cat.color }}>
             {game.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="flex items-center justify-center h-full text-6xl text-gray-300">🎲</div>
+              <span style={{ fontSize: 64, opacity: 0.25 }}>🎲</span>
             )}
-            <span className={`absolute top-3 left-3 px-3 py-1.5 rounded-full text-sm font-bold ${cat.bg} ${cat.text} shadow`}>
+            <span className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow"
+              style={{ background: cat.color }}>
               {cat.label}
             </span>
           </div>
@@ -252,7 +258,7 @@ export default function GameDetailPage() {
           <div className="p-6 flex-1">
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex items-center gap-2 min-w-0">
-                <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
+                <h1 className="text-2xl font-bold" style={{ color: "var(--p-ink)", fontFamily: "var(--font-display, system-ui)" }}>{game.name}</h1>
                 {isAdmin && reports.length > 0 && (
                   <div className="relative flex-shrink-0">
                     <button
@@ -294,33 +300,34 @@ export default function GameDetailPage() {
                   </div>
                 )}
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${STATUS_STYLES[game.status]}`}>
+              <span className="px-3 py-1 rounded-full text-sm font-medium flex-shrink-0"
+                style={STATUS_STYLES[game.status]}>
                 {STATUS_LABELS[game.status]}
               </span>
             </div>
 
-            <p className="text-sm text-gray-500 mb-1">
-              Type : <span className="font-medium text-gray-700">{game.type}</span>
+            <p className="text-sm mb-1" style={{ color: "var(--p-ink3)" }}>
+              Type : <span className="font-medium" style={{ color: "var(--p-ink2)" }}>{game.type}</span>
             </p>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-xs mb-3" style={{ color: "var(--p-ink3)" }}>
               Entrée à la ludothèque le {formatDate(game.addedAt)}
             </p>
 
             <div className="flex flex-wrap gap-4 my-3">
               {game.minPlayers && game.maxPlayers && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--p-ink2)" }}>
                   <span className="text-lg">👥</span>
                   <span>{game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}–${game.maxPlayers}`} joueurs</span>
                 </div>
               )}
               {game.duration && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--p-ink2)" }}>
                   <span className="text-lg">⏱</span>
                   <span>{game.duration} min</span>
                 </div>
               )}
               {game.minAge && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--p-ink2)" }}>
                   <span className="text-lg">🎂</span>
                   <span>Dès {game.minAge} ans</span>
                 </div>
@@ -329,13 +336,13 @@ export default function GameDetailPage() {
 
             {game.averageRating && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-yellow-400 text-xl">{"★".repeat(Math.round(game.averageRating))}</span>
-                <span className="text-sm text-gray-500">{game.averageRating}/5 ({game.ratingsCount} avis)</span>
+                <span className="text-xl" style={{ color: "var(--p-ocre)" }}>{"★".repeat(Math.round(game.averageRating))}</span>
+                <span className="text-sm" style={{ color: "var(--p-ink3)" }}>{game.averageRating}/5 ({game.ratingsCount} avis)</span>
               </div>
             )}
 
             {game.summary && (
-              <p className="text-sm text-gray-600 leading-relaxed mb-4">{game.summary}</p>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--p-ink2)" }}>{game.summary}</p>
             )}
 
             {game.activeLoan?.isCurrentUser && (
@@ -355,7 +362,8 @@ export default function GameDetailPage() {
                 <button
                   onClick={borrow}
                   disabled={borrowing}
-                  className="px-6 py-2.5 bg-[#C8102E] text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  className="px-6 py-2.5 rounded-xl font-medium disabled:opacity-50 transition-colors text-white"
+                  style={{ background: "var(--p-primary)" }}
                 >
                   {borrowing ? "Emprunt en cours..." : "Emprunter ce jeu"}
                 </button>
@@ -363,7 +371,8 @@ export default function GameDetailPage() {
               {isAdmin && (
                 <button
                   onClick={() => setShowHistory(true)}
-                  className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors"
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}
                 >
                   📋 Historique
                 </button>
@@ -371,7 +380,8 @@ export default function GameDetailPage() {
               {session && (
                 <button
                   onClick={() => setShowReport(true)}
-                  className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  style={{ border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
                 >
                   🚨 Signaler un problème
                 </button>
@@ -382,20 +392,20 @@ export default function GameDetailPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Avis des joueurs</h2>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--p-ink)" }}>Avis des joueurs</h2>
         <RatingForm gameId={id} existing={myRating} onSaved={loadGame} />
 
         <div className="mt-6 space-y-4">
           {game.ratings.map((r) => (
-            <div key={r.id} className="bg-white rounded-xl p-4 border border-gray-100">
+            <div key={r.id} className="rounded-xl p-4" style={{ background: "var(--p-card)", border: "1.5px solid var(--p-rule)" }}>
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-sm">{r.userName}</span>
-                <span className="text-xs text-gray-400">{formatDate(r.createdAt)}</span>
+                <span className="font-medium text-sm" style={{ color: "var(--p-ink)" }}>{r.userName}</span>
+                <span className="text-xs" style={{ color: "var(--p-ink3)" }}>{formatDate(r.createdAt)}</span>
               </div>
-              <div className="text-yellow-400 text-sm mb-1">
+              <div className="text-sm mb-1" style={{ color: "var(--p-ocre)" }}>
                 {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
               </div>
-              {r.comment && <p className="text-sm text-gray-600">{r.comment}</p>}
+              {r.comment && <p className="text-sm" style={{ color: "var(--p-ink2)" }}>{r.comment}</p>}
             </div>
           ))}
         </div>

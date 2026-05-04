@@ -46,7 +46,7 @@ export default function GameDetailScreen() {
     }
   }
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 80 }} color="#C8102E" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 80 }} color="#d24a1f" />;
   if (!game) return null;
 
   const STATUS_LABEL = { AVAILABLE: "Disponible", BORROWED: "Emprunté", SUSPENDED: "Suspendu" };
@@ -119,6 +119,6 @@ const s = StyleSheet.create({
   summaryBox: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginTop: 16 },
   summaryTitle: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 8 },
   summary: { fontSize: 14, color: "#374151", lineHeight: 22 },
-  borrowBtn: { backgroundColor: "#C8102E", padding: 16, borderRadius: 14, alignItems: "center", marginTop: 20 },
+  borrowBtn: { backgroundColor: "#d24a1f", padding: 16, borderRadius: 14, alignItems: "center", marginTop: 20 },
   borrowBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

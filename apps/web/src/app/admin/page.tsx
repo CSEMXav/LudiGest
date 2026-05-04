@@ -26,7 +26,6 @@ export default async function AdminDashboard() {
     })
   );
 
-  // Extended stats for the collapsible section
   const [totalLoansAllTime, loansLast30d, categoryGroups, topGameIds] = await Promise.all([
     prisma.loan.count(),
     prisma.loan.count({ where: { borrowedAt: { gte: thirtyDaysAgo } } }),
@@ -51,7 +50,6 @@ export default async function AdminDashboard() {
     })
   );
 
-  // Average loan duration (completed loans only)
   const completedLoans = await prisma.loan.findMany({
     where: { returnedAt: { not: null } },
     select: { borrowedAt: true, returnedAt: true },
@@ -71,46 +69,74 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Tableau de bord</h1>
+      {/* Header */}
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <h1 className="font-display text-4xl font-bold tracking-tight leading-none" style={{ color: "var(--p-ink)" }}>
+            Tableau de bord
+          </h1>
+          <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
+            Vue globale · {LOCATIONS.length} ludothèques
+          </p>
+        </div>
+        <a
+          href="/admin/sessions"
+          className="px-4 py-2.5 rounded-full text-sm font-bold text-white"
+          style={{ background: "var(--p-ink)" }}
+        >
+          + Nouvelle soirée
+        </a>
+      </div>
 
-      {/* Global */}
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Global</h2>
+      {/* Global stats */}
+      <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--p-ink3)" }}>Global</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="rounded-xl p-6 bg-green-50 text-green-700">
-          <div className="text-3xl font-bold">{availableGames} / {totalGames}</div>
-          <div className="text-sm mt-1 opacity-80">Jeux disponibles</div>
+        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#e8f3dc", border: "1px solid var(--p-rule)" }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "var(--p-vert)", color: "#fff" }}>🎲</div>
+          <div>
+            <div className="font-display text-3xl font-bold leading-none" style={{ color: "#1e1610" }}>{availableGames}<span className="text-lg font-semibold" style={{ color: "#7a9656" }}> / {totalGames}</span></div>
+            <div className="text-xs mt-1" style={{ color: "#3d5a1a" }}>Jeux disponibles</div>
+          </div>
         </div>
-        <div className="rounded-xl p-6 bg-orange-50 text-orange-700">
-          <div className="text-3xl font-bold">{activeLoans}</div>
-          <div className="text-sm mt-1 opacity-80">Emprunts en cours</div>
+        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#fcebd2", border: "1px solid var(--p-rule)" }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "var(--p-ocre)", color: "#fff" }}>📚</div>
+          <div>
+            <div className="font-display text-3xl font-bold leading-none" style={{ color: "var(--p-ink)" }}>{activeLoans}</div>
+            <div className="text-xs mt-1" style={{ color: "#7d4a0d" }}>Emprunts en cours</div>
+          </div>
         </div>
-        <div className={`rounded-xl p-6 ${overdueLoans > 0 ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"}`}>
-          <div className="text-3xl font-bold">{overdueLoans}</div>
-          <div className="text-sm mt-1 opacity-80">Emprunts en retard</div>
+        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: overdueLoans > 0 ? "var(--p-primary-soft)" : "#f5f5f0", border: "1px solid var(--p-rule)" }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: overdueLoans > 0 ? "var(--p-primary)" : "var(--p-ink3)", color: "#fff" }}>⚠️</div>
+          <div>
+            <div className="font-display text-3xl font-bold leading-none" style={{ color: "var(--p-ink)" }}>{overdueLoans}</div>
+            <div className="text-xs mt-1" style={{ color: overdueLoans > 0 ? "#7c2410" : "var(--p-ink3)" }}>Emprunts en retard</div>
+          </div>
         </div>
       </div>
 
-      {/* Par lieu */}
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Par ludothèque</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+      {/* Par ludothèque */}
+      <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--p-ink3)" }}>Par ludothèque</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {locationStats.map(({ loc, total, available, loans, overdue }) => (
-          <div key={loc} className="bg-white rounded-xl border border-gray-100 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-[#C8102E]">📍</span> {loc}
+          <div key={loc} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+            <h3 className="font-display text-lg font-bold mb-3 flex items-center gap-2" style={{ color: "var(--p-ink)" }}>
+              <span style={{ color: "var(--p-primary)" }}>📍</span> {loc}
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg p-3 bg-green-50 text-green-700">
-                <div className="text-xl font-bold">{available} / {total}</div>
-                <div className="text-xs opacity-80">Jeux disponibles</div>
+              <div className="rounded-xl p-3" style={{ background: "#e8f3dc", color: "#3d5a1a" }}>
+                <div className="font-display text-xl font-bold leading-none">
+                  {available}<span className="text-sm font-semibold" style={{ color: "#7a9656" }}> / {total}</span>
+                </div>
+                <div className="text-xs mt-1 opacity-80">Jeux disponibles</div>
               </div>
-              <div className="rounded-lg p-3 bg-orange-50 text-orange-700">
-                <div className="text-xl font-bold">{loans}</div>
-                <div className="text-xs opacity-80">Emprunts en cours</div>
+              <div className="rounded-xl p-3" style={{ background: "#fcebd2", color: "#7d4a0d" }}>
+                <div className="font-display text-xl font-bold leading-none">{loans}</div>
+                <div className="text-xs mt-1 opacity-80">Emprunts</div>
               </div>
               {overdue > 0 && (
-                <div className="col-span-2 rounded-lg p-3 bg-red-50 text-red-700">
-                  <div className="text-xl font-bold">{overdue}</div>
-                  <div className="text-xs opacity-80">Emprunts en retard</div>
+                <div className="col-span-2 rounded-xl p-3" style={{ background: "var(--p-primary-soft)", color: "#7c2410" }}>
+                  <div className="font-display text-xl font-bold leading-none">{overdue}</div>
+                  <div className="text-xs mt-1 opacity-80">En retard</div>
                 </div>
               )}
             </div>
@@ -119,63 +145,69 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Données & statistiques — collapsible */}
-      <details className="group bg-white rounded-xl border border-gray-100">
-        <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none select-none hover:bg-gray-50 rounded-xl transition-colors">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Données &amp; statistiques</h2>
-          <span className="text-gray-400 text-sm transition-transform group-open:rotate-180">▼</span>
+      <details className="group rounded-2xl" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+        <summary
+          className="flex items-center justify-between px-6 py-5 cursor-pointer list-none select-none rounded-2xl"
+          style={{ color: "var(--p-ink)" }}
+        >
+          <h2 className="font-display text-xl font-bold" style={{ color: "var(--p-ink)" }}>Données &amp; statistiques</h2>
+          <span className="text-sm transition-transform group-open:rotate-180" style={{ color: "var(--p-ink3)" }}>▼</span>
         </summary>
 
-        <div className="px-5 pb-6 pt-2 border-t border-gray-100">
+        <div className="px-6 pb-6 pt-2" style={{ borderTop: "1px solid var(--p-rule)" }}>
           {/* Loan summary */}
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 mt-4">Emprunts</h3>
+          <p className="text-xs font-bold uppercase tracking-widest mb-3 mt-4" style={{ color: "var(--p-ink3)" }}>Emprunts</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="rounded-lg p-3 bg-gray-50">
-              <div className="text-xl font-bold text-gray-800">{totalLoansAllTime}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Total all time</div>
+            <div className="rounded-xl p-3" style={{ background: "var(--p-bg)" }}>
+              <div className="font-display text-xl font-bold" style={{ color: "var(--p-ink)" }}>{totalLoansAllTime}</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>Total all time</div>
             </div>
-            <div className="rounded-lg p-3 bg-blue-50">
-              <div className="text-xl font-bold text-blue-700">{loansLast30d}</div>
-              <div className="text-xs text-blue-600 mt-0.5">Ces 30 derniers jours</div>
+            <div className="rounded-xl p-3" style={{ background: "#dee9f3" }}>
+              <div className="font-display text-xl font-bold" style={{ color: "var(--p-bleu)" }}>{loansLast30d}</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--p-bleu)" }}>Ces 30 derniers jours</div>
             </div>
-            <div className="rounded-lg p-3 bg-gray-50">
-              <div className="text-xl font-bold text-gray-800">{avgDays !== null ? `${avgDays}j` : "—"}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Durée moyenne</div>
+            <div className="rounded-xl p-3" style={{ background: "var(--p-bg)" }}>
+              <div className="font-display text-xl font-bold" style={{ color: "var(--p-ink)" }}>{avgDays !== null ? `${avgDays}j` : "—"}</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>Durée moyenne</div>
             </div>
-            <div className={`rounded-lg p-3 ${lateCount > 0 ? "bg-red-50" : "bg-gray-50"}`}>
-              <div className={`text-xl font-bold ${lateCount > 0 ? "text-red-700" : "text-gray-800"}`}>{lateCount}</div>
-              <div className={`text-xs mt-0.5 ${lateCount > 0 ? "text-red-500" : "text-gray-500"}`}>Rendus en retard</div>
+            <div className="rounded-xl p-3" style={{ background: lateCount > 0 ? "var(--p-primary-soft)" : "var(--p-bg)" }}>
+              <div className="font-display text-xl font-bold" style={{ color: lateCount > 0 ? "var(--p-primary)" : "var(--p-ink)" }}>{lateCount}</div>
+              <div className="text-xs mt-0.5" style={{ color: lateCount > 0 ? "#7c2410" : "var(--p-ink3)" }}>Rendus en retard</div>
             </div>
           </div>
 
-          {/* Top jeux */}
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Top 5 jeux empruntés</h3>
+          {/* Top 5 */}
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--p-ink3)" }}>Top 5 jeux empruntés</p>
           <div className="space-y-2 mb-6">
             {topGames.map((g, i) => (
               <div key={i} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <span className="font-display text-sm font-bold w-6 flex-shrink-0" style={{ color: "var(--p-ink3)" }}>0{i + 1}.</span>
+                <div className="flex-1 rounded-full h-2 overflow-hidden" style={{ background: "var(--p-bg)" }}>
                   <div
-                    className="bg-[#C8102E] h-2 rounded-full"
-                    style={{ width: `${topGames[0].count > 0 ? Math.round((g.count / topGames[0].count) * 100) : 0}%` }}
+                    className="h-2 rounded-full"
+                    style={{
+                      width: `${topGames[0].count > 0 ? Math.round((g.count / topGames[0].count) * 100) : 0}%`,
+                      background: "var(--p-primary)",
+                    }}
                   />
                 </div>
-                <span className="text-sm text-gray-700 w-40 truncate">{g.name}</span>
-                <span className="text-xs text-gray-500 w-8 text-right">{g.count}x</span>
+                <span className="text-sm font-semibold w-44 truncate" style={{ color: "var(--p-ink2)" }}>{g.name}</span>
+                <span className="text-xs font-bold w-10 text-right tabular-nums" style={{ color: "var(--p-ink)" }}>{g.count}×</span>
               </div>
             ))}
-            {topGames.length === 0 && <p className="text-sm text-gray-400">Aucun emprunt enregistré.</p>}
+            {topGames.length === 0 && <p className="text-sm" style={{ color: "var(--p-ink3)" }}>Aucun emprunt enregistré.</p>}
           </div>
 
-          {/* Répartition par catégorie */}
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Répartition par catégorie</h3>
+          {/* Catégories */}
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--p-ink3)" }}>Répartition par catégorie</p>
           <div className="flex flex-wrap gap-2">
             {categoryGroups.map(({ category, _count }) => (
-              <div key={category} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                <span className="text-sm font-medium text-gray-700 capitalize">{category}</span>
-                <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">{_count.id}</span>
+              <div key={category} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "var(--p-bg)" }}>
+                <span className="text-sm font-semibold capitalize" style={{ color: "var(--p-ink2)" }}>{category}</span>
+                <span className="text-xs font-bold rounded-full px-2 py-0.5" style={{ background: "var(--p-ink)", color: "#fff" }}>{_count.id}</span>
               </div>
             ))}
-            {categoryGroups.length === 0 && <p className="text-sm text-gray-400">Aucun jeu enregistré.</p>}
+            {categoryGroups.length === 0 && <p className="text-sm" style={{ color: "var(--p-ink3)" }}>Aucun jeu enregistré.</p>}
           </div>
         </div>
       </details>

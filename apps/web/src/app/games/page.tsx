@@ -3,41 +3,36 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { GameCard, GameListRow } from "@/components/GameCard";
+import { Pion } from "@/components/Pion";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 
-const STATUS_LABELS: Record<string, string> = {
-  "": "Tous",
-  AVAILABLE: "Disponibles",
-  BORROWED: "Empruntés",
-};
-
 const CATEGORIES: { value: GameCategory; label: string; color: string }[] = [
-  { value: "escape",   label: "Escape",   color: "bg-red-500 text-white"    },
-  { value: "famille",  label: "Famille",  color: "bg-orange-400 text-white" },
-  { value: "ambiance", label: "Ambiance", color: "bg-blue-500 text-white"   },
-  { value: "enfant",   label: "Enfant",   color: "bg-yellow-400 text-white" },
-  { value: "initié",   label: "Initié",   color: "bg-gray-500 text-white"   },
-  { value: "expert",   label: "Expert",   color: "bg-green-500 text-white"  },
+  { value: "escape",   label: "Escape",   color: "#d24a1f" },
+  { value: "famille",  label: "Famille",  color: "#e8a82f" },
+  { value: "ambiance", label: "Ambiance", color: "#286b7a" },
+  { value: "enfant",   label: "Enfant",   color: "#f4c430" },
+  { value: "initié",   label: "Initié",   color: "#5b4d40" },
+  { value: "expert",   label: "Expert",   color: "#6a8f3c" },
 ];
 
 const DURATION_OPTIONS = [
-  { label: "Toutes", value: "" },
-  { label: "≤ 30 min", value: "30" },
-  { label: "≤ 60 min", value: "60" },
-  { label: "≤ 90 min", value: "90" },
-  { label: "≤ 2h",    value: "120" },
-  { label: "≤ 3h",    value: "180" },
+  { label: "Toutes",  value: ""    },
+  { label: "≤30min",  value: "30"  },
+  { label: "≤60min",  value: "60"  },
+  { label: "≤90min",  value: "90"  },
+  { label: "≤2h",     value: "120" },
+  { label: "≤3h",     value: "180" },
 ];
 
 const PLAYERS_OPTIONS = [
   { label: "Tous", value: "" },
-  { label: "1",  value: "1" },
-  { label: "2",  value: "2" },
-  { label: "3",  value: "3" },
-  { label: "4",  value: "4" },
-  { label: "5",  value: "5" },
-  { label: "6+", value: "6" },
+  { label: "1",   value: "1" },
+  { label: "2",   value: "2" },
+  { label: "3",   value: "3" },
+  { label: "4",   value: "4" },
+  { label: "5",   value: "5" },
+  { label: "6+",  value: "6" },
 ];
 
 function GridIcon() {
@@ -54,29 +49,40 @@ function GridIcon() {
 function ListIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-      <rect x="1" y="2"  width="16" height="3" rx="1.5" />
+      <rect x="1" y="2"   width="16" height="3" rx="1.5" />
       <rect x="1" y="7.5" width="16" height="3" rx="1.5" />
-      <rect x="1" y="13" width="16" height="3" rx="1.5" />
+      <rect x="1" y="13"  width="16" height="3" rx="1.5" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+      <circle cx="6" cy="6" r="4.5" fill="none" stroke="var(--p-ink)" strokeWidth="1.6" />
+      <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="var(--p-ink)" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
 export default function GamesPage() {
   const { data: session } = useSession();
-  const [games, setGames]       = useState<GameDTO[]>([]);
-  const [search, setSearch]     = useState("");
-  const [status, setStatus]     = useState("");
-  const [loading, setLoading]   = useState(true);
+  const [games, setGames]           = useState<GameDTO[]>([]);
+  const [search, setSearch]         = useState("");
+  const [status, setStatus]         = useState("AVAILABLE");
+  const [loading, setLoading]       = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode]     = useState<"grid" | "list">("grid");
+  const [dense, setDense]           = useState(false);
+
   useEffect(() => {
     const stored = localStorage.getItem("gamesViewMode") as "grid" | "list" | null;
     if (stored) setViewMode(stored);
+    const storedDense = localStorage.getItem("gamesDense");
+    if (storedDense) setDense(storedDense === "true");
   }, []);
 
-  const [sortBy, setSortBy] = useState("name");
-
-  // Advanced filters
+  const [sortBy,       setSortBy]       = useState("name_asc");
   const [category,    setCategory]    = useState("");
   const [minStars,    setMinStars]    = useState("");
   const [maxDuration, setMaxDuration] = useState("");
@@ -90,6 +96,10 @@ export default function GamesPage() {
   function toggleView(mode: "grid" | "list") {
     setViewMode(mode);
     localStorage.setItem("gamesViewMode", mode);
+  }
+
+  function toggleDense() {
+    setDense((v) => { localStorage.setItem("gamesDense", String(!v)); return !v; });
   }
 
   function resetFilters() {
@@ -117,7 +127,6 @@ export default function GamesPage() {
 
   const sortedGames = [...games].sort((a, b) => {
     switch (sortBy) {
-      case "name_asc":  return a.name.localeCompare(b.name, "fr");
       case "name_desc": return b.name.localeCompare(a.name, "fr");
       case "rating":    return (b.averageRating ?? 0) - (a.averageRating ?? 0);
       case "duration":  return (a.duration ?? 9999) - (b.duration ?? 9999);
@@ -126,126 +135,202 @@ export default function GamesPage() {
     }
   });
 
+  const available = games.filter((g) => g.status === "AVAILABLE").length;
+  const borrowed  = games.filter((g) => g.status === "BORROWED").length;
+
+  const cols = viewMode === "grid"
+    ? (dense ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")
+    : "";
+
   return (
-    <div>
-      {/* Top bar: location badge + how-it-works link */}
-      <div className="flex items-center justify-between mb-4">
-        {session?.user.location ? (
-          <div className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 text-[#C8102E] text-sm font-semibold px-3 py-1.5 rounded-full">
-            📍 {session.user.location}
-          </div>
-        ) : <div />}
-        <a href="/comment-ca-marche" className="text-xs text-gray-400 hover:text-[#C8102E] hover:underline transition-colors">
+    <div className="px-4 sm:px-8 py-7 max-w-[1280px] mx-auto">
+
+      {/* ── Bloc titre ── */}
+      <div className="flex items-end justify-between gap-6 mb-[22px]">
+        <div>
+          <h1
+            className="font-display font-bold leading-none"
+            style={{ fontSize: 40, letterSpacing: -1.2, color: "var(--p-ink)" }}
+          >
+            Catalogue
+          </h1>
+          <p className="text-[13px] mt-2" style={{ color: "var(--p-ink2)" }}>
+            <strong style={{ color: "var(--p-ink)" }}>{available} jeux disponibles</strong>
+            {borrowed > 0 && <> · {borrowed} empruntés</>}
+            {games.length > 0 && <> · {sortedGames.length} résultat{sortedGames.length > 1 ? "s" : ""} affiché{sortedGames.length > 1 ? "s" : ""}</>}
+          </p>
+        </div>
+        <a
+          href="/comment-ca-marche"
+          className="text-[11px] hover:opacity-70 transition-opacity flex-shrink-0 hidden sm:block"
+          style={{ color: "var(--p-ink3)", textDecoration: "underline" }}
+        >
           Comment ça marche ?
         </a>
       </div>
 
-      {/* Search + status bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="flex gap-2 flex-1">
+      {/* ── Barre recherche + filtres rapides ── */}
+      <div className="flex items-center gap-[10px] mb-[14px] flex-wrap">
+
+        {/* Champ recherche */}
+        <div className="relative flex-1 min-w-[240px]">
+          <SearchIcon />
           <input
             type="search"
-            placeholder="Rechercher un jeu..."
+            placeholder="Rechercher un jeu…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
+            className="w-full focus:outline-none text-[13px]"
+            style={{
+              height: 44,
+              padding: "0 16px 0 40px",
+              border: "1.5px solid var(--p-ink)",
+              borderRadius: 100,
+              background: "#fff",
+              color: "var(--p-ink)",
+            }}
           />
-          <button
-            onClick={() => setShowScanner(true)}
-            title="Scanner un code-barres"
-            className="sm:hidden flex items-center justify-center w-11 h-11 bg-[#C8102E] text-white rounded-xl hover:bg-red-700 transition-colors flex-shrink-0"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
-              <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-              <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
-              <line x1="13" y1="8" x2="13" y2="16" /><line x1="16" y1="8" x2="16" y2="16" />
-            </svg>
-          </button>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {Object.entries(STATUS_LABELS).map(([val, label]) => (
+
+        {/* Pills statut */}
+        {(["", "AVAILABLE", "BORROWED"] as const).map((val) => {
+          const labels: Record<string, string> = { "": "Tous", AVAILABLE: "Disponibles", BORROWED: "Empruntés" };
+          const active = status === val;
+          return (
             <button
               key={val}
               onClick={() => setStatus(val)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                status === val ? "bg-[#C8102E] text-white" : "bg-white border border-gray-300 text-gray-700 hover:border-red-300"
-              }`}
+              className="text-[13px] font-semibold transition-colors"
+              style={{
+                height: 44, padding: "0 16px", borderRadius: 100,
+                border: `1.5px solid ${active ? "var(--p-ink)" : "var(--p-rule)"}`,
+                background: active ? "var(--p-ink)" : "#fff",
+                color: active ? "#fff" : "var(--p-ink2)",
+              }}
             >
-              {label}
+              {labels[val]}
             </button>
-          ))}
+          );
+        })}
 
-          {/* Filters toggle */}
+        {/* Bouton filtres */}
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-[13px] font-bold transition-colors"
+          style={{
+            height: 44, padding: "0 16px", borderRadius: 100,
+            border: `1.5px solid ${hasActiveFilters ? "var(--p-primary)" : "var(--p-primary)"}`,
+            background: "var(--p-primary)",
+            color: "#fff",
+          }}
+        >
+          ⚙ Filtres
+          {hasActiveFilters && <span style={{ width: 6, height: 6, background: "#fff", borderRadius: 6, display: "inline-block" }} />}
+        </button>
+
+        {/* Select tri */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="focus:outline-none cursor-pointer font-semibold text-[13px]"
+          style={{
+            height: 44, padding: "0 14px", borderRadius: 100,
+            border: "1.5px solid var(--p-rule)", background: "#fff",
+            color: "var(--p-ink2)",
+          }}
+        >
+          <option value="name_asc">Nom A→Z</option>
+          <option value="name_desc">Nom Z→A</option>
+          <option value="rating">Mieux notés</option>
+          <option value="duration">Durée ↑</option>
+          <option value="recent">Plus récents</option>
+        </select>
+
+        {/* Scanner */}
+        <button
+          onClick={() => setShowScanner(true)}
+          title="Scanner un code-barres"
+          className="inline-flex items-center gap-2 text-[13px] font-semibold transition-colors"
+          style={{
+            height: 44, padding: "0 16px", borderRadius: 100,
+            border: "1.5px solid var(--p-rule)", background: "#fff",
+            color: "var(--p-ink2)",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+            <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
+            <line x1="13" y1="8" x2="13" y2="16" /><line x1="16" y1="8" x2="16" y2="16" />
+          </svg>
+          <span className="hidden sm:inline">Scanner</span>
+        </button>
+
+        {/* Toggle vue + densité */}
+        <div className="flex overflow-hidden" style={{ border: "1.5px solid var(--p-rule)", borderRadius: 100 }}>
           <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors flex items-center gap-1.5 ${
-              hasActiveFilters
-                ? "bg-[#C8102E] text-white border-[#C8102E]"
-                : "bg-white border-gray-300 text-gray-700 hover:border-red-300"
-            }`}
+            onClick={() => toggleView("grid")}
+            title="Vue grille"
+            className="transition-colors"
+            style={{
+              width: 44, height: 44,
+              background: viewMode === "grid" ? "var(--p-primary)" : "#fff",
+              color: viewMode === "grid" ? "#fff" : "var(--p-ink3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
           >
-            ⚙ Filtres{hasActiveFilters && " ●"}
+            <GridIcon />
           </button>
-
-          {/* Sort */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
-          >
-            <option value="name_asc">Nom A→Z</option>
-            <option value="name_desc">Nom Z→A</option>
-            <option value="rating">Mieux notés</option>
-            <option value="duration">Durée ↑</option>
-            <option value="recent">Plus récents</option>
-          </select>
-
-          {/* Scanner button — desktop */}
           <button
-            onClick={() => setShowScanner(true)}
-            title="Scanner un code-barres"
-            className="hidden sm:flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:border-red-300 bg-white transition-colors"
+            onClick={() => toggleView("list")}
+            title="Vue liste"
+            className="transition-colors"
+            style={{
+              width: 44, height: 44,
+              background: viewMode === "list" ? "var(--p-primary)" : "#fff",
+              color: viewMode === "list" ? "#fff" : "var(--p-ink3)",
+              borderLeft: "1.5px solid var(--p-rule)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
-              <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-              <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
-              <line x1="13" y1="8" x2="13" y2="16" /><line x1="16" y1="8" x2="16" y2="16" />
-            </svg>
-            Scanner
+            <ListIcon />
           </button>
-
-          {/* View toggle */}
-          <div className="flex border border-gray-300 rounded-xl overflow-hidden">
+          {viewMode === "grid" && (
             <button
-              onClick={() => toggleView("grid")}
-              title="Vue grille"
-              className={`px-3 py-2 transition-colors ${viewMode === "grid" ? "bg-[#C8102E] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              onClick={toggleDense}
+              title={dense ? "Vue normale" : "Vue compacte"}
+              className="text-xs font-bold transition-colors px-3"
+              style={{
+                height: 44,
+                background: dense ? "var(--p-ink)" : "#fff",
+                color: dense ? "#fff" : "var(--p-ink3)",
+                borderLeft: "1.5px solid var(--p-rule)",
+              }}
             >
-              <GridIcon />
+              {dense ? "5×" : "4×"}
             </button>
-            <button
-              onClick={() => toggleView("list")}
-              title="Vue liste"
-              className={`px-3 py-2 border-l border-gray-300 transition-colors ${viewMode === "list" ? "bg-[#C8102E] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-            >
-              <ListIcon />
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Advanced filter panel */}
+      {/* ── Panneau filtres avancés ── */}
       {showFilters && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 space-y-5">
-          {/* Category */}
+        <div
+          className="p-5 mb-[22px] space-y-5"
+          style={{ background: "#fff", border: "1.5px solid var(--p-rule)", borderRadius: 18 }}
+        >
+          {/* Catégorie */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Catégorie</p>
+            <p className="text-[10px] font-bold uppercase mb-[10px]" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
+              Catégorie
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setCategory("")}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${category === "" ? "bg-gray-800 text-white border-gray-800" : "border-gray-300 text-gray-600 hover:border-gray-400"}`}
+                className="px-[14px] py-[6px] rounded-full text-xs font-semibold transition-opacity"
+                style={category === ""
+                  ? { background: "var(--p-ink)", color: "#fff", border: "none" }
+                  : { background: "#fff", color: "var(--p-ink2)", border: "1.5px solid var(--p-rule)" }}
               >
                 Toutes
               </button>
@@ -253,7 +338,11 @@ export default function GamesPage() {
                 <button
                   key={c.value}
                   onClick={() => setCategory(category === c.value ? "" : c.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-opacity ${c.color} ${category && category !== c.value ? "opacity-40" : "opacity-100"}`}
+                  className="px-[14px] py-[6px] rounded-full text-xs font-semibold transition-opacity"
+                  style={{
+                    background: c.color, color: "#fff", border: "none",
+                    opacity: category && category !== c.value ? 0.4 : 1,
+                  }}
                 >
                   {c.label}
                 </button>
@@ -261,18 +350,22 @@ export default function GamesPage() {
             </div>
           </div>
 
-          {/* Stars / Duration / Players */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Note / Durée / Joueurs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr 1.4fr", gap: 24 }} className="max-sm:grid max-sm:!grid-cols-1">
+            {/* Note */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Note minimale</label>
+              <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
+                Note minimale
+              </p>
               <div className="flex gap-1">
                 {["", "1", "2", "3", "4", "5"].map((s) => (
                   <button
                     key={s}
                     onClick={() => setMinStars(minStars === s ? "" : s)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      minStars === s ? "bg-yellow-400 text-white border-yellow-400" : "border-gray-200 text-gray-600 hover:border-yellow-300"
-                    }`}
+                    className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold transition-colors"
+                    style={minStars === s
+                      ? { background: "var(--p-ocre)", color: "#fff", border: `1px solid var(--p-ocre)` }
+                      : { border: "1px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}
                   >
                     {s === "" ? "—" : `${s}★`}
                   </button>
@@ -280,16 +373,20 @@ export default function GamesPage() {
               </div>
             </div>
 
+            {/* Durée */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Durée max</label>
+              <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
+                Durée max
+              </p>
               <div className="flex flex-wrap gap-1">
                 {DURATION_OPTIONS.map((d) => (
                   <button
                     key={d.value}
                     onClick={() => setMaxDuration(maxDuration === d.value ? "" : d.value)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      maxDuration === d.value ? "bg-[#C8102E] text-white border-[#C8102E]" : "border-gray-200 text-gray-600 hover:border-red-300"
-                    }`}
+                    className="px-3 py-[7px] rounded-lg text-[11px] font-semibold transition-colors"
+                    style={maxDuration === d.value
+                      ? { background: "var(--p-primary)", color: "#fff", border: `1px solid var(--p-primary)` }
+                      : { border: "1px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}
                   >
                     {d.label}
                   </button>
@@ -297,16 +394,20 @@ export default function GamesPage() {
               </div>
             </div>
 
+            {/* Joueurs */}
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Nombre de joueurs</label>
-              <div className="flex flex-wrap gap-1">
+              <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
+                Joueurs
+              </p>
+              <div className="flex gap-1">
                 {PLAYERS_OPTIONS.map((p) => (
                   <button
                     key={p.value}
                     onClick={() => setPlayers(players === p.value ? "" : p.value)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      players === p.value ? "bg-[#C8102E] text-white border-[#C8102E]" : "border-gray-200 text-gray-600 hover:border-red-300"
-                    }`}
+                    className="flex-1 py-[7px] rounded-lg text-[11px] font-semibold transition-colors"
+                    style={players === p.value
+                      ? { background: "var(--p-ink)", color: "#fff", border: `1px solid var(--p-ink)` }
+                      : { border: "1px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}
                   >
                     {p.label}
                   </button>
@@ -315,63 +416,65 @@ export default function GamesPage() {
             </div>
           </div>
 
-          {/* Entry date */}
+          {/* Dates */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Date d&apos;entrée à la ludothèque</p>
+            <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
+              Date d&apos;entrée
+            </p>
             <div className="flex gap-3 items-center flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">Du</label>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-300"
-                />
+                <label className="text-xs" style={{ color: "var(--p-ink3)" }}>Du</label>
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+                  className="rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                  style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink)" }} />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">au</label>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-300"
-                />
+                <label className="text-xs" style={{ color: "var(--p-ink3)" }}>au</label>
+                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+                  className="rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                  style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink)" }} />
               </div>
             </div>
           </div>
 
           {hasActiveFilters && (
-            <button onClick={resetFilters} className="text-xs text-red-600 hover:underline">
+            <button onClick={resetFilters} className="text-xs hover:underline" style={{ color: "var(--p-primary)" }}>
               Réinitialiser les filtres
             </button>
           )}
         </div>
       )}
 
-      {/* Game list */}
+      {/* ── Grille / liste ── */}
       {loading ? (
         viewMode === "grid" ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[...Array(10)].map((_, i) => <div key={i} className="bg-white rounded-xl h-64 animate-pulse border border-gray-100" />)}
+          <div className={`grid ${cols} gap-4`}>
+            {[...Array(dense ? 10 : 8)].map((_, i) => (
+              <div key={i} className="rounded-2xl animate-pulse"
+                style={{ height: dense ? 240 : 280, background: "var(--p-card)", border: "1.5px solid #f0eee9" }} />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {[...Array(8)].map((_, i) => <div key={i} className="bg-white rounded-xl h-20 animate-pulse border border-gray-100" />)}
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-xl h-[70px] animate-pulse"
+                style={{ background: "var(--p-card)", border: "1.5px solid #f0eee9" }} />
+            ))}
           </div>
         )
-      ) : games.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-5xl mb-4">🎲</div>
-          <p>Aucun jeu trouvé.</p>
+      ) : sortedGames.length === 0 ? (
+        <div className="text-center py-20 flex flex-col items-center gap-4" style={{ color: "var(--p-ink3)" }}>
+          <Pion tint="#9a8b7c" kind="meeple" w={80} h={80} />
+          <p className="text-base">Aucun jeu trouvé.</p>
           {hasActiveFilters && (
-            <button onClick={resetFilters} className="mt-2 text-sm text-[#C8102E] hover:underline">
+            <button onClick={resetFilters} className="text-sm hover:underline" style={{ color: "var(--p-primary)" }}>
               Effacer les filtres
             </button>
           )}
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {sortedGames.map((g) => <GameCard key={g.id} game={g} />)}
+        <div className={`grid ${cols} gap-4`}>
+          {sortedGames.map((g) => <GameCard key={g.id} game={g} dense={dense} />)}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

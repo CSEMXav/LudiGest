@@ -146,8 +146,8 @@ export default function AdminLoansPage() {
   }
 
   function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return <span className="text-gray-300 ml-1">↕</span>;
-    return <span className="text-[#C8102E] ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+    if (sortKey !== k) return <span className="ml-1" style={{ color: "var(--p-rule)" }}>↕</span>;
+    return <span className="ml-1" style={{ color: "var(--p-primary)" }}>{sortDir === "asc" ? "↑" : "↓"}</span>;
   }
 
   const now = new Date();
@@ -274,7 +274,8 @@ export default function AdminLoansPage() {
                             </button>
                             <button
                               onClick={() => forceReturn(l.id)}
-                              className="text-xs px-2.5 py-1 bg-[#C8102E] text-white rounded-lg hover:bg-red-700 transition-colors"
+                              className="text-xs px-2.5 py-1 text-white rounded-lg transition-colors"
+                              style={{ background: "var(--p-primary)" }}
                             >
                               Forcer retour
                             </button>
@@ -322,7 +323,7 @@ export default function AdminLoansPage() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditDates(null)} className="flex-1 py-2 text-sm rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50">Annuler</button>
-              <button onClick={saveDates} disabled={savingDates} className="flex-1 py-2 text-sm rounded-xl bg-[#C8102E] text-white hover:bg-red-700 disabled:opacity-50">
+              <button onClick={saveDates} disabled={savingDates} className="flex-1 py-2 text-sm rounded-xl text-white disabled:opacity-50" style={{ background: "var(--p-primary)" }}>
                 {savingDates ? "Enregistrement…" : "Enregistrer"}
               </button>
             </div>

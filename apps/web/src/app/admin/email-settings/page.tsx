@@ -24,8 +24,16 @@ interface EmailLog {
   loanActive: boolean | null;
 }
 
-const VARS_HINT = "Variables disponibles : {{userName}}, {{gameName}}, {{dueAt}}";
+const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}";
 const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
+
+const LOG_TINTS: Record<string, string> = {
+  reminder:        "var(--p-ocre)",
+  overdue:         "var(--p-primary)",
+  SESSION_INVITE:  "var(--p-bleu)",
+  SESSION_REMINDER:"var(--p-ocre)",
+  GAME_REPORT:     "var(--p-primary)",
+};
 
 const TYPE_COLORS: Record<string, string> = {
   reminder: "bg-yellow-50 text-yellow-700",
@@ -38,8 +46,8 @@ const TYPE_COLORS: Record<string, string> = {
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
+      <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "var(--p-ink3)" }}>{label}</label>
+      {hint && <p className="text-xs mb-1.5" style={{ color: "var(--p-ink3)" }}>{hint}</p>}
       {children}
     </div>
   );
@@ -48,18 +56,22 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function Collapsible({ title, icon, defaultOpen = false, children }: { title: string; icon: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-xl border border-gray-100">
+    <div className="rounded-xl" style={{ border: "1px solid var(--p-rule)" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors rounded-xl"
+        className="w-full flex items-center justify-between px-5 py-4 rounded-xl transition-colors hover:opacity-80"
       >
-        <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-          <span className="text-xl">{icon}</span> {title}
+        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--p-ink)" }}>
+          <span className="text-lg">{icon}</span> {title}
         </h2>
-        <span className="text-gray-400 text-sm">{open ? "▲" : "▼"}</span>
+        <span className="text-sm" style={{ color: "var(--p-ink3)" }}>{open ? "▲" : "▼"}</span>
       </button>
-      {open && <div className="px-6 pb-6 pt-2 border-t border-gray-100">{children}</div>}
+      {open && (
+        <div className="px-5 pb-5 pt-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -95,17 +107,10 @@ export default function EmailSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setSaveError(d.error ?? "Erreur lors de l'enregistrement.");
-      } else {
-        setSaved(true);
-      }
-    } catch {
-      setSaveError("Erreur réseau. Veuillez réessayer.");
-    } finally {
-      setSaving(false);
-    }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setSaveError(d.error ?? "Erreur."); }
+      else { setSaved(true); }
+    } catch { setSaveError("Erreur réseau."); }
+    finally { setSaving(false); }
   }
 
   async function loadLogs() {
@@ -119,216 +124,187 @@ export default function EmailSettingsPage() {
   }
 
   if (loading) return (
-    <div className="animate-pulse space-y-4">
-      {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-white rounded-xl" />)}
+    <div className="space-y-4 animate-pulse">
+      {[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-xl" style={{ background: "var(--p-card)" }} />)}
     </div>
   );
 
   if (!config) return null;
 
-  const inputCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300";
-  const textareaCls = `${inputCls} resize-y min-h-[100px] font-mono text-xs leading-relaxed`;
+  const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition-colors";
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Paramètres des emails de rappel</h1>
+      {/* Header */}
+      <div className="flex items-end justify-between mb-6">
+        <div>
+          <h1 className="font-display text-4xl font-bold tracking-tight leading-none" style={{ color: "var(--p-ink)" }}>
+            Paramètres email
+          </h1>
+          <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
+            Modèles de notifications, expéditeur, journal d'envoi
+          </p>
+        </div>
         <button
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+          className="px-5 py-2.5 rounded-full text-sm font-bold text-white disabled:opacity-50 transition-colors"
+          style={{ background: "var(--p-ink)" }}
         >
           {saving ? "Enregistrement..." : saved ? "✓ Enregistré" : saveError ? "⚠ Réessayer" : "Enregistrer"}
         </button>
       </div>
 
       {saveError && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">{saveError}</div>
+        <div className="mb-4 rounded-xl px-4 py-3 text-sm" style={{ background: "var(--p-primary-soft)", color: "#7c2410" }}>{saveError}</div>
       )}
 
-      <div className="space-y-4">
+      {/* 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-4">
+        {/* Left: email templates */}
+        <section className="rounded-2xl p-6" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+          <h2 className="font-display text-xl font-bold mb-1" style={{ color: "var(--p-ink)" }}>Modèles</h2>
+          <p className="text-xs mb-5" style={{ color: "var(--p-ink3)" }}>Personnalisez les emails envoyés aux membres.</p>
 
-        {/* Timing */}
-        <Collapsible title="Fréquence d'envoi" icon="⏱" defaultOpen>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
-            <Field
-              label="Jours avant échéance pour le rappel"
-              hint="L'email de rappel sera envoyé X jours avant la date de retour."
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={1}
-                  max={14}
-                  value={config.reminderDaysBefore}
-                  onChange={(e) => set("reminderDaysBefore", parseInt(e.target.value) || 1)}
-                  className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                />
-                <span className="text-sm text-gray-500">jours avant la fin</span>
-              </div>
-            </Field>
-            <Field
-              label="Fréquence des relances en retard (jours)"
-              hint="Après la date limite, un email de relance sera envoyé tous les X jours."
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={config.overdueFrequencyDays}
-                  onChange={(e) => set("overdueFrequencyDays", parseInt(e.target.value) || 1)}
-                  className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                />
-                <span className="text-sm text-gray-500">jours entre chaque relance</span>
-              </div>
-            </Field>
-            <div className="sm:col-span-2">
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-600">
-                <span>🕛</span>
-                <span>Les rappels automatiques sont envoyés chaque jour à <strong>12h00 UTC</strong> (14h en France en été, 13h en hiver).</span>
-              </div>
-            </div>
-          </div>
-        </Collapsible>
-
-        {/* Reminder email */}
-        <Collapsible title="Email de rappel avant échéance" icon="📧">
-          <div className="space-y-4 mt-2">
-            <Field label="Objet" hint={VARS_HINT}>
-              <input
-                type="text"
-                value={config.reminderSubject}
-                onChange={(e) => set("reminderSubject", e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            <Field label="Corps du message" hint={VARS_HINT}>
-              <textarea
-                value={config.reminderBody}
-                onChange={(e) => set("reminderBody", e.target.value)}
-                className={textareaCls}
-              />
-            </Field>
-          </div>
-        </Collapsible>
-
-        {/* Overdue email */}
-        <Collapsible title="Email de retard après échéance" icon="⚠️">
-          <div className="space-y-4 mt-2">
-            <Field label="Objet" hint={VARS_HINT}>
-              <input
-                type="text"
-                value={config.overdueSubject}
-                onChange={(e) => set("overdueSubject", e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            <Field label="Corps du message" hint={VARS_HINT}>
-              <textarea
-                value={config.overdueBody}
-                onChange={(e) => set("overdueBody", e.target.value)}
-                className={textareaCls}
-              />
-            </Field>
-          </div>
-        </Collapsible>
-
-        {/* Session invite email */}
-        <Collapsible title="Email d'invitation aux sessions" icon="🎲">
-          <div className="space-y-4 mt-2">
-            <p className="text-xs text-gray-400">Utilisé lors des invitations admin et des sessions privées créées par les membres.</p>
-            <Field label="Objet" hint={SESSION_VARS_HINT}>
-              <input
-                type="text"
-                value={config.sessionInviteSubject ?? ""}
-                onChange={(e) => set("sessionInviteSubject", e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            <Field label="Corps du message" hint={SESSION_VARS_HINT}>
-              <textarea
-                value={config.sessionInviteBody ?? ""}
-                onChange={(e) => set("sessionInviteBody", e.target.value)}
-                className={textareaCls}
-              />
-            </Field>
-          </div>
-        </Collapsible>
-
-        {/* Variables reference */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
-          <p className="font-medium mb-1">💡 Variables disponibles dans les emails</p>
-          <ul className="space-y-0.5 text-xs text-blue-600">
-            <li><code className="bg-blue-100 px-1 rounded">{"{{userName}}"}</code> — Prénom et nom</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{gameName}}"}</code> — Nom du jeu emprunté</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{dueAt}}"}</code> — Date limite de retour</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionName}}"}</code> — Nom de la session</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionDate}}"}</code> — Date de la session</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionTime}}"}</code> — Heure de début</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{sessionLocation}}"}</code> — Lieu</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{registerUrl}}"}</code> — Lien d&apos;inscription</li>
-            <li><code className="bg-blue-100 px-1 rounded">{"{{inviterName}}"}</code> — Nom de la personne qui invite (sessions privées)</li>
-          </ul>
-        </div>
-
-        {/* Email send history */}
-        <div className="bg-white rounded-xl border border-gray-100">
-          <button
-            type="button"
-            onClick={loadLogs}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors rounded-xl"
-          >
-            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">📋</span> Historique des emails envoyés
-            </h2>
-            <span className="text-gray-400 text-sm">{logsOpen ? "▲" : "▼"}</span>
-          </button>
-
-          {logsOpen && (
-            <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-              {logsLoading ? (
-                <div className="space-y-2 mt-2">
-                  {[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}
+          <div className="space-y-3">
+            <Collapsible title="Fréquence d'envoi" icon="⏱" defaultOpen>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                <Field label="Rappel avant échéance" hint="Jours avant la date de retour">
+                  <div className="flex items-center gap-2">
+                    <input type="number" min={1} max={14} value={config.reminderDaysBefore}
+                      onChange={(e) => set("reminderDaysBefore", parseInt(e.target.value) || 1)}
+                      className="w-20 rounded-xl px-3 py-2 text-sm focus:outline-none text-center"
+                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                    <span className="text-sm" style={{ color: "var(--p-ink3)" }}>jours</span>
+                  </div>
+                </Field>
+                <Field label="Fréquence relances retard" hint="Jours entre chaque relance">
+                  <div className="flex items-center gap-2">
+                    <input type="number" min={1} max={30} value={config.overdueFrequencyDays}
+                      onChange={(e) => set("overdueFrequencyDays", parseInt(e.target.value) || 1)}
+                      className="w-20 rounded-xl px-3 py-2 text-sm focus:outline-none text-center"
+                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                    <span className="text-sm" style={{ color: "var(--p-ink3)" }}>jours</span>
+                  </div>
+                </Field>
+                <div className="sm:col-span-2">
+                  <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
+                    🕛 Rappels automatiques à <strong style={{ color: "var(--p-ink)" }}>12h00 UTC</strong> (14h heure France en été)
+                  </div>
                 </div>
-              ) : logs.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-6">Aucun email enregistré.</p>
-              ) : (
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-gray-100 text-gray-500">
-                        <th className="text-left pb-2 pr-3 font-medium">Date</th>
-                        <th className="text-left pb-2 pr-3 font-medium">Type</th>
-                        <th className="text-left pb-2 pr-3 font-medium">Destinataire</th>
-                        <th className="text-left pb-2 font-medium">Détail</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {logs.map((log) => (
-                        <tr key={log.id} className="hover:bg-gray-50">
-                          <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Rappel avant échéance" icon="📧">
+              <div className="space-y-3 mt-2">
+                <Field label="Objet" hint={VARS_HINT}>
+                  <input type="text" value={config.reminderSubject} onChange={(e) => set("reminderSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.reminderBody} onChange={(e) => set("reminderBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Retard après échéance" icon="⚠️">
+              <div className="space-y-3 mt-2">
+                <Field label="Objet" hint={VARS_HINT}>
+                  <input type="text" value={config.overdueSubject} onChange={(e) => set("overdueSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.overdueBody} onChange={(e) => set("overdueBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Invitation aux soirées" icon="🎲">
+              <div className="space-y-3 mt-2">
+                <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Utilisé lors des invitations admin et des sessions privées.</p>
+                <Field label="Objet" hint={SESSION_VARS_HINT}>
+                  <input type="text" value={config.sessionInviteSubject ?? ""} onChange={(e) => set("sessionInviteSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.sessionInviteBody ?? ""} onChange={(e) => set("sessionInviteBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+          </div>
+        </section>
+
+        {/* Right column */}
+        <div className="flex flex-col gap-4">
+          {/* Variables reference */}
+          <section className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+            <h2 className="font-display text-base font-bold mb-3" style={{ color: "var(--p-ink)" }}>💡 Variables disponibles</h2>
+            <ul className="space-y-1">
+              {[
+                ["{{userName}}", "Prénom et nom"],
+                ["{{gameName}}", "Nom du jeu emprunté"],
+                ["{{dueAt}}", "Date limite de retour"],
+                ["{{sessionName}}", "Nom de la session"],
+                ["{{sessionDate}}", "Date de la session"],
+                ["{{sessionTime}}", "Heure de début"],
+                ["{{sessionLocation}}", "Lieu"],
+                ["{{registerUrl}}", "Lien d'inscription"],
+                ["{{inviterName}}", "Nom de l'invitant (sessions privées)"],
+              ].map(([v, d]) => (
+                <li key={v} className="flex items-center gap-2 text-xs">
+                  <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: "var(--p-bg)", color: "var(--p-primary)" }}>{v}</code>
+                  <span style={{ color: "var(--p-ink2)" }}>— {d}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Logs */}
+          <section className="rounded-2xl" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+            <button
+              type="button"
+              onClick={loadLogs}
+              className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-colors hover:opacity-80"
+            >
+              <h2 className="font-display text-base font-bold flex items-center gap-2" style={{ color: "var(--p-ink)" }}>
+                <span>📋</span> Journal d'envoi
+              </h2>
+              <span className="text-sm" style={{ color: "var(--p-ink3)" }}>{logsOpen ? "▲" : "▼"}</span>
+            </button>
+
+            {logsOpen && (
+              <div className="px-5 pb-5 pt-2" style={{ borderTop: "1px solid var(--p-rule)" }}>
+                {logsLoading ? (
+                  <div className="space-y-2 mt-2">{[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "var(--p-bg)" }} />)}</div>
+                ) : logs.length === 0 ? (
+                  <p className="text-sm text-center py-4" style={{ color: "var(--p-ink3)" }}>Aucun email enregistré.</p>
+                ) : (
+                  <div className="space-y-0">
+                    {logs.map((log, i) => (
+                      <div key={log.id} className="flex items-center gap-3 py-2.5" style={{ borderTop: i > 0 ? "1px solid var(--p-rule)" : "none" }}>
+                        <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ background: LOG_TINTS[log.typeKey] ?? "var(--p-ink3)" }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold truncate" style={{ color: "var(--p-ink)" }}>{log.detail || log.typeLabel}</div>
+                          <div className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>
                             {new Date(log.sentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                            {" "}
-                            {new Date(log.sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                          </td>
-                          <td className="py-2 pr-3">
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${TYPE_COLORS[log.typeKey] ?? "bg-gray-100 text-gray-600"}`}>
-                              {log.typeLabel}
-                            </span>
-                          </td>
-                          <td className="py-2 pr-3 text-gray-700">{log.userEmail}</td>
-                          <td className="py-2 text-gray-500 truncate max-w-[180px]">{log.detail}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                            {" "}·{" "}
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs ${TYPE_COLORS[log.typeKey] ?? "bg-gray-100 text-gray-600"}`}>{log.typeLabel}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         </div>
-
       </div>
     </div>
   );

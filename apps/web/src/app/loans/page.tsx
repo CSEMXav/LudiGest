@@ -20,23 +20,25 @@ function isDueSoon(dueAt: string) {
 function ReturnModal({ loan, onConfirm, onCancel }: { loan: LoanDTO; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">
+      <div className="rounded-2xl w-full max-w-md shadow-xl p-6" style={{ background: "var(--p-card)" }}>
+        <h2 className="text-lg font-bold mb-3" style={{ color: "var(--p-ink)" }}>
           Rendre &ldquo;{loan.gameName}&rdquo; ?
         </h2>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm mb-4" style={{ color: "var(--p-ink2)" }}>
           Merci de ranger le jeu correctement dans sa boîte avant de le rendre, et de tenir compte de sa catégorie/couleur pour le ranger dans la section correspondante.
         </p>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}
           >
             Non, annuler
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+            className="px-4 py-2 text-white rounded-xl text-sm font-medium transition-colors"
+            style={{ background: "var(--p-primary)" }}
           >
             Oui, rendre
           </button>
@@ -60,46 +62,59 @@ function LoanCard({
   const overdue = active && isOverdue(loan.dueAt);
   const dueSoon = active && !overdue && isDueSoon(loan.dueAt);
 
+  const cardStyle = overdue
+    ? { background: "#fbebe9", borderColor: "var(--p-primary)" }
+    : dueSoon
+    ? { background: "#fdf6e3", borderColor: "var(--p-ocre)" }
+    : { background: "var(--p-card)", borderColor: "var(--p-rule)" };
+
   return (
-    <div className={`bg-white rounded-xl border p-4 flex gap-4 items-start ${
-      overdue ? "border-red-200 bg-red-50" : dueSoon ? "border-yellow-200 bg-yellow-50" : "border-gray-100"
-    }`}>
-      <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+    <div className="rounded-xl p-4 flex gap-4 items-start" style={{ border: "1.5px solid", ...cardStyle }}>
+      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center"
+        style={{ background: loan.gameCoverUrl ? undefined : "var(--p-primary-soft)" }}>
         {loan.gameCoverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={loan.gameCoverUrl} alt={loan.gameName} className="w-full h-full object-cover" />
         ) : (
-          <div className="flex items-center justify-center h-full text-2xl">🎲</div>
+          <span style={{ fontSize: 24, opacity: 0.5 }}>🎲</span>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <Link href={`/games/${loan.gameId}`} className="font-semibold text-gray-900 hover:text-[#C8102E]">
+        <Link href={`/games/${loan.gameId}`} className="font-semibold text-sm hover:underline"
+          style={{ color: "var(--p-ink)" }}>
           {loan.gameName}
         </Link>
 
         {active ? (
           <>
-            <p className={`text-sm mt-0.5 ${overdue ? "text-red-600 font-medium" : dueSoon ? "text-yellow-700 font-medium" : "text-gray-500"}`}>
+            <p className="text-sm mt-0.5 font-medium" style={{
+              color: overdue ? "var(--p-primary)" : dueSoon ? "#a07000" : "var(--p-ink3)"
+            }}>
               {overdue ? "⚠ En retard — " : dueSoon ? "⏰ À rendre bientôt — " : "À rendre avant le "}
               {formatDate(loan.dueAt)}
             </p>
             {loan.extendedCount > 0 && (
-              <span className="inline-block mt-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+              <span className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded-full"
+                style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }}>
                 Prolongé {loan.extendedCount}x
               </span>
             )}
           </>
         ) : (
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm mt-0.5" style={{ color: "var(--p-ink3)" }}>
             Rendu le {formatDate(loan.returnedAt!)}
           </p>
         )}
 
-        <p className="text-xs text-gray-400 mt-0.5">Emprunté le {formatDate(loan.borrowedAt)}</p>
+        <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>Emprunté le {formatDate(loan.borrowedAt)}</p>
 
         {message && (
-          <p className={`text-sm mt-1 ${message.includes("Erreur") || message.includes("erreur") || message.includes("maximum") ? "text-red-600" : "text-green-600"}`}>
+          <p className="text-sm mt-1" style={{
+            color: message.includes("Erreur") || message.includes("erreur") || message.includes("maximum")
+              ? "var(--p-primary)"
+              : "#3a6a3e"
+          }}>
             {message}
           </p>
         )}
@@ -108,14 +123,16 @@ function LoanCard({
           <div className="flex gap-2 mt-3">
             <button
               onClick={() => onAction("return")}
-              className="px-3 py-1.5 bg-[#C8102E] text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+              className="px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-colors"
+              style={{ background: "var(--p-primary)" }}
             >
               Rendre
             </button>
             {loan.extendedCount < 3 && (
               <button
                 onClick={() => onAction("extend")}
-                className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)", background: "var(--p-card)" }}
               >
                 Prolonger (+1 semaine)
               </button>
@@ -171,23 +188,29 @@ export default function LoansPage() {
   const active = loans.filter((l) => !l.returnedAt);
   const history = loans.filter((l) => l.returnedAt);
 
-  if (loading) return <div className="animate-pulse space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-white h-28 rounded-xl" />)}</div>;
+  if (loading) return (
+    <div className="space-y-4">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: "var(--p-card)" }} />
+      ))}
+    </div>
+  );
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mes emprunts</h1>
+      <h1 className="text-2xl font-bold mb-6" style={{ color: "var(--p-ink)", fontFamily: "var(--font-display, system-ui)" }}>Mes emprunts</h1>
 
       {active.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12" style={{ color: "var(--p-ink3)" }}>
           <div className="text-5xl mb-4">📭</div>
           <p>Aucun emprunt en cours.</p>
-          <Link href="/games" className="mt-4 inline-block text-[#C8102E] hover:underline text-sm">
+          <Link href="/games" className="mt-4 inline-block text-sm hover:underline" style={{ color: "var(--p-primary)" }}>
             Parcourir les jeux →
           </Link>
         </div>
       ) : (
         <>
-          <p className="text-sm text-gray-500 mb-4">{active.length}/5 emprunts actifs</p>
+          <p className="text-sm mb-4" style={{ color: "var(--p-ink3)" }}>{active.length}/5 emprunts actifs</p>
           <div className="space-y-4">
             {active.map((loan) => (
               <LoanCard
@@ -206,7 +229,8 @@ export default function LoansPage() {
         <div className="mt-10">
           <button
             onClick={() => setShowHistory((v) => !v)}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-sm font-semibold mb-4"
+            style={{ color: "var(--p-ink2)" }}
           >
             <span className={`transition-transform ${showHistory ? "rotate-90" : ""}`}>▶</span>
             Historique des emprunts ({history.length})

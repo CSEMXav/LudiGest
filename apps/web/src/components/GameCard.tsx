@@ -1,68 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import type { GameDTO, GameCategory } from "@ludigest/types";
+import type { GameDTO } from "@ludigest/types";
+import { Pion, CAT_PION } from "./Pion";
 
-const CATEGORY_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  escape:   { label: "Escape",   bg: "bg-red-500",    text: "text-white", border: "border-l-4 border-l-red-500" },
-  famille:  { label: "Famille",  bg: "bg-orange-400", text: "text-white", border: "border-l-4 border-l-orange-400" },
-  ambiance: { label: "Ambiance", bg: "bg-blue-500",   text: "text-white", border: "border-l-4 border-l-blue-500" },
-  enfant:   { label: "Enfant",   bg: "bg-yellow-400", text: "text-white", border: "border-l-4 border-l-yellow-400" },
-  "initié": { label: "Initié",   bg: "bg-gray-500",   text: "text-white", border: "border-l-4 border-l-gray-500" },
-  expert:   { label: "Expert",   bg: "bg-green-500",  text: "text-white", border: "border-l-4 border-l-green-500" },
+const TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
+
+const CAT_CONFIG: Record<string, { label: string; color: string }> = {
+  escape:   { label: "Escape",   color: "#d24a1f" },
+  famille:  { label: "Famille",  color: "#e8a82f" },
+  ambiance: { label: "Ambiance", color: "#286b7a" },
+  enfant:   { label: "Enfant",   color: "#f4c430" },
+  "initié": { label: "Initié",   color: "#5b4d40" },
+  expert:   { label: "Expert",   color: "#6a8f3c" },
 };
 
-function getCategoryConfig(category: string) {
-  return CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG["famille"];
+function getCat(category: string) {
+  return CAT_CONFIG[category] ?? CAT_CONFIG["famille"];
+}
+
+function gameTint(game: GameDTO): string {
+  // Cycle through tints based on first char of id
+  const code = game.id.charCodeAt(0) + game.id.charCodeAt(game.id.length - 1);
+  return TINTS[code % TINTS.length];
+}
+
+function formatDueDate(iso: string) {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 function StatusBadge({ status }: { status: GameDTO["status"] }) {
-  const styles: Record<string, string> = {
-    AVAILABLE: "bg-green-100 text-green-800",
-    BORROWED: "bg-orange-100 text-orange-800",
-    SUSPENDED: "bg-gray-100 text-gray-600",
-  };
-  const labels: Record<string, string> = {
-    AVAILABLE: "Disponible",
-    BORROWED: "Emprunté",
-    SUSPENDED: "Suspendu",
-  };
+  if (status === "AVAILABLE") return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: "#e8f4ec", color: "#3a6a3e" }}>
+      Disponible
+    </span>
+  );
+  if (status === "BORROWED") return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: "rgba(30,22,16,.85)", color: "#fff" }}>
+      Emprunté
+    </span>
+  );
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: "var(--p-rule)", color: "var(--p-ink3)" }}>
+      Suspendu
     </span>
   );
 }
 
+/* ── List row (inchangé stylistiquement, juste nettoyé) ── */
 export function GameListRow({ game }: { game: GameDTO }) {
-  const cat = getCategoryConfig(game.category);
-
+  const cat = getCat(game.category);
   return (
     <Link href={`/games/${game.id}`} className="block">
-      <div className={`bg-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow flex items-center gap-4 p-3 ${cat.border}`}>
-        {/* Thumbnail */}
-        <div className="w-14 h-14 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+      <div
+        className="flex items-center gap-4 p-3 rounded-xl transition-all hover:-translate-y-px"
+        style={{ background: "var(--p-card)", border: "1.5px solid var(--p-rule)" }}
+      >
+        <div
+          className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center"
+          style={{ background: game.coverUrl ? undefined : cat.color }}
+        >
           {game.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
-            <div className="flex items-center justify-center h-full text-2xl text-gray-300">🎲</div>
+            <Pion tint={cat.color} kind={CAT_PION[game.category] ?? "meeple"} w={32} h={32} />
           )}
         </div>
 
-        {/* Category badge */}
-        <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0 ${cat.bg} ${cat.text}`}>
+        <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0 text-white" style={{ background: cat.color }}>
           {cat.label}
         </span>
 
-        {/* Name + type */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm truncate">{game.name}</p>
-          <p className="text-xs text-gray-500 truncate">{game.type}</p>
+          <p className="font-semibold text-sm truncate font-display" style={{ color: "var(--p-ink)" }}>{game.name}</p>
+          <p className="text-xs truncate" style={{ color: "var(--p-ink3)" }}>{game.type}</p>
         </div>
 
-        {/* Players + duration */}
-        <div className="hidden sm:flex gap-4 text-xs text-gray-500 flex-shrink-0">
+        <div className="hidden sm:flex gap-4 text-xs flex-shrink-0" style={{ color: "var(--p-ink2)" }}>
           {game.minPlayers && game.maxPlayers && (
             <span>👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}–${game.maxPlayers}`}</span>
           )}
@@ -70,17 +85,15 @@ export function GameListRow({ game }: { game: GameDTO }) {
           {game.minAge && <span>🎂 {game.minAge}+</span>}
         </div>
 
-        {/* Rating */}
         {game.averageRating && (
-          <span className="hidden md:block text-yellow-500 text-xs flex-shrink-0">
+          <span className="hidden md:block text-xs flex-shrink-0" style={{ color: "var(--p-ocre)" }}>
             {"★".repeat(Math.round(game.averageRating))}{"☆".repeat(5 - Math.round(game.averageRating))}
           </span>
         )}
 
-        {/* Report + Status */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {(game.reportCount ?? 0) > 0 && (
-            <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full" title="Un signalement existe pour ce jeu">🚨</span>
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }} title="Un signalement existe pour ce jeu">🚨</span>
           )}
           <StatusBadge status={game.status} />
         </div>
@@ -89,65 +102,125 @@ export function GameListRow({ game }: { game: GameDTO }) {
   );
 }
 
-export function GameCard({ game }: { game: GameDTO }) {
-  const cat = getCategoryConfig(game.category);
+/* ── Plateau card (grille) ── */
+export function GameCard({ game, dense = false }: { game: GameDTO; dense?: boolean }) {
+  const cat = getCat(game.category);
+  const tint = game.coverUrl ? cat.color : gameTint(game);
+  const pionKind = CAT_PION[game.category] ?? "meeple";
+  const pionSize = dense ? 60 : 76;
+  const visualH = dense ? 120 : 144;
+
+  const dueDate = (game as GameDTO & { activeLoan?: { dueAt: string } }).activeLoan?.dueAt;
 
   return (
-    <Link href={`/games/${game.id}`} className="block h-full">
-      <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden h-full flex flex-col ${cat.border}`}>
-        {/* Image */}
-        <div className="relative h-44 bg-gray-100 overflow-hidden">
+    <Link href={`/games/${game.id}`} className="block group">
+      <div
+        className="rounded-2xl overflow-hidden cursor-pointer transition-all duration-150 group-hover:-translate-y-0.5"
+        style={{
+          background: "#fff",
+          border: "1.5px solid var(--p-rule)",
+          borderTop: `4px solid ${cat.color}`,
+          boxShadow: "none",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(30,22,16,.08)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
+      >
+        {/* Visuel */}
+        <div
+          className="relative flex items-center justify-center overflow-hidden"
+          style={{ height: visualH, background: game.coverUrl ? undefined : tint }}
+        >
           {game.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={game.coverUrl}
-              alt={game.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            <img src={game.coverUrl} alt={game.name} className="w-full h-full object-cover" loading="lazy" />
           ) : (
-            <div className="flex items-center justify-center h-full text-4xl text-gray-300">
-              🎲
+            <Pion tint={tint} kind={pionKind} w={pionSize} h={pionSize} />
+          )}
+
+          {/* Tampon EMPRUNTÉ — hachuré diagonal */}
+          {game.status === "BORROWED" && (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                background: "repeating-linear-gradient(135deg, rgba(30,22,16,.55) 0 14px, rgba(30,22,16,.35) 14px 28px)",
+              }}
+            >
+              <div
+                style={{
+                  transform: "rotate(-12deg)",
+                  background: "#1e1610",
+                  color: "#fff",
+                  padding: "4px 16px",
+                  borderRadius: 4,
+                  fontFamily: "var(--font-display, system-ui)",
+                  fontSize: dense ? 13 : 15,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  boxShadow: "0 4px 12px rgba(0,0,0,.3)",
+                }}
+              >
+                EMPRUNTÉ
+              </div>
             </div>
           )}
-          {/* Catégorie — badge en overlay sur l'image */}
-          <span className={`absolute top-2 left-2 px-2.5 py-1 rounded-full text-xs font-bold ${cat.bg} ${cat.text} shadow-sm`}>
-            {cat.label}
+
+          {/* Report badge */}
+          {(game.reportCount ?? 0) > 0 && (
+            <span
+              className="absolute bottom-2 right-2 text-xs font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }}
+            >🚨</span>
+          )}
+        </div>
+
+        {/* Bandeau catégorie pleine largeur */}
+        <div
+          className="flex items-center justify-between"
+          style={{
+            background: cat.color,
+            color: "#fff",
+            padding: dense ? "5px 12px" : "6px 14px",
+            fontSize: dense ? 10 : 11,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          <span>{cat.label}</span>
+          <span style={{ fontSize: 9, opacity: 0.85, fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>
+            {game.status === "BORROWED"
+              ? dueDate ? `Retour ${formatDueDate(dueDate)}` : "Emprunté"
+              : "● Disponible"}
           </span>
         </div>
 
-        {/* Infos */}
-        <div className="p-3 flex flex-col gap-1.5 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-gray-900 leading-tight text-sm">{game.name}</h3>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {(game.reportCount ?? 0) > 0 && (
-                <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full" title="Un signalement existe pour ce jeu">🚨</span>
+        {/* Corps texte */}
+        <div style={{ padding: dense ? "10px 12px 12px" : "12px 14px 14px" }}>
+          <div
+            className="font-bold leading-tight mb-0.5"
+            style={{
+              fontFamily: "var(--font-display, system-ui)",
+              fontSize: dense ? 14 : 16,
+              lineHeight: 1.15,
+              color: "var(--p-ink)",
+            }}
+          >
+            {game.name}
+          </div>
+          <div className="text-[10px] mb-1.5" style={{ color: "var(--p-ink3)" }}>{game.type}</div>
+          <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--p-ink2)" }}>
+            <span>
+              {game.minPlayers && game.maxPlayers && (
+                <>👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}–${game.maxPlayers}`}</>
               )}
-              <StatusBadge status={game.status} />
-            </div>
-          </div>
-
-          <span className="text-xs text-gray-500">{game.type}</span>
-
-          {/* Joueurs + durée */}
-          <div className="flex gap-3 text-xs text-gray-500">
-            {game.minPlayers && game.maxPlayers && (
-              <span>👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}–${game.maxPlayers}`} joueurs</span>
-            )}
-            {game.duration && <span>⏱ {game.duration} min</span>}
-          </div>
-
-          {game.minAge && (
-            <span className="text-xs text-gray-400">À partir de {game.minAge} ans</span>
-          )}
-
-          {game.averageRating && (
-            <span className="text-yellow-500 text-xs">
-              {"★".repeat(Math.round(game.averageRating))}{"☆".repeat(5 - Math.round(game.averageRating))}
-              <span className="text-gray-400 ml-1">{game.averageRating}</span>
+              {game.duration && <> · ⏱ {game.duration}min</>}
             </span>
-          )}
+            {game.averageRating && (
+              <span style={{ color: "var(--p-ocre)" }}>
+                {"★".repeat(Math.round(game.averageRating))}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>

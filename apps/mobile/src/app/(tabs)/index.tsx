@@ -95,7 +95,7 @@ export default function GamesTab() {
   const sorted = sortGames(games, sort);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+    <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
       {location ? (
         <View style={s.locationBanner}>
           <Text style={s.locationBannerText}>📍 {location}</Text>
@@ -150,7 +150,7 @@ export default function GamesTab() {
       </ScrollView>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#C8102E" />
+        <ActivityIndicator style={{ marginTop: 40 }} color="#d24a1f" />
       ) : (
         <FlatList
           data={sorted}
@@ -159,7 +159,7 @@ export default function GamesTab() {
           contentContainerStyle={{ padding: 12 }}
           columnWrapperStyle={{ gap: 12 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#C8102E" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
           renderItem={({ item }) => (
             <TouchableOpacity style={s.card} onPress={() => router.push(`/game/${item.id}`)} activeOpacity={0.8}>
               {item.coverUrl
@@ -191,30 +191,30 @@ export default function GamesTab() {
 }
 
 const s = StyleSheet.create({
-  locationBanner: { backgroundColor: "#fff5f5", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#fecaca" },
-  locationBannerText: { fontSize: 13, color: "#C8102E", fontWeight: "600" },
+  locationBanner: { backgroundColor: "#fde2d2", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f5bba8" },
+  locationBannerText: { fontSize: 13, color: "#d24a1f", fontWeight: "600" },
   searchRow: { flexDirection: "row", padding: 12, paddingBottom: 0, gap: 8 },
-  searchInput: { flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12, padding: 12, fontSize: 15 },
-  addBtn: { backgroundColor: "#C8102E", width: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  searchInput: { flex: 1, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, padding: 12, fontSize: 15 },
+  addBtn: { backgroundColor: "#d24a1f", width: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   addBtnText: { color: "#fff", fontSize: 22, lineHeight: 28 },
   chipRow: { marginTop: 10, flexGrow: 0, flexShrink: 0 },
   filterRow: { paddingVertical: 8, flexGrow: 0, flexShrink: 0 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff", flexShrink: 0 },
-  chipActive: { backgroundColor: "#7c3aed", borderColor: "#7c3aed" },
-  chipText: { fontSize: 12, color: "#374151" },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff", flexShrink: 0 },
+  chipActive: { backgroundColor: "#d24a1f", borderColor: "#d24a1f" },
+  chipText: { fontSize: 12, color: "#1e1610" },
   chipTextActive: { color: "#fff" },
-  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#d1d5db", backgroundColor: "#fff", flexShrink: 0 },
-  filterActive: { backgroundColor: "#C8102E", borderColor: "#C8102E" },
-  sortActive: { backgroundColor: "#1d4ed8", borderColor: "#1d4ed8" },
-  filterText: { fontSize: 12, color: "#374151" },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff", flexShrink: 0 },
+  filterActive: { backgroundColor: "#1e1610", borderColor: "#1e1610" },
+  sortActive: { backgroundColor: "#e8a82f", borderColor: "#e8a82f" },
+  filterText: { fontSize: 12, color: "#1e1610" },
   filterTextActive: { color: "#fff" },
   sortTextActive: { color: "#fff" },
-card: { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+card: { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", borderWidth: 1.5, borderColor: "#ece1cd", elevation: 0 },
   cover: { width: "100%", aspectRatio: 1 },
-  coverPlaceholder: { backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" },
+  coverPlaceholder: { backgroundColor: "#fde2d2", alignItems: "center", justifyContent: "center" },
   cardBody: { padding: 10 },
-  cardName: { fontSize: 13, fontWeight: "600", color: "#111827", marginBottom: 2 },
-  cardCategory: { fontSize: 10, color: "#9ca3af", marginBottom: 2, textTransform: "capitalize" },
+  cardName: { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 2 },
+  cardCategory: { fontSize: 10, color: "#8a7a6a", marginBottom: 2, textTransform: "capitalize" },
   statusDot: { fontSize: 11, fontWeight: "500" },
-  rating: { fontSize: 10, color: "#f59e0b", marginTop: 2 },
+  rating: { fontSize: 10, color: "#e8a82f", marginTop: 2 },
 });
