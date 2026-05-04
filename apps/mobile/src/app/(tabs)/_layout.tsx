@@ -55,7 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: "Emprunter un jeu",
+          headerShown: false,
           tabBarLabel: "Emprunter",
           tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="card" w={24} h={24} />,
         }}
@@ -71,7 +71,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="sessions"
         options={{
-          title: "Sessions",
+          headerShown: false,
           tabBarLabel: "Sessions",
           tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="star" w={24} h={24} />,
         }}
@@ -79,7 +79,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="members"
         options={{
-          title: "Membres",
+          headerShown: false,
           tabBarLabel: "Membres",
           tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="meeple" w={24} h={24} />,
         }}
@@ -87,8 +87,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="admin-panel"
         options={{
+          headerShown: false,
           href: isAdmin ? undefined : null,
-          title: "Admin",
           tabBarLabel: "Admin",
           tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="chip" w={24} h={24} />,
         }}
