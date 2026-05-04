@@ -8,14 +8,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet } from "@/lib/api";
 import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
+import { Pion, CAT_PION } from "@/components/Pion";
 
-const CAT_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
-  escape:   { label: "Escape",   color: "#d24a1f", emoji: "🎲" },
-  famille:  { label: "Famille",  color: "#e8a82f", emoji: "♟" },
-  ambiance: { label: "Ambiance", color: "#286b7a", emoji: "🃏" },
-  enfant:   { label: "Enfant",   color: "#f4c430", emoji: "🪀" },
-  "initié": { label: "Initié",   color: "#5b4d40", emoji: "⚙" },
-  expert:   { label: "Expert",   color: "#6a8f3c", emoji: "⭐" },
+const CAT_CONFIG: Record<string, { label: string; color: string }> = {
+  escape:   { label: "Escape",   color: "#d24a1f" },
+  famille:  { label: "Famille",  color: "#e8a82f" },
+  ambiance: { label: "Ambiance", color: "#286b7a" },
+  enfant:   { label: "Enfant",   color: "#f4c430" },
+  "initié": { label: "Initié",   color: "#5b4d40" },
+  expert:   { label: "Expert",   color: "#6a8f3c" },
 };
 
 const CATEGORIES: { key: GameCategory | ""; label: string }[] = [
@@ -49,13 +50,13 @@ function sortGames(games: GameDTO[], sort: string): GameDTO[] {
 }
 
 function GameThumb({ game }: { game: GameDTO }) {
-  const cat = CAT_CONFIG[game.category] ?? { color: "#9a8b7c", emoji: "🎲" };
+  const cat = CAT_CONFIG[game.category] ?? { color: "#9a8b7c" };
   if (game.coverUrl) {
     return <Image source={{ uri: game.coverUrl }} style={s.thumbImg} resizeMode="cover" />;
   }
   return (
     <View style={[s.thumbPlaceholder, { backgroundColor: cat.color }]}>
-      <Text style={{ fontSize: 38 }}>{cat.emoji}</Text>
+      <Pion tint={cat.color} kind={CAT_PION[game.category] ?? "meeple"} w={56} h={56} />
     </View>
   );
 }

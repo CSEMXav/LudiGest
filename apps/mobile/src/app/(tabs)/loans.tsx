@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet, apiPost } from "@/lib/api";
 import type { LoanDTO } from "@ludigest/types";
+import { Pion } from "@/components/Pion";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
@@ -33,9 +34,10 @@ function LoanThumb({ loan, size = 52 }: { loan: LoanDTO; size?: number }) {
     return <Image source={{ uri: loan.gameCoverUrl }} style={{ width: size, height: size, borderRadius: 10 }} resizeMode="cover" />;
   }
   const color = hashColor(loan.gameName);
+  const pionSize = Math.round(size * 0.55);
   return (
     <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>{loan.gameName[0]?.toUpperCase()}</Text>
+      <Pion tint={color} kind="meeple" w={pionSize} h={pionSize} />
     </View>
   );
 }

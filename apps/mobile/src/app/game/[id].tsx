@@ -5,14 +5,15 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiGet, apiPost } from "@/lib/api";
+import { Pion, CAT_PION } from "@/components/Pion";
 
-const CAT_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
-  escape:   { label: "Escape",   color: "#d24a1f", emoji: "🎲" },
-  famille:  { label: "Famille",  color: "#e8a82f", emoji: "♟" },
-  ambiance: { label: "Ambiance", color: "#286b7a", emoji: "🃏" },
-  enfant:   { label: "Enfant",   color: "#f4c430", emoji: "🪀" },
-  "initié": { label: "Initié",   color: "#5b4d40", emoji: "⚙" },
-  expert:   { label: "Expert",   color: "#6a8f3c", emoji: "⭐" },
+const CAT_CONFIG: Record<string, { label: string; color: string }> = {
+  escape:   { label: "Escape",   color: "#d24a1f" },
+  famille:  { label: "Famille",  color: "#e8a82f" },
+  ambiance: { label: "Ambiance", color: "#286b7a" },
+  enfant:   { label: "Enfant",   color: "#f4c430" },
+  "initié": { label: "Initié",   color: "#5b4d40" },
+  expert:   { label: "Expert",   color: "#6a8f3c" },
 };
 
 interface Rating {
@@ -133,7 +134,7 @@ export default function GameDetailScreen() {
             <Image source={{ uri: game.coverUrl }} style={s.cover} resizeMode="cover" />
           ) : (
             <View style={[s.cover, { backgroundColor: cat.color, alignItems: "center", justifyContent: "center" }]}>
-              <Text style={{ fontSize: 96 }}>{cat.emoji}</Text>
+              <Pion tint={cat.color} kind={CAT_PION[game.category] ?? "meeple"} w={110} h={110} />
             </View>
           )}
           <View style={[s.catBadge, { backgroundColor: cat.color }]}>
