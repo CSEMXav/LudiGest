@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody"];
+  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody"];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) data[key] = body[key];

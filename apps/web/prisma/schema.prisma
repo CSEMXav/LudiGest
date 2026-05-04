@@ -120,6 +120,7 @@ model EmailConfig {
   overdueBody          String   @default("Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED")
   sessionInviteSubject String   @default("🎲 Invitation session : \"{{sessionName}}\" — le {{sessionDate}}")
   sessionInviteBody    String   @default("Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED")
+  sendHour             Int      @default(8)
   updatedAt            DateTime @updatedAt
 }
 

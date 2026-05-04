@@ -22,8 +22,9 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
   try {
-    const [loanReminders, sessionNotifs] = await Promise.all([
-      prisma.loanReminder.findMany({
+    let loanReminders: any[] = [];
+    try {
+      loanReminders = await prisma.loanReminder.findMany({
         orderBy: { sentAt: "desc" },
         take: 200,
         include: {
@@ -37,16 +38,27 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-      }),
-      prisma.userNotification.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 200,
-        include: {
-          user: { select: { name: true, email: true } },
-          session: { select: { name: true, isPrivate: true } },
-        },
-      }),
-    ]);
+      });
+    } catch { /* LoanReminder table may not exist yet */ }
+
+    const sessionNotifs = await prisma.userNotification.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        user: { select: { name: true, email: true } },
+        session: { select: { name: true, isPrivate: true } },
+      },
+    });
+
+    // For GAME_REPORT: deduplicate by title so one report = one row (not one per admin)
+    const seenReportTitles = new Set<string>();
+    const deduplicatedNotifs = sessionNotifs.filter((n) => {
+      if (n.type === "GAME_REPORT") {
+        if (seenReportTitles.has(n.title)) return false;
+        seenReportTitles.add(n.title);
+      }
+      return true;
+    });
 
     const logs = [
       ...loanReminders.map((r) => ({
@@ -59,16 +71,20 @@ export async function GET(req: NextRequest) {
         detail: r.loan.game.name,
         loanActive: r.loan.returnedAt === null,
       })),
-      ...sessionNotifs.map((n) => ({
+      ...deduplicatedNotifs.map((n) => ({
         id: n.id,
         sentAt: n.createdAt.toISOString(),
         typeKey: n.type,
-        typeLabel: n.session?.isPrivate
+        typeLabel: n.type === "GAME_REPORT"
+          ? "Signalement jeu"
+          : n.session?.isPrivate
           ? "Invitation session privée"
           : TYPE_LABELS[n.type] ?? n.type,
-        userEmail: n.user.email,
-        userName: n.user.name,
-        detail: n.session?.name ?? n.title,
+        userEmail: n.type === "GAME_REPORT" ? "→ admins" : n.user.email,
+        userName: n.type === "GAME_REPORT" ? "" : n.user.name,
+        detail: n.type === "GAME_REPORT"
+          ? n.title.replace('🚨 Signalement : ', '')
+          : n.session?.name ?? n.title,
         loanActive: null,
       })),
     ].sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
@@ -76,6 +92,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(logs);
   } catch (err) {
     console.error("GET /api/admin/email-logs error:", err);
-    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 }

@@ -271,7 +271,20 @@ export default function GameDetailPage() {
                         <div className="space-y-3 max-h-64 overflow-y-auto">
                           {reports.map((r) => (
                             <div key={r.id} className="bg-red-50 rounded-lg p-3">
-                              <p className="text-xs font-medium text-gray-700 mb-0.5">{r.reporterName} · {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</p>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-medium text-gray-700 mb-0.5">{r.reporterName} · {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</p>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    await fetch(`/api/games/${id}/reports/${r.id}`, { method: "DELETE" });
+                                    setReports((prev) => prev.filter((x) => x.id !== r.id));
+                                  }}
+                                  className="text-gray-300 hover:text-red-500 text-xs flex-shrink-0"
+                                  title="Supprimer ce signalement"
+                                >
+                                  ✕
+                                </button>
+                              </div>
                               <p className="text-sm text-gray-800">{r.message}</p>
                             </div>
                           ))}

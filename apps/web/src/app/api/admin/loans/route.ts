@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
     loans = raw.map((l) => ({ ...l, reminders: [] as { type: string; sentAt: Date }[] }));
   }
 
+  // Fallback: if a loan has reminderSentAt but no LoanReminder records, synthesize one
+  loans = loans.map((l) => {
+    if (l.reminders.length === 0 && (l as any).reminderSentAt) {
+      return { ...l, reminders: [{ type: "reminder", sentAt: (l as any).reminderSentAt as Date }] };
+    }
+    return l;
+  });
+
   return NextResponse.json(
     loans.map((l) => ({
       id: l.id,
