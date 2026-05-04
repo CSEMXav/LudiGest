@@ -99,7 +99,7 @@ export default async function CommentCaMarchePage() {
           </h2>
           <ul style={{ paddingLeft: 22, margin: 0, color: "#78350f", fontSize: 15, lineHeight: 2.2 }}>
             <li><strong style={{ color: "#C8102E" }}>Quand j'emprunte un jeu,</strong> j'utilise l'application LudiGest pour enregistrer mon emprunt — ainsi tout le monde sait quels jeux sont disponibles en temps réel.</li>
-            <li><strong style={{ color: "#C8102E" }}>Quand je rends un jeu,</strong> je le marque comme rendu dans l'application pour libérer le jeu pour les autres.</li>
+            <li><strong style={{ color: "#C8102E" }}>Quand je rends un jeu,</strong> je le marque comme rendu dans l'application, je le range dans l'étagère de la couleur correspondante (gommette sur la boîte), et je m'assure que le jeu est complet et bien rangé dans sa boîte.</li>
             <li>J'emprunte <strong style={{ textDecoration: "underline" }}>5 jeux maximum</strong> en même temps.</li>
             <li>J'emprunte les jeux pour <strong style={{ textDecoration: "underline" }}>4 semaines maximum</strong> — prolongeable 2 fois d'une semaine.</li>
             <li>Je rends les jeux empruntés complets et je les range dans l'armoire correspondante en fonction de sa couleur (gommette).</li>
@@ -131,7 +131,7 @@ export default async function CommentCaMarchePage() {
             {
               num: 4, color: "#ea580c", bg: "#fff7ed",
               title: "Rendez le jeu à temps",
-              text: "Remettez la boîte au référent avant la date de retour affichée dans votre profil. Vous recevrez un rappel automatique 2 jours avant l'échéance. En cas de retard, une relance est envoyée tous les 3 jours.",
+              text: "Avant la date de retour affichée dans votre profil, marquez le jeu comme rendu dans l'application, rangez la boîte à sa place (étagère de la couleur correspondante) et vérifiez qu'elle est complète et bien rangée.",
             },
           ].map(({ num, color, bg, title, text }) => (
             <div key={num} style={{ display: "flex", gap: 20, marginBottom: 20, backgroundColor: bg, borderRadius: 16, padding: "20px 24px" }}>

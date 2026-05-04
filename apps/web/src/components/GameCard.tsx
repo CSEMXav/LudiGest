@@ -57,7 +57,10 @@ export function GameListRow({ game }: { game: GameDTO }) {
 
         {/* Name + type */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm truncate">{game.name}</p>
+          <p className="font-semibold text-gray-900 text-sm truncate">
+            {game.name}
+            {(game.reportCount ?? 0) > 0 && <span className="ml-1 text-red-600 text-xs">🚨</span>}
+          </p>
           <p className="text-xs text-gray-500 truncate">{game.type}</p>
         </div>
 
@@ -109,6 +112,12 @@ export function GameCard({ game }: { game: GameDTO }) {
           <span className={`absolute top-2 left-2 px-2.5 py-1 rounded-full text-xs font-bold ${cat.bg} ${cat.text} shadow-sm`}>
             {cat.label}
           </span>
+          {/* Report badge */}
+          {(game.reportCount ?? 0) > 0 && (
+            <span className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-sm">
+              🚨
+            </span>
+          )}
         </div>
 
         {/* Infos */}

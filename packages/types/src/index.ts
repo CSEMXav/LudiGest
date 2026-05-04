@@ -41,6 +41,7 @@ export interface GameDTO {
   addedAt: string;
   averageRating?: number | null;
   ratingsCount?: number;
+  reportCount?: number;
 }
 
 export interface LoanDTO {

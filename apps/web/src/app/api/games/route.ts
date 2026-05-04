@@ -49,6 +49,35 @@ export async function GET(req: NextRequest) {
     orderBy: { name: "asc" },
   });
 
+  // For admins: get report counts per game (try/catch in case table doesn't exist yet)
+  let reportCounts: Record<string, number> = {};
+  if (user.role === "ADMIN") {
+    try {
+      const counts = await prisma.gameReport.groupBy({ by: ["gameId"], _count: { id: true } });
+      reportCounts = Object.fromEntries(counts.map((c) => [c.gameId, c._count.id]));
+      // Also count from UserNotification fallback (legacy reports before GameReport table)
+      const legacyCounts = await prisma.userNotification.groupBy({
+        by: ["title"],
+        where: { type: "GAME_REPORT" },
+        _count: { id: true },
+      });
+      for (const lc of legacyCounts) {
+        const match = lc.title.match(/🚨 Signalement : "(.+)"$/);
+        if (match) {
+          const game = games.find((g) => g.name === match[1]);
+          if (game && !reportCounts[game.id]) {
+            // Count distinct messages (one per report, multiple admins per report)
+            const distinctCount = await prisma.userNotification.findMany({
+              where: { type: "GAME_REPORT", title: lc.title },
+              distinct: ["message"],
+            });
+            reportCounts[game.id] = (reportCounts[game.id] ?? 0) + distinctCount.length;
+          }
+        }
+      }
+    } catch { /* GameReport or UserNotification query failed */ }
+  }
+
   let result = games.map((g) => {
     const avg =
       g.ratings.length > 0
@@ -72,6 +101,7 @@ export async function GET(req: NextRequest) {
       addedAt: g.addedAt.toISOString(),
       averageRating: avg,
       ratingsCount: g.ratings.length,
+      ...(user.role === "ADMIN" ? { reportCount: reportCounts[g.id] ?? 0 } : {}),
     };
   });
 
