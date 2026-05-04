@@ -187,21 +187,32 @@ function SessionFormModal({
   );
 }
 
+type AdminSession = GameSessionDTO & { createdByName?: string | null };
+
 export default function AdminSessionsPage() {
-  const [sessions, setSessions] = useState<GameSessionDTO[]>([]);
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
+  const [privateSessions, setPrivateSessions] = useState<AdminSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<GameSessionDTO | null>(null);
-  const [viewRegs, setViewRegs] = useState<GameSessionDTO | null>(null);
+  const [editing, setEditing] = useState<AdminSession | null>(null);
+  const [viewRegs, setViewRegs] = useState<AdminSession | null>(null);
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
+  const [privateExpanded, setPrivateExpanded] = useState(false);
 
   async function load() {
     try {
       const res = await fetch("/api/admin/sessions");
       const data = await res.json();
-      setSessions(Array.isArray(data) ? data : []);
+      if (data.adminSessions) {
+        setSessions(Array.isArray(data.adminSessions) ? data.adminSessions : []);
+        setPrivateSessions(Array.isArray(data.privateSessions) ? data.privateSessions : []);
+      } else if (Array.isArray(data)) {
+        setSessions(data);
+        setPrivateSessions([]);
+      }
     } catch {
       setSessions([]);
+      setPrivateSessions([]);
     } finally {
       setLoading(false);
     }
@@ -214,13 +225,13 @@ export default function AdminSessionsPage() {
     setTimeout(() => setActionMsg((m) => { const n = { ...m }; delete n[id]; return n; }), 3000);
   }
 
-  async function deleteSession(s: GameSessionDTO) {
+  async function deleteSession(s: AdminSession) {
     if (!confirm(`Supprimer "${s.name}" ? Cette action est irréversible.`)) return;
     const res = await fetch(`/api/admin/sessions/${s.id}`, { method: "DELETE" });
     if (res.ok) load();
   }
 
-  async function sendInvite(s: GameSessionDTO) {
+  async function sendInvite(s: AdminSession) {
     if (!confirm(`Envoyer une invitation par email (+ push) à TOUS les membres actifs pour "${s.name}" ?`)) return;
     flash(s.id, "Envoi en cours…");
     const res = await fetch(`/api/admin/sessions/${s.id}/invite`, { method: "POST" });
@@ -232,7 +243,7 @@ export default function AdminSessionsPage() {
     }
   }
 
-  async function sendReminder(s: GameSessionDTO) {
+  async function sendReminder(s: AdminSession) {
     if (s.registrationCount === 0) { flash(s.id, "Aucun inscrit."); return; }
     if (!confirm(`Envoyer un rappel aux ${s.registrationCount} inscrit(s) de "${s.name}" ?`)) return;
     flash(s.id, "Envoi en cours…");
@@ -298,48 +309,88 @@ export default function AdminSessionsPage() {
                   {s.info && <p className="text-sm text-gray-500 mt-2 line-clamp-2">{s.info}</p>}
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-100">
                 {actionMsg[s.id] && (
                   <span className="text-xs text-green-600 font-medium mr-1">{actionMsg[s.id]}</span>
                 )}
                 <div className="flex flex-wrap gap-2 ml-auto">
-                  <button
-                    onClick={() => setViewRegs(s)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                  >
-                    👥 Inscrits
-                  </button>
-                  <button
-                    onClick={() => { setEditing(s); setShowForm(true); }}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                  >
-                    ✏️ Modifier
-                  </button>
-                  <button
-                    onClick={() => sendInvite(s)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
-                  >
-                    📧 Inviter tous
-                  </button>
-                  <button
-                    onClick={() => sendReminder(s)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
-                  >
-                    ⏰ Rappel inscrits
-                  </button>
-                  <button
-                    onClick={() => deleteSession(s)}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
-                  >
-                    🗑 Supprimer
-                  </button>
+                  <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">👥 Inscrits</button>
+                  <button onClick={() => { setEditing(s); setShowForm(true); }} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">✏️ Modifier</button>
+                  <button onClick={() => sendInvite(s)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">📧 Inviter tous</button>
+                  <button onClick={() => sendReminder(s)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors">⏰ Rappel inscrits</button>
+                  <button onClick={() => deleteSession(s)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors">🗑 Supprimer</button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Private sessions collapsible */}
+      <div className="mt-8">
+        <button
+          onClick={() => setPrivateExpanded((v) => !v)}
+          className="w-full flex items-center justify-between bg-white rounded-2xl shadow-sm border border-purple-100 px-5 py-4 hover:bg-purple-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-purple-700 font-semibold text-sm">🔒 Sessions privées des membres</span>
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{privateSessions.length}</span>
+          </div>
+          <span className="text-gray-400 text-sm">{privateExpanded ? "▲" : "▼"}</span>
+        </button>
+
+        {privateExpanded && (
+          <div className="mt-3 space-y-3">
+            {privateSessions.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-6">Aucune session privée.</p>
+            ) : (
+              privateSessions.map((s) => (
+                <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5">
+                  <div className="flex gap-4">
+                    {s.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.imageUrl} alt={s.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div>
+                          <h2 className="font-semibold text-gray-900">{s.name}</h2>
+                          {s.createdByName && (
+                            <p className="text-xs text-purple-600 mt-0.5">Créée par {s.createdByName}</p>
+                          )}
+                        </div>
+                        <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium flex-shrink-0">
+                          👥 {s.registrationCount} inscrit(s){s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
+                        <span>📅 {formatDate(s.date)}</span>
+                        <span>🕐 {s.startTime}</span>
+                        <span>📍 {s.location}</span>
+                      </div>
+                      {s.info && <p className="text-sm text-gray-500 mt-2 line-clamp-2">{s.info}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100 justify-end">
+                    <button
+                      onClick={() => setViewRegs(s)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                    >
+                      👥 Inscrits
+                    </button>
+                    <button
+                      onClick={() => deleteSession(s)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                    >
+                      🗑 Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
       {showForm && (
         <SessionFormModal

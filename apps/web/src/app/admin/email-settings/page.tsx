@@ -13,8 +13,26 @@ interface EmailConfig {
   sessionInviteBody: string;
 }
 
+interface EmailLog {
+  id: string;
+  sentAt: string;
+  typeKey: string;
+  typeLabel: string;
+  userEmail: string;
+  userName: string;
+  detail: string;
+  loanActive: boolean | null;
+}
+
 const VARS_HINT = "Variables disponibles : {{userName}}, {{gameName}}, {{dueAt}}";
 const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
+
+const TYPE_COLORS: Record<string, string> = {
+  reminder: "bg-yellow-50 text-yellow-700",
+  overdue: "bg-red-50 text-red-700",
+  SESSION_INVITE: "bg-blue-50 text-blue-700",
+  SESSION_REMINDER: "bg-orange-50 text-orange-700",
+};
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -26,11 +44,33 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+function Collapsible({ title, icon, defaultOpen = false, children }: { title: string; icon: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-xl border border-gray-100">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors rounded-xl"
+      >
+        <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+          <span className="text-xl">{icon}</span> {title}
+        </h2>
+        <span className="text-gray-400 text-sm">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && <div className="px-6 pb-6 pt-2 border-t border-gray-100">{children}</div>}
+    </div>
+  );
+}
+
 export default function EmailSettingsPage() {
   const [config, setConfig] = useState<EmailConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logs, setLogs] = useState<EmailLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/email-config")
@@ -53,6 +93,16 @@ export default function EmailSettingsPage() {
     });
     setSaving(false);
     setSaved(true);
+  }
+
+  async function loadLogs() {
+    if (logs.length > 0) { setLogsOpen((v) => !v); return; }
+    setLogsOpen(true);
+    setLogsLoading(true);
+    const res = await fetch("/api/admin/email-logs");
+    const data = await res.json();
+    setLogs(Array.isArray(data) ? data : []);
+    setLogsLoading(false);
   }
 
   if (loading) return (
@@ -79,14 +129,11 @@ export default function EmailSettingsPage() {
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
 
         {/* Timing */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-xl">⏱</span> Fréquence d'envoi
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <Collapsible title="Fréquence d'envoi" icon="⏱" defaultOpen>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
             <Field
               label="Jours avant échéance pour le rappel"
               hint="L'email de rappel sera envoyé X jours avant la date de retour."
@@ -120,14 +167,11 @@ export default function EmailSettingsPage() {
               </div>
             </Field>
           </div>
-        </div>
+        </Collapsible>
 
         {/* Reminder email */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-xl">📧</span> Email de rappel avant échéance
-          </h2>
-          <div className="space-y-4">
+        <Collapsible title="Email de rappel avant échéance" icon="📧">
+          <div className="space-y-4 mt-2">
             <Field label="Objet" hint={VARS_HINT}>
               <input
                 type="text"
@@ -144,14 +188,11 @@ export default function EmailSettingsPage() {
               />
             </Field>
           </div>
-        </div>
+        </Collapsible>
 
         {/* Overdue email */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-xl">⚠️</span> Email de retard après échéance
-          </h2>
-          <div className="space-y-4">
+        <Collapsible title="Email de retard après échéance" icon="⚠️">
+          <div className="space-y-4 mt-2">
             <Field label="Objet" hint={VARS_HINT}>
               <input
                 type="text"
@@ -168,15 +209,12 @@ export default function EmailSettingsPage() {
               />
             </Field>
           </div>
-        </div>
+        </Collapsible>
 
         {/* Session invite email */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-xl">🎲</span> Email d&apos;invitation aux sessions
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">Utilisé lors des invitations admin et des sessions privées créées par les membres.</p>
-          <div className="space-y-4">
+        <Collapsible title="Email d'invitation aux sessions" icon="🎲">
+          <div className="space-y-4 mt-2">
+            <p className="text-xs text-gray-400">Utilisé lors des invitations admin et des sessions privées créées par les membres.</p>
             <Field label="Objet" hint={SESSION_VARS_HINT}>
               <input
                 type="text"
@@ -193,9 +231,9 @@ export default function EmailSettingsPage() {
               />
             </Field>
           </div>
-        </div>
+        </Collapsible>
 
-        {/* Preview */}
+        {/* Variables reference */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
           <p className="font-medium mb-1">💡 Variables disponibles dans les emails</p>
           <ul className="space-y-0.5 text-xs text-blue-600">
@@ -210,6 +248,64 @@ export default function EmailSettingsPage() {
             <li><code className="bg-blue-100 px-1 rounded">{"{{inviterName}}"}</code> — Nom de la personne qui invite (sessions privées)</li>
           </ul>
         </div>
+
+        {/* Email send history */}
+        <div className="bg-white rounded-xl border border-gray-100">
+          <button
+            type="button"
+            onClick={loadLogs}
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors rounded-xl"
+          >
+            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+              <span className="text-xl">📋</span> Historique des emails envoyés
+            </h2>
+            <span className="text-gray-400 text-sm">{logsOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {logsOpen && (
+            <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+              {logsLoading ? (
+                <div className="space-y-2 mt-2">
+                  {[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}
+                </div>
+              ) : logs.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-6">Aucun email enregistré.</p>
+              ) : (
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-gray-500">
+                        <th className="text-left pb-2 pr-3 font-medium">Date</th>
+                        <th className="text-left pb-2 pr-3 font-medium">Type</th>
+                        <th className="text-left pb-2 pr-3 font-medium">Destinataire</th>
+                        <th className="text-left pb-2 font-medium">Détail</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {logs.map((log) => (
+                        <tr key={log.id} className="hover:bg-gray-50">
+                          <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">
+                            {new Date(log.sentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            {" "}
+                            {new Date(log.sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${TYPE_COLORS[log.typeKey] ?? "bg-gray-100 text-gray-600"}`}>
+                              {log.typeLabel}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 text-gray-700">{log.userEmail}</td>
+                          <td className="py-2 text-gray-500 truncate max-w-[180px]">{log.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

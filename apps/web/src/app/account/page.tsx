@@ -32,6 +32,10 @@ function NotifBadge({ type }: { type: string }) {
   return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Rappel emprunt</span>;
 }
 
+function UnreadDot() {
+  return <span className="w-2 h-2 rounded-full bg-[#C8102E] flex-shrink-0 mt-1" />;
+}
+
 export default function AccountPage() {
   const { data: session } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -154,11 +158,13 @@ export default function AccountPage() {
           ) : (
             <div className="space-y-3">
               {notifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                <div key={n.id} className={`flex items-start gap-3 p-3 rounded-xl ${n.read ? "bg-gray-50" : "bg-red-50 border border-red-100"}`}>
+                  {!n.read && <UnreadDot />}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
                       <NotifBadge type={n.type} />
                       <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      {!n.read && <span className="text-xs text-[#C8102E] font-medium">Nouveau</span>}
                     </div>
                     <p className="text-sm font-medium text-gray-900 truncate">{n.title}</p>
                     <p className="text-xs text-gray-500">{n.message}</p>

@@ -130,6 +130,7 @@ export interface UserNotificationDTO {
   sessionId?: string | null;
   loanId?: string | null;
   createdAt: string;
+  read: boolean;
 }
 
 export interface RatingDTO {

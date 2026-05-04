@@ -15,20 +15,18 @@ export async function GET(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
-  // Session notifications (unread)
+  // All session notifications (both read and unread)
   const sessionNotifs = await prisma.userNotification.findMany({
-    where: { userId, readAt: null },
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 
-  // Loan reminders where loan is not yet returned
+  // All loan reminders (including returned loans)
   const loanReminders = await prisma.loanReminder.findMany({
-    where: {
-      loan: { userId, returnedAt: null },
-    },
+    where: { loan: { userId } },
     include: {
       loan: {
-        select: { id: true, dueAt: true, game: { select: { name: true } } },
+        select: { id: true, dueAt: true, returnedAt: true, game: { select: { name: true } } },
       },
     },
     orderBy: { sentAt: "desc" },
@@ -43,15 +41,19 @@ export async function GET(req: NextRequest) {
       sessionId: n.sessionId,
       loanId: null,
       createdAt: n.createdAt.toISOString(),
+      read: n.readAt !== null,
     })),
     ...loanReminders.map((r) => ({
       id: r.id,
       type: "LOAN_REMINDER" as const,
       title: `Rappel : ${r.loan.game.name}`,
-      message: `À rendre avant le ${r.loan.dueAt.toLocaleDateString("fr-FR")}`,
+      message: r.loan.returnedAt
+        ? `Rendu le ${r.loan.returnedAt.toLocaleDateString("fr-FR")}`
+        : `À rendre avant le ${r.loan.dueAt.toLocaleDateString("fr-FR")}`,
       sessionId: null,
       loanId: r.loan.id,
       createdAt: r.sentAt.toISOString(),
+      read: r.loan.returnedAt !== null,
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

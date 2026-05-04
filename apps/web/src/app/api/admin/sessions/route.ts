@@ -16,11 +16,15 @@ export async function GET(req: NextRequest) {
   try {
     const sessions = await prisma.gameSession.findMany({
       orderBy: { date: "asc" },
-      include: { _count: { select: { registrations: true } } },
+      include: {
+        _count: { select: { registrations: true } },
+        createdBy: { select: { name: true, nickname: true } },
+      },
     });
 
-    return NextResponse.json(
-      sessions.map((s) => ({
+    const adminSessions = sessions
+      .filter((s) => !s.isPrivate)
+      .map((s) => ({
         id: s.id,
         name: s.name,
         date: s.date.toISOString(),
@@ -30,14 +34,37 @@ export async function GET(req: NextRequest) {
         info: s.info,
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
-        isPrivate: false,
+        isPrivate: false as const,
         createdByUserId: null,
+        createdByName: null as string | null,
         maxParticipants: null,
         isCreator: false,
         myInvitation: null,
         myRegistration: null,
-      }))
-    );
+      }));
+
+    const privateSessions = sessions
+      .filter((s) => s.isPrivate)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        date: s.date.toISOString(),
+        location: s.location,
+        startTime: s.startTime,
+        imageUrl: s.imageUrl,
+        info: s.info,
+        createdAt: s.createdAt.toISOString(),
+        registrationCount: s._count.registrations,
+        isPrivate: true as const,
+        createdByUserId: s.createdByUserId,
+        createdByName: s.createdBy ? (s.createdBy.nickname ?? s.createdBy.name) : null,
+        maxParticipants: s.maxParticipants,
+        isCreator: false,
+        myInvitation: null,
+        myRegistration: null,
+      }));
+
+    return NextResponse.json({ adminSessions, privateSessions });
   } catch (err) {
     console.error("GET /api/admin/sessions error:", err);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
