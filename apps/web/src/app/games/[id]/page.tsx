@@ -166,6 +166,13 @@ function ReportModal({ gameId, gameName, onClose }: { gameId: string; gameName: 
   );
 }
 
+interface GameReportItem {
+  id: string;
+  reporterName: string;
+  message: string;
+  createdAt: string;
+}
+
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session } = useSession();
@@ -176,6 +183,8 @@ export default function GameDetailPage() {
   const [message, setMessage] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [reports, setReports] = useState<GameReportItem[]>([]);
+  const [showReportList, setShowReportList] = useState(false);
 
   const isAdmin = session?.user.role === "ADMIN";
 
@@ -186,7 +195,13 @@ export default function GameDetailPage() {
     setLoading(false);
   }
 
+  async function loadReports() {
+    const res = await fetch(`/api/games/${id}/reports`);
+    if (res.ok) setReports(await res.json());
+  }
+
   useEffect(() => { loadGame(); }, [id]);
+  useEffect(() => { if (isAdmin) loadReports(); }, [id, isAdmin]);
 
   async function borrow() {
     setBorrowing(true);
@@ -236,7 +251,36 @@ export default function GameDetailPage() {
 
           <div className="p-6 flex-1">
             <div className="flex items-start justify-between gap-4 mb-3">
-              <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
+                {isAdmin && reports.length > 0 && (
+                  <div className="relative flex-shrink-0">
+                    <button
+                      onClick={() => setShowReportList((v) => !v)}
+                      className="w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center hover:bg-red-600 transition-colors"
+                      title={`${reports.length} signalement(s)`}
+                    >
+                      !
+                    </button>
+                    {showReportList && (
+                      <div className="absolute left-0 top-8 z-30 w-80 bg-white border border-red-200 rounded-xl shadow-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-sm font-semibold text-red-700">🚨 {reports.length} signalement(s)</p>
+                          <button onClick={() => setShowReportList(false)} className="text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>
+                        </div>
+                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                          {reports.map((r) => (
+                            <div key={r.id} className="bg-red-50 rounded-lg p-3">
+                              <p className="text-xs font-medium text-gray-700 mb-0.5">{r.reporterName} · {new Date(r.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</p>
+                              <p className="text-sm text-gray-800">{r.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${STATUS_STYLES[game.status]}`}>
                 {STATUS_LABELS[game.status]}
               </span>

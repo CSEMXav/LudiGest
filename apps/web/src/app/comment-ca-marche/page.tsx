@@ -98,10 +98,10 @@ export default async function CommentCaMarchePage() {
             📋 Merci de respecter les règles suivantes&nbsp;:
           </h2>
           <ul style={{ paddingLeft: 22, margin: 0, color: "#78350f", fontSize: 15, lineHeight: 2.2 }}>
-            <li><strong style={{ color: "#C8102E" }}>Quand j'emprunte un jeu,</strong> j'indique mon matricule et la date d'emprunt en face du jeu correspondant.</li>
-            <li><strong style={{ color: "#C8102E" }}>Quand je rends un jeu,</strong> j'efface mon matricule et la date d'emprunt en face du jeu correspondant.</li>
+            <li><strong style={{ color: "#C8102E" }}>Quand j'emprunte un jeu,</strong> j'utilise l'application LudiGest pour enregistrer mon emprunt — ainsi tout le monde sait quels jeux sont disponibles en temps réel.</li>
+            <li><strong style={{ color: "#C8102E" }}>Quand je rends un jeu,</strong> je le marque comme rendu dans l'application pour libérer le jeu pour les autres.</li>
             <li>J'emprunte <strong style={{ textDecoration: "underline" }}>5 jeux maximum</strong> en même temps.</li>
-            <li>J'emprunte les jeux pour <strong style={{ textDecoration: "underline" }}>4 semaines maximum</strong>.</li>
+            <li>J'emprunte les jeux pour <strong style={{ textDecoration: "underline" }}>4 semaines maximum</strong> — prolongeable 2 fois d'une semaine.</li>
             <li>Je rends les jeux empruntés complets et je les range dans l'armoire correspondante en fonction de sa couleur (gommette).</li>
           </ul>
           <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 16, marginBottom: 0 }}>
@@ -121,7 +121,7 @@ export default async function CommentCaMarchePage() {
             {
               num: 2, color: "#2563eb", bg: "#eff6ff",
               title: "Choisissez un jeu",
-              text: "Parcourez le catalogue dans la section Jeux. Filtrez par catégorie, nombre de joueurs ou durée de partie. Sur mobile, scannez directement le code-barres d'une boîte pour accéder à sa fiche.",
+              text: "Parcourez le catalogue dans la section Jeux. Filtrez par catégorie, nombre de joueurs ou durée de partie. Sur mobile ou sur l'application web responsive depuis votre téléphone, scannez directement le code-barres d'une boîte pour accéder à sa fiche.",
             },
             {
               num: 3, color: "#16a34a", bg: "#f0fdf4",

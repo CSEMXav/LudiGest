@@ -33,6 +33,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const reporterName = ("name" in user ? user.name : null) ?? user.email ?? "Utilisateur";
 
+  // Save the report record (used to show badge on game detail)
+  await prisma.gameReport.create({
+    data: { gameId: game.id, reporterId: user.id, reporterName, message: message.trim() },
+  }).catch(() => {});
+
+  // Notify all admins via email + UserNotification
   await Promise.all(
     admins.map(async (admin) => {
       await sendGameReportEmail(admin.email, admin.name, reporterName, game.name, gameUrl, message.trim()).catch(() => {});

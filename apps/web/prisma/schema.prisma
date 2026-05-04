@@ -65,6 +65,20 @@ model Game {
 
   loans   Loan[]
   ratings Rating[]
+  reports GameReport[]
+}
+
+model GameReport {
+  id           String   @id @default(cuid())
+  gameId       String
+  reporterId   String
+  reporterName String
+  message      String
+  createdAt    DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
 }
 
 model Loan {
