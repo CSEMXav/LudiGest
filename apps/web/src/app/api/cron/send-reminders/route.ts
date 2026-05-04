@@ -15,13 +15,6 @@ export async function GET(req: NextRequest) {
 
   const reminderDaysBefore = config?.reminderDaysBefore ?? 2;
   const overdueFrequencyDays = config?.overdueFrequencyDays ?? 3;
-  const sendHour = (config as any)?.sendHour ?? 8;
-
-  // Check if current UTC hour matches the configured send hour
-  const currentHour = new Date().getUTCHours();
-  if (currentHour !== sendHour) {
-    return NextResponse.json({ skipped: true });
-  }
 
   const now = new Date();
   let remindersCount = 0;

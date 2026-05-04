@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 interface EmailConfig {
   reminderDaysBefore: number;
   overdueFrequencyDays: number;
-  sendHour: number;
   reminderSubject: string;
   reminderBody: string;
   overdueSubject: string;
@@ -184,23 +183,12 @@ export default function EmailSettingsPage() {
                 <span className="text-sm text-gray-500">jours entre chaque relance</span>
               </div>
             </Field>
-            <Field
-              label="Heure d'envoi automatique"
-              hint="Les rappels automatiques seront envoyés à cette heure chaque jour (heure du serveur UTC)."
-            >
-              <div className="flex items-center gap-3">
-                <select
-                  value={config.sendHour ?? 8}
-                  onChange={(e) => set("sendHour", parseInt(e.target.value))}
-                  className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                >
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <option key={h} value={h}>{String(h).padStart(2, "0")}h00</option>
-                  ))}
-                </select>
-                <span className="text-sm text-gray-500">heure UTC</span>
+            <div className="sm:col-span-2">
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-600">
+                <span>🕛</span>
+                <span>Les rappels automatiques sont envoyés chaque jour à <strong>12h00 UTC</strong> (14h en France en été, 13h en hiver).</span>
               </div>
-            </Field>
+            </div>
           </div>
         </Collapsible>
 
