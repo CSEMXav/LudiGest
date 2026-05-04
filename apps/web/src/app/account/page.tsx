@@ -29,6 +29,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
 function NotifBadge({ type }: { type: string }) {
   if (type === "SESSION_INVITE") return <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Invitation</span>;
   if (type === "SESSION_REMINDER") return <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Rappel session</span>;
+  if (type === "GAME_REPORT") return <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Signalement jeu</span>;
   return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Rappel emprunt</span>;
 }
 

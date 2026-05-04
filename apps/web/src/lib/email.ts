@@ -193,6 +193,34 @@ export async function sendConfiguredSessionInviteEmail(
   await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
 }
 
+export async function sendGameReportEmail(to: string, adminName: string, reporterName: string, gameName: string, gameUrl: string, reportMessage: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Signalement jeu pour ${to} : "${gameName}" — ${reportMessage}\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🚨 Signalement jeu : "${gameName}"`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Signalement</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${adminName}</strong>,</p>
+        <p><strong>${reporterName}</strong> a signalé un problème sur le jeu <strong>"${gameName}"</strong> :</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0;color:#374151">${reportMessage}</p>
+        </div>
+        <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Voir la fiche du jeu
+        </a>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {
   const dateStr = dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const resend = getResend();

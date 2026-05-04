@@ -106,6 +106,66 @@ function HistoryModal({ gameId, onClose }: { gameId: string; onClose: () => void
   );
 }
 
+function ReportModal({ gameId, gameName, onClose }: { gameId: string; gameName: string; onClose: () => void }) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    if (!text.trim()) return;
+    setSending(true);
+    await fetch(`/api/games/${gameId}/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    setSending(false);
+    setDone(true);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">🚨 Signaler un problème</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+        <div className="p-5">
+          {done ? (
+            <div className="text-center py-4">
+              <div className="text-3xl mb-3">✓</div>
+              <p className="text-green-700 font-medium">Signalement envoyé aux administrateurs.</p>
+              <button onClick={onClose} className="mt-4 text-sm text-gray-500 hover:underline">Fermer</button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 mb-3">Jeu : <strong>{gameName}</strong></p>
+              <p className="text-xs text-gray-400 mb-2">Pièces manquantes, boîte abîmée, jeu détérioré…</p>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Décrivez le problème..."
+                rows={4}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+              />
+              <div className="flex gap-3 mt-4">
+                <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+                <button
+                  onClick={submit}
+                  disabled={sending || !text.trim()}
+                  className="flex-1 bg-[#C8102E] text-white py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {sending ? "Envoi..." : "Envoyer le signalement"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session } = useSession();
@@ -115,6 +175,7 @@ export default function GameDetailPage() {
   const [borrowing, setBorrowing] = useState(false);
   const [message, setMessage] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const isAdmin = session?.user.role === "ADMIN";
 
@@ -250,6 +311,14 @@ export default function GameDetailPage() {
                   📋 Historique
                 </button>
               )}
+              {session && (
+                <button
+                  onClick={() => setShowReport(true)}
+                  className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  🚨 Signaler un problème
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -276,6 +345,7 @@ export default function GameDetailPage() {
       </div>
 
       {showHistory && <HistoryModal gameId={id} onClose={() => setShowHistory(false)} />}
+      {showReport && game && <ReportModal gameId={id} gameName={game.name} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

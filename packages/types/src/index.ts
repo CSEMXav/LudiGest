@@ -124,7 +124,7 @@ export interface MemberDTO {
 
 export interface UserNotificationDTO {
   id: string;
-  type: "SESSION_INVITE" | "SESSION_REMINDER" | "LOAN_REMINDER";
+  type: "SESSION_INVITE" | "SESSION_REMINDER" | "LOAN_REMINDER" | "GAME_REPORT";
   title: string;
   message: string;
   sessionId?: string | null;
