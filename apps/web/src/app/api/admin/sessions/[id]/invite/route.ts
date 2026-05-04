@@ -71,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const dateStr = gameSession.date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
       const messages = pushTokens.map((token) => ({
         to: token,
-        title: "🎲 Nouvelle soirée ludique !",
+        title: "🎲 Nouvelle session ludique !",
         body: `${gameSession.name} — ${dateStr} à ${gameSession.startTime}`,
         data: { type: "session_invite", sessionId: gameSession.id },
       }));

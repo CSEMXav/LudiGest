@@ -106,14 +106,22 @@ function SessionFormModal({
     setError("");
     const method = initial ? "PATCH" : "POST";
     const url = initial ? `/api/admin/sessions/${initial.id}` : "/api/admin/sessions";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setLoading(false);
-    if (res.ok) { onSave(); }
-    else { const d = await res.json(); setError(d.error ?? "Erreur."); }
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      setLoading(false);
+      if (res.ok) { onSave(); }
+      else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error ?? "Erreur lors de l'enregistrement.");
+      }
+    } catch {
+      setLoading(false);
+      setError("Erreur réseau. Veuillez réessayer.");
+    }
   }
 
   return (
@@ -127,7 +135,7 @@ function SessionFormModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la session <span className="text-red-500">*</span></label>
             <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)} required
-              placeholder="Soirée Catan, Nuit des jeux…"
+              placeholder="Session Catan, Nuit des jeux…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -157,7 +165,7 @@ function SessionFormModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Informations complémentaires</label>
             <textarea value={form.info} onChange={(e) => set("info", e.target.value)} rows={3}
-              placeholder="Détails sur la soirée, jeux prévus, nombre de places…"
+              placeholder="Détails sur la session, jeux prévus, nombre de places…"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none" />
           </div>
 
@@ -246,7 +254,7 @@ export default function AdminSessionsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Soirées ludiques</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Sessions ludiques</h1>
         <button
           onClick={() => { setEditing(null); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"

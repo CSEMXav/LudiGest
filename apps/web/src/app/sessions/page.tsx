@@ -42,6 +42,7 @@ export default function SessionsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateSessionForm>(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   // Invite modal (for creator)
   const [inviteSession, setInviteSession] = useState<GameSessionDTO | null>(null);
@@ -110,6 +111,7 @@ export default function SessionsPage() {
   async function createPrivateSession() {
     if (!createForm.name || !createForm.date || !createForm.location || !createForm.startTime) return;
     setCreating(true);
+    setCreateError("");
     const body: Record<string, unknown> = {
       name: createForm.name,
       date: createForm.date,
@@ -121,16 +123,25 @@ export default function SessionsPage() {
     if (createForm.info) body.info = createForm.info;
     if (createForm.maxParticipants) body.maxParticipants = parseInt(createForm.maxParticipants);
 
-    const res = await fetch("/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setCreating(false);
-    if (res.ok) {
-      setShowCreate(false);
-      setCreateForm(EMPTY_FORM);
-      load();
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setCreating(false);
+      if (res.ok) {
+        setShowCreate(false);
+        setCreateForm(EMPTY_FORM);
+        setCreateError("");
+        load();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setCreateError(d.error ?? "Erreur lors de la création.");
+      }
+    } catch {
+      setCreating(false);
+      setCreateError("Erreur réseau. Veuillez réessayer.");
     }
   }
 
@@ -401,7 +412,7 @@ export default function SessionsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la session *</label>
-                  <input type="text" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" placeholder="Ex : Soirée Catan" />
+                  <input type="text" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" placeholder="Ex : Session Catan" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -430,8 +441,11 @@ export default function SessionsPage() {
                   <textarea value={createForm.info} onChange={(e) => setCreateForm({ ...createForm, info: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-y min-h-[80px]" placeholder="Informations complémentaires…" />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">Annuler</button>
+              {createError && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{createError}</div>
+              )}
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => { setShowCreate(false); setCreateError(""); }} className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">Annuler</button>
                 <button
                   onClick={createPrivateSession}
                   disabled={creating || !createForm.name || !createForm.date || !createForm.location || !createForm.startTime}

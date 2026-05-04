@@ -48,14 +48,27 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
-  const { name, date, location, startTime, imageUrl, info } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const { name, date, location, startTime, imageUrl, info } = body;
   if (!name || !date || !location || !startTime) {
     return NextResponse.json({ error: "Nom, date, lieu et heure sont requis." }, { status: 400 });
   }
 
-  const session = await prisma.gameSession.create({
-    data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null },
-  });
+  try {
+    const session = await prisma.gameSession.create({
+      data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null },
+    });
 
-  return NextResponse.json({ ...session, registrationCount: 0 }, { status: 201 });
+    return NextResponse.json({
+      id: session.id, name: session.name, date: session.date.toISOString(),
+      location: session.location, startTime: session.startTime,
+      imageUrl: session.imageUrl, info: session.info,
+      createdAt: session.createdAt.toISOString(), registrationCount: 0,
+      isPrivate: false, createdByUserId: null, maxParticipants: null,
+      isCreator: false, myInvitation: null, myRegistration: null,
+    }, { status: 201 });
+  } catch (err) {
+    console.error("POST /api/admin/sessions error:", err);
+    return NextResponse.json({ error: "Erreur lors de la création de la session." }, { status: 500 });
+  }
 }

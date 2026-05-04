@@ -109,20 +109,20 @@ export async function sendSessionInviteEmail(to: string, name: string, sessionNa
 
   const resend = getResend();
   if (!resend) {
-    console.log(`\n📧 [DEV] Invitation soirée ludique pour ${to} : "${sessionName}" le ${dateStr}\n`);
+    console.log(`\n📧 [DEV] Invitation session ludique pour ${to} : "${sessionName}" le ${dateStr}\n`);
     return;
   }
 
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `🎲 Soirée ludique : "${sessionName}" — Inscrivez-vous !`,
+    subject: `🎲 Session ludique : "${sessionName}" — Inscrivez-vous !`,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Soirée Ludique</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
         <p>Bonjour <strong>${name}</strong>,</p>
-        <p>Une nouvelle soirée ludique est disponible !</p>
+        <p>Une nouvelle session ludique est disponible !</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
           <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
           <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
@@ -150,13 +150,13 @@ export async function sendSessionReminderEmail(to: string, name: string, session
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `⏰ Rappel : Soirée ludique "${sessionName}" bientôt !`,
+    subject: `⏰ Rappel : Session ludique "${sessionName}" bientôt !`,
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Rappel Soirée</h1>
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Rappel Session</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
         <p>Bonjour <strong>${name}</strong>,</p>
-        <p>Rappel : vous êtes inscrit(e) à la soirée ludique suivante :</p>
+        <p>Rappel : vous êtes inscrit(e) à la session ludique suivante :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
           <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
           <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
