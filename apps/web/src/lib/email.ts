@@ -243,3 +243,44 @@ export async function sendOverdueEmail(to: string, name: string, gameName: strin
     `,
   });
 }
+
+export async function sendSessionUpdateEmail(
+  to: string,
+  userName: string,
+  sessionName: string,
+  sessionDate: string,
+  sessionTime: string,
+  sessionLocation: string,
+  sessionsUrl: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Mise à jour session pour ${to} : "${sessionName}" le ${sessionDate} à ${sessionTime}\n`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎲 Session mise à jour : "${sessionName}" — le ${sessionDate}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Mise à jour de session</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${userName}</strong>,</p>
+        <p>Les informations de la session à laquelle vous êtes inscrit(e) ont été mises à jour :</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
+          <p style="margin:0 0 4px;color:#374151">📅 ${sessionDate}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
+          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+        </div>
+        <p>Pensez à vérifier vos disponibilités pour cette nouvelle date.</p>
+        <a href="${sessionsUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Voir les sessions
+        </a>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}

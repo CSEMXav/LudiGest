@@ -44,6 +44,12 @@ export default function SessionsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
+  // Edit modal (for creator)
+  const [editSession, setEditSession] = useState<GameSessionDTO | null>(null);
+  const [editForm, setEditForm] = useState<CreateSessionForm>(EMPTY_FORM);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState("");
+
   // Invite modal (for creator)
   const [inviteSession, setInviteSession] = useState<GameSessionDTO | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -145,6 +151,53 @@ export default function SessionsPage() {
     }
   }
 
+  function openEditModal(s: GameSessionDTO) {
+    setEditSession(s);
+    setEditError("");
+    setEditForm({
+      name: s.name,
+      date: s.date.slice(0, 10),
+      location: s.location,
+      startTime: s.startTime,
+      imageUrl: s.imageUrl ?? "",
+      info: s.info ?? "",
+      maxParticipants: s.maxParticipants ? String(s.maxParticipants) : "",
+    });
+  }
+
+  async function saveEdit() {
+    if (!editSession || !editForm.name || !editForm.date || !editForm.location || !editForm.startTime) return;
+    setEditing(true);
+    setEditError("");
+    const body: Record<string, unknown> = {
+      name: editForm.name,
+      date: editForm.date,
+      location: editForm.location,
+      startTime: editForm.startTime,
+      imageUrl: editForm.imageUrl || null,
+      info: editForm.info || null,
+      maxParticipants: editForm.maxParticipants ? parseInt(editForm.maxParticipants) : null,
+    };
+    try {
+      const res = await fetch(`/api/sessions/${editSession.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setEditing(false);
+      if (res.ok) {
+        setEditSession(null);
+        load();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setEditError(d.error ?? "Erreur lors de la mise à jour.");
+      }
+    } catch {
+      setEditing(false);
+      setEditError("Erreur réseau.");
+    }
+  }
+
   async function openInviteModal(s: GameSessionDTO) {
     setInviteSession(s);
     setSelectedUserIds(new Set());
@@ -195,6 +248,7 @@ export default function SessionsPage() {
     const myInvStatus = s.myInvitation?.status;
     const isPending = isPrivate && !isCreator && myInvStatus === "PENDING";
     const isDeclined = isPrivate && myInvStatus === "DECLINED";
+    const isFull = !!(s.maxParticipants && s.registrationCount >= s.maxParticipants);
 
     const borderColor = isPrivate
       ? "border-purple-200"
@@ -246,7 +300,10 @@ export default function SessionsPage() {
             <span>📅 {formatDate(s.date)}</span>
             <span>🕐 {s.startTime}</span>
             <span>📍 {s.location}</span>
-            <span className="font-medium text-blue-600">👥 {s.registrationCount} inscrit(s){s.maxParticipants ? ` / ${s.maxParticipants}` : ""}</span>
+            <span className={`font-medium ${isFull ? "text-red-500" : "text-blue-600"}`}>
+              👥 {s.registrationCount} inscrit(s){s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+              {isFull && <span className="ml-1 text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">Complet</span>}
+            </span>
           </div>
 
           {s.myRegistration?.guestName && (
@@ -267,6 +324,10 @@ export default function SessionsPage() {
               >
                 Se désinscrire
               </button>
+            ) : isFull && !registered ? (
+              <span className="px-4 py-2 text-sm font-medium rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed">
+                Session complète
+              </span>
             ) : isPending ? (
               <>
                 {actionSession?.id === s.id ? (
@@ -332,12 +393,20 @@ export default function SessionsPage() {
             ) : null}
 
             {isCreator && (
-              <button
-                onClick={() => openInviteModal(s)}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-purple-300 text-purple-700 hover:bg-purple-50 transition-colors"
-              >
-                👥 Gérer les invitations
-              </button>
+              <>
+                <button
+                  onClick={() => openEditModal(s)}
+                  className="px-4 py-2 text-sm font-medium rounded-xl border border-indigo-300 text-indigo-700 hover:bg-indigo-50 transition-colors"
+                >
+                  ✏️ Modifier
+                </button>
+                <button
+                  onClick={() => openInviteModal(s)}
+                  className="px-4 py-2 text-sm font-medium rounded-xl border border-purple-300 text-purple-700 hover:bg-purple-50 transition-colors"
+                >
+                  👥 Invitations
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -452,6 +521,64 @@ export default function SessionsPage() {
                   className="flex-1 py-2.5 text-sm font-medium rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-50"
                 >
                   {creating ? "Création…" : "Créer la session"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit session modal (creator only) */}
+      {editSession && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900">✏️ Modifier la session</h2>
+                <button onClick={() => setEditSession(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la session *</label>
+                  <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Heure *</label>
+                    <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lieu *</label>
+                  <input type="text" value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Places max</label>
+                  <input type="number" min={1} value={editForm.maxParticipants} onChange={(e) => setEditForm({ ...editForm, maxParticipants: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Illimité si vide" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                  <input type="url" value={editForm.imageUrl} onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea value={editForm.info} onChange={(e) => setEditForm({ ...editForm, info: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y min-h-[80px]" />
+                </div>
+              </div>
+              <p className="text-xs text-indigo-600 mt-3">Les participants inscrits recevront un email avec les nouvelles informations.</p>
+              {editError && <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{editError}</div>}
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => { setEditSession(null); setEditError(""); }} className="flex-1 py-2.5 text-sm font-medium rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">Annuler</button>
+                <button
+                  onClick={saveEdit}
+                  disabled={editing || !editForm.name || !editForm.date || !editForm.location || !editForm.startTime}
+                  className="flex-1 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {editing ? "Mise à jour…" : "Enregistrer"}
                 </button>
               </div>
             </div>

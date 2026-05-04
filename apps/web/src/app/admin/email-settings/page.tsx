@@ -70,6 +70,7 @@ export default function EmailSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
@@ -88,13 +89,24 @@ export default function EmailSettingsPage() {
   async function save() {
     if (!config) return;
     setSaving(true);
-    await fetch("/api/admin/email-config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    });
-    setSaving(false);
-    setSaved(true);
+    setSaveError("");
+    try {
+      const res = await fetch("/api/admin/email-config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setSaveError(d.error ?? "Erreur lors de l'enregistrement.");
+      } else {
+        setSaved(true);
+      }
+    } catch {
+      setSaveError("Erreur réseau. Veuillez réessayer.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function loadLogs() {
@@ -127,9 +139,13 @@ export default function EmailSettingsPage() {
           disabled={saving}
           className="flex items-center gap-2 px-5 py-2.5 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
         >
-          {saving ? "Enregistrement..." : saved ? "✓ Enregistré" : "Enregistrer"}
+          {saving ? "Enregistrement..." : saved ? "✓ Enregistré" : saveError ? "⚠ Réessayer" : "Enregistrer"}
         </button>
       </div>
+
+      {saveError && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">{saveError}</div>
+      )}
 
       <div className="space-y-4">
 

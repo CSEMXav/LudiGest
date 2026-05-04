@@ -49,13 +49,16 @@ export async function GET(req: NextRequest) {
     orderBy: { name: "asc" },
   });
 
-  // For admins: get report counts per game (try/catch in case table doesn't exist yet)
+  // Get report counts for all users (badge visible to everyone)
   let reportCounts: Record<string, number> = {};
+  try {
+    const counts = await prisma.gameReport.groupBy({ by: ["gameId"], _count: { id: true } });
+    reportCounts = Object.fromEntries(counts.map((c) => [c.gameId, c._count.id]));
+  } catch { /* GameReport table may not exist yet */ }
+
+  // Admins also get legacy UserNotification-based reports (before GameReport table existed)
   if (user.role === "ADMIN") {
     try {
-      const counts = await prisma.gameReport.groupBy({ by: ["gameId"], _count: { id: true } });
-      reportCounts = Object.fromEntries(counts.map((c) => [c.gameId, c._count.id]));
-      // Also count from UserNotification fallback (legacy reports before GameReport table)
       const legacyCounts = await prisma.userNotification.groupBy({
         by: ["title"],
         where: { type: "GAME_REPORT" },
@@ -66,7 +69,6 @@ export async function GET(req: NextRequest) {
         if (match) {
           const game = games.find((g) => g.name === match[1]);
           if (game && !reportCounts[game.id]) {
-            // Count distinct messages (one per report, multiple admins per report)
             const distinctCount = await prisma.userNotification.findMany({
               where: { type: "GAME_REPORT", title: lc.title },
               distinct: ["message"],
@@ -75,7 +77,7 @@ export async function GET(req: NextRequest) {
           }
         }
       }
-    } catch { /* GameReport or UserNotification query failed */ }
+    } catch { /* UserNotification query failed */ }
   }
 
   let result = games.map((g) => {
@@ -101,7 +103,7 @@ export async function GET(req: NextRequest) {
       addedAt: g.addedAt.toISOString(),
       averageRating: avg,
       ratingsCount: g.ratings.length,
-      ...(user.role === "ADMIN" ? { reportCount: reportCounts[g.id] ?? 0 } : {}),
+      reportCount: reportCounts[g.id] ?? 0,
     };
   });
 

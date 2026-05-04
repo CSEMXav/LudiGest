@@ -35,6 +35,11 @@ export default async function CommentCaMarchePage() {
 
   return (
     <main style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: "#1a1a1a" }}>
+      <div style={{ padding: "12px 24px", borderBottom: "1px solid #e5e7eb", background: "#fff" }}>
+        <a href="/games" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          ← Retour aux jeux
+        </a>
+      </div>
 
       {/* Hero banner — sunburst with category circles */}
       <div style={{

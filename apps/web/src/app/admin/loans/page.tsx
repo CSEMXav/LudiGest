@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import type { LoanDTO } from "@ludigest/types";
 
 interface ReminderLog {
@@ -26,44 +26,66 @@ type SortDir = "asc" | "desc";
 
 function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
   const hasReminders = reminders.length > 0;
+  const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  function show() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setPos({ top: rect.top + window.scrollY - 8, left: rect.left + rect.width / 2 });
+    setVisible(true);
+  }
+
   return (
-    <div className="relative group/tooltip">
+    <div className="relative">
       <button
+        ref={btnRef}
+        onMouseEnter={show}
+        onMouseLeave={() => setVisible(false)}
         className={`text-base leading-none transition-colors ${
           hasReminders ? "text-blue-400 hover:text-blue-600" : "text-gray-200 hover:text-gray-300"
         }`}
-        title={hasReminders ? `${reminders.length} rappel(s) envoyé(s)` : "Aucun rappel envoyé"}
       >
         📬
       </button>
-      {/* Tooltip */}
-      <div className="absolute right-0 bottom-full mb-2 hidden group-hover/tooltip:block z-20 w-56 bg-gray-900 text-white rounded-lg shadow-xl text-xs p-3">
-        {hasReminders ? (
-          <>
-            <p className="font-semibold mb-2 text-gray-300">{reminders.length} rappel(s) envoyé(s)</p>
-            <ul className="space-y-1.5">
-              {reminders.map((r, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className={r.type === "overdue" ? "text-red-400" : "text-blue-400"}>
-                    {r.type === "overdue" ? "⚠️" : "📧"}
-                  </span>
-                  <span>
-                    <span className="font-medium">{r.type === "overdue" ? "Retard" : "Rappel"}</span>
-                    <br />
-                    <span className="text-gray-400">{formatDateTime(r.sentAt)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="text-gray-400">Aucun email de rappel envoyé pour cet emprunt.</p>
-        )}
-        {/* Arrow */}
-        <div className="absolute bottom-[-4px] right-3 w-2 h-2 bg-gray-900 rotate-45" />
-      </div>
+      {visible && (
+        <div
+          className="fixed z-50 w-56 bg-gray-900 text-white rounded-lg shadow-xl text-xs p-3 pointer-events-none"
+          style={{ top: pos.top, left: pos.left, transform: "translate(-50%, -100%)" }}
+        >
+          {hasReminders ? (
+            <>
+              <p className="font-semibold mb-2 text-gray-300">{reminders.length} rappel(s) envoyé(s)</p>
+              <ul className="space-y-1.5">
+                {reminders.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className={r.type === "overdue" ? "text-red-400" : "text-blue-400"}>
+                      {r.type === "overdue" ? "⚠️" : "📧"}
+                    </span>
+                    <span>
+                      <span className="font-medium">{r.type === "overdue" ? "Retard" : "Rappel"}</span>
+                      <br />
+                      <span className="text-gray-400">{formatDateTime(r.sentAt)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="text-gray-400">Aucun email de rappel envoyé pour cet emprunt.</p>
+          )}
+          <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+        </div>
+      )}
     </div>
   );
+}
+
+interface EditDatesModal {
+  loanId: string;
+  borrowedAt: string;
+  dueAt: string;
 }
 
 export default function AdminLoansPage() {
@@ -75,6 +97,8 @@ export default function AdminLoansPage() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("borrowedAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [editDates, setEditDates] = useState<EditDatesModal | null>(null);
+  const [savingDates, setSavingDates] = useState(false);
 
   async function loadLoans() {
     setLoading(true);
@@ -101,6 +125,19 @@ export default function AdminLoansPage() {
     } else {
       setMessages((m) => ({ ...m, [loanId]: data.error ?? "Erreur envoi" }));
     }
+  }
+
+  async function saveDates() {
+    if (!editDates) return;
+    setSavingDates(true);
+    const res = await fetch(`/api/admin/loans/${editDates.loanId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ borrowedAt: editDates.borrowedAt, dueAt: editDates.dueAt }),
+    });
+    setSavingDates(false);
+    if (res.ok) { setEditDates(null); loadLoans(); }
+    else { const d = await res.json(); setMessages((m) => ({ ...m, [editDates.loanId]: d.error ?? "Erreur" })); setEditDates(null); }
   }
 
   function toggleSort(key: SortKey) {
@@ -214,6 +251,13 @@ export default function AdminLoansPage() {
                         {messages[l.id] && (
                           <span className="text-xs text-green-600 self-center">{messages[l.id]}</span>
                         )}
+                        <button
+                          onClick={() => setEditDates({ loanId: l.id, borrowedAt: l.borrowedAt.slice(0,10), dueAt: l.dueAt.slice(0,10) })}
+                          className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                          title="Modifier les dates"
+                        >
+                          ✏️
+                        </button>
                         <ReminderIcon reminders={l.reminders} />
                         {!l.returnedAt && (
                           <>
@@ -246,6 +290,43 @@ export default function AdminLoansPage() {
           {filtered.length === 0 && (
             <p className="text-center py-8 text-gray-400">Aucun emprunt{search ? " correspondant" : ""}.</p>
           )}
+        </div>
+      )}
+
+      {editDates && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-gray-900">Modifier les dates</h2>
+              <button onClick={() => setEditDates(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date d&apos;emprunt</label>
+                <input
+                  type="date"
+                  value={editDates.borrowedAt}
+                  onChange={(e) => setEditDates({ ...editDates, borrowedAt: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date limite de retour</label>
+                <input
+                  type="date"
+                  value={editDates.dueAt}
+                  onChange={(e) => setEditDates({ ...editDates, dueAt: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setEditDates(null)} className="flex-1 py-2 text-sm rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50">Annuler</button>
+              <button onClick={saveDates} disabled={savingDates} className="flex-1 py-2 text-sm rounded-xl bg-[#C8102E] text-white hover:bg-red-700 disabled:opacity-50">
+                {savingDates ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
