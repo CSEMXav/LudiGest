@@ -263,7 +263,7 @@ export default function GameDetailPage() {
                       !
                     </button>
                     {showReportList && (
-                      <div className="absolute left-0 top-8 z-30 w-80 bg-white border border-red-200 rounded-xl shadow-xl p-4">
+                      <div className="absolute right-0 top-8 z-30 w-80 bg-white border border-red-200 rounded-xl shadow-xl p-4">
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-sm font-semibold text-red-700">🚨 {reports.length} signalement(s)</p>
                           <button onClick={() => setShowReportList(false)} className="text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>

@@ -80,7 +80,7 @@ export function GameListRow({ game }: { game: GameDTO }) {
         {/* Report + Status */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {(game.reportCount ?? 0) > 0 && (
-            <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">🚨</span>
+            <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full" title="Un signalement existe pour ce jeu">🚨</span>
           )}
           <StatusBadge status={game.status} />
         </div>
@@ -122,7 +122,7 @@ export function GameCard({ game }: { game: GameDTO }) {
             <h3 className="font-semibold text-gray-900 leading-tight text-sm">{game.name}</h3>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {(game.reportCount ?? 0) > 0 && (
-                <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">🚨</span>
+                <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full" title="Un signalement existe pour ce jeu">🚨</span>
               )}
               <StatusBadge status={game.status} />
             </div>

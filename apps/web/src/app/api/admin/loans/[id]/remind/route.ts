@@ -31,6 +31,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await sendReminderEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
   }
 
+  // Always update reminderSentAt on the loan (field exists in base schema, used as fallback)
+  await prisma.loan.update({ where: { id: loan.id }, data: { reminderSentAt: new Date() } });
+
   try {
     await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
   } catch { /* LoanReminder table may not exist yet */ }
