@@ -4,10 +4,10 @@ import {
   ActivityIndicator, RefreshControl, Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet, apiPost } from "@/lib/api";
 import type { LoanDTO } from "@ludigest/types";
 import { Pion } from "@/components/Pion";
+import { PhoneHeader } from "@/components/PhoneHeader";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
@@ -44,7 +44,6 @@ function LoanThumb({ loan, size = 52 }: { loan: LoanDTO; size?: number }) {
 
 export default function LoansTab() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [active, setActive] = useState<LoanDTO[]>([]);
   const [history, setHistory] = useState<LoanDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,16 +90,7 @@ export default function LoansTab() {
   return (
     <>
       <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
-        {/* Header rouge */}
-        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.headerTitle}>Mes emprunts</Text>
-            <Text style={s.headerSub}>{active.length}/5 emprunt{active.length > 1 ? "s" : ""} actifs</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/account")} style={s.monCompteBtn}>
-            <Text style={s.monCompteBtnText}>Mon compte</Text>
-          </TouchableOpacity>
-        </View>
+        <PhoneHeader title="Mes emprunts" subtitle={`${active.length}/5 emprunt${active.length > 1 ? "s" : ""} actifs`} />
 
         <FlatList
           data={active}
@@ -198,11 +188,6 @@ export default function LoansTab() {
 }
 
 const s = StyleSheet.create({
-  header:            { backgroundColor: "#d24a1f", paddingHorizontal: 16, paddingBottom: 18, flexDirection: "row", alignItems: "center" },
-  headerTitle:       { color: "#fff", fontSize: 22, fontWeight: "700" },
-  headerSub:         { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3 },
-  monCompteBtn:      { borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  monCompteBtnText:  { color: "#fff", fontSize: 12, fontWeight: "600" },
   card:              { backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: "#ece1cd" },
   cardOverdue:       { backgroundColor: "#fff5f5", borderColor: "#fecaca" },
   cardWarn:          { backgroundColor: "#fefce8", borderColor: "#fde68a" },

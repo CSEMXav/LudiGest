@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
-import { Text, TouchableOpacity } from "react-native";
+import { TouchableOpacity, Text } from "react-native";
 import { getStoredUser } from "@/lib/auth";
-
-const P = {
-  bg:      "#fef9f0",
-  bgAlt:   "#1e1610",
-  primary: "#d24a1f",
-  ocre:    "#e8a82f",
-  ink3:    "#9a8b7c",
-};
+import { Pion } from "@/components/Pion";
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -22,19 +15,24 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: P.primary,
-        tabBarInactiveTintColor: P.ink3,
-        tabBarStyle: { backgroundColor: P.bgAlt, borderTopColor: "rgba(255,255,255,0.08)" },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
-        headerStyle: { backgroundColor: P.bgAlt },
+        tabBarActiveTintColor: "#d24a1f",
+        tabBarInactiveTintColor: "#9a8b7c",
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopColor: "#ece1cd",
+          borderTopWidth: 1,
+          height: 64,
+        },
+        tabBarLabelStyle: { fontSize: 9, fontWeight: "700" },
+        headerStyle: { backgroundColor: "#d24a1f" },
         headerTintColor: "#fff",
         headerTitleStyle: { fontWeight: "700", fontSize: 17 },
         headerRight: () => (
           <TouchableOpacity
             onPress={() => router.push("/account")}
-            style={{ marginRight: 16, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}
+            style={{ marginRight: 16, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" }}
           >
-            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>Mon compte</Text>
+            <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Mon compte</Text>
           </TouchableOpacity>
         ),
       }}
@@ -44,7 +42,7 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           tabBarLabel: "Jeux",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎲</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="die" w={24} h={24} />,
         }}
       />
       <Tabs.Screen
@@ -52,7 +50,7 @@ export default function TabsLayout() {
         options={{
           title: "Emprunter un jeu",
           tabBarLabel: "Emprunter",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📷</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="card" w={24} h={24} />,
         }}
       />
       <Tabs.Screen
@@ -60,7 +58,7 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           tabBarLabel: "Emprunts",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📚</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="hex" w={24} h={24} />,
         }}
       />
       <Tabs.Screen
@@ -68,7 +66,7 @@ export default function TabsLayout() {
         options={{
           title: "Sessions",
           tabBarLabel: "Sessions",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎉</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="star" w={24} h={24} />,
         }}
       />
       <Tabs.Screen
@@ -76,7 +74,7 @@ export default function TabsLayout() {
         options={{
           title: "Membres",
           tabBarLabel: "Membres",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👥</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="meeple" w={24} h={24} />,
         }}
       />
       <Tabs.Screen
@@ -85,7 +83,7 @@ export default function TabsLayout() {
           href: isAdmin ? undefined : null,
           title: "Admin",
           tabBarLabel: "Admin",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚙️</Text>,
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="chip" w={24} h={24} />,
         }}
       />
     </Tabs>

@@ -4,11 +4,11 @@ import {
   ActivityIndicator, ScrollView, RefreshControl,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet } from "@/lib/api";
 import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 import { Pion, CAT_PION } from "@/components/Pion";
+import { PhoneHeader } from "@/components/PhoneHeader";
 
 const CAT_CONFIG: Record<string, { label: string; color: string }> = {
   escape:   { label: "Escape",   color: "#d24a1f" },
@@ -63,7 +63,6 @@ function GameThumb({ game }: { game: GameDTO }) {
 
 export default function GamesTab() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [games, setGames] = useState<GameDTO[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "AVAILABLE" | "BORROWED">("");
@@ -116,16 +115,7 @@ export default function GamesTab() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
-      {/* Header rouge */}
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Liste des jeux</Text>
-          <Text style={s.headerSub}>📍 {location || "…"} · {games.length} jeux</Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push("/account")} style={s.monCompteBtn}>
-          <Text style={s.monCompteBtnText}>Mon compte</Text>
-        </TouchableOpacity>
-      </View>
+      <PhoneHeader title="Liste des jeux" subtitle={`📍 ${location || "…"} · ${games.length} jeux`} />
 
       {/* Recherche */}
       <View style={s.searchRow}>
@@ -227,11 +217,6 @@ export default function GamesTab() {
 }
 
 const s = StyleSheet.create({
-  header:           { backgroundColor: "#d24a1f", paddingHorizontal: 16, paddingBottom: 18, flexDirection: "row", alignItems: "center" },
-  headerTitle:      { color: "#fff", fontSize: 22, fontWeight: "700" },
-  headerSub:        { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3 },
-  monCompteBtn:     { borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  monCompteBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   searchRow:        { flexDirection: "row", paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4, gap: 8 },
   searchWrap:       { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, paddingHorizontal: 10, height: 44 },
   searchIcon:       { fontSize: 14, marginRight: 6 },
