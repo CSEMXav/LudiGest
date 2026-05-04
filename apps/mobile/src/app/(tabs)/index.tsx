@@ -4,12 +4,19 @@ import {
   ActivityIndicator, ScrollView, RefreshControl,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet } from "@/lib/api";
 import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 
-const STATUS_LABELS = { AVAILABLE: "Disponible", BORROWED: "Emprunté", SUSPENDED: "Suspendu" };
-const STATUS_COLORS = { AVAILABLE: "#16a34a", BORROWED: "#ea580c", SUSPENDED: "#6b7280" };
+const CAT_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
+  escape:   { label: "Escape",   color: "#d24a1f", emoji: "🎲" },
+  famille:  { label: "Famille",  color: "#e8a82f", emoji: "♟" },
+  ambiance: { label: "Ambiance", color: "#286b7a", emoji: "🃏" },
+  enfant:   { label: "Enfant",   color: "#f4c430", emoji: "🪀" },
+  "initié": { label: "Initié",   color: "#5b4d40", emoji: "⚙" },
+  expert:   { label: "Expert",   color: "#6a8f3c", emoji: "⭐" },
+};
 
 const CATEGORIES: { key: GameCategory | ""; label: string }[] = [
   { key: "", label: "Tous" },
@@ -26,7 +33,7 @@ const SORTS: { key: string; label: string }[] = [
   { key: "name_desc", label: "Z → A" },
   { key: "rating", label: "Mieux notés" },
   { key: "duration", label: "Durée ↑" },
-  { key: "recent", label: "Plus récents" },
+  { key: "recent", label: "Récents" },
 ];
 
 function sortGames(games: GameDTO[], sort: string): GameDTO[] {
@@ -41,8 +48,21 @@ function sortGames(games: GameDTO[], sort: string): GameDTO[] {
   });
 }
 
+function GameThumb({ game }: { game: GameDTO }) {
+  const cat = CAT_CONFIG[game.category] ?? { color: "#9a8b7c", emoji: "🎲" };
+  if (game.coverUrl) {
+    return <Image source={{ uri: game.coverUrl }} style={s.thumbImg} resizeMode="cover" />;
+  }
+  return (
+    <View style={[s.thumbPlaceholder, { backgroundColor: cat.color }]}>
+      <Text style={{ fontSize: 38 }}>{cat.emoji}</Text>
+    </View>
+  );
+}
+
 export default function GamesTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [games, setGames] = useState<GameDTO[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "AVAILABLE" | "BORROWED">("");
@@ -59,7 +79,6 @@ export default function GamesTab() {
     getStoredLocation().then(setLocation);
   }, []);
 
-  // Recharge les jeux quand on revient sur cet onglet (ex: après changement de lieu)
   useFocusEffect(
     useCallback(() => {
       load(search, status, category);
@@ -96,19 +115,30 @@ export default function GamesTab() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
-      {location ? (
-        <View style={s.locationBanner}>
-          <Text style={s.locationBannerText}>📍 {location}</Text>
+      {/* Header rouge */}
+      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.headerTitle}>Liste des jeux</Text>
+          <Text style={s.headerSub}>📍 {location || "…"} · {games.length} jeux</Text>
         </View>
-      ) : null}
+        <TouchableOpacity onPress={() => router.push("/account")} style={s.monCompteBtn}>
+          <Text style={s.monCompteBtnText}>Mon compte</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Recherche */}
       <View style={s.searchRow}>
-        <TextInput
-          style={s.searchInput}
-          placeholder="Rechercher un jeu..."
-          value={search}
-          onChangeText={setSearch}
-          clearButtonMode="while-editing"
-        />
+        <View style={s.searchWrap}>
+          <Text style={s.searchIcon}>🔍</Text>
+          <TextInput
+            style={s.searchInput}
+            placeholder="Rechercher un jeu..."
+            placeholderTextColor="#9a8b7c"
+            value={search}
+            onChangeText={setSearch}
+            clearButtonMode="while-editing"
+          />
+        </View>
         {isAdmin && (
           <TouchableOpacity style={s.addBtn} onPress={() => router.push("/admin/add-game")}>
             <Text style={s.addBtnText}>＋</Text>
@@ -116,32 +146,32 @@ export default function GamesTab() {
         )}
       </View>
 
-      {/* Filtres catégorie */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
+      {/* Chips catégorie */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
         {CATEGORIES.map((c) => (
           <TouchableOpacity
             key={c.key}
             style={[s.chip, category === c.key && s.chipActive]}
             onPress={() => setCategory(c.key as GameCategory | "")}
           >
-            <Text style={[s.chipText, category === c.key && s.chipTextActive]} numberOfLines={1}>{c.label}</Text>
+            <Text style={[s.chipText, category === c.key && s.chipTextActive]}>{c.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Filtres statut */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
+      {/* Filtre statut */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
         {(["", "AVAILABLE", "BORROWED"] as const).map((f) => (
           <TouchableOpacity key={f} style={[s.filterBtn, status === f && s.filterActive]} onPress={() => setStatus(f)}>
             <Text style={[s.filterText, status === f && s.filterTextActive]}>
-              {f === "" ? "Tous" : STATUS_LABELS[f]}
+              {f === "" ? "Tous" : f === "AVAILABLE" ? "Disponibles" : "Empruntés"}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       {/* Tri */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 14 }}>
         {SORTS.map((so) => (
           <TouchableOpacity key={so.key} style={[s.filterBtn, sort === so.key && s.sortActive]} onPress={() => setSort(so.key)}>
             <Text style={[s.filterText, sort === so.key && s.sortTextActive]}>{so.label}</Text>
@@ -156,28 +186,33 @@ export default function GamesTab() {
           data={sorted}
           keyExtractor={(g) => g.id}
           numColumns={2}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 32 }}
           columnWrapperStyle={{ gap: 12 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={s.card} onPress={() => router.push(`/game/${item.id}`)} activeOpacity={0.8}>
-              {item.coverUrl
-                ? <Image source={{ uri: item.coverUrl }} style={s.cover} resizeMode="cover" />
-                : <View style={[s.cover, s.coverPlaceholder]}><Text style={{ fontSize: 32 }}>🎲</Text></View>
-              }
-              <View style={s.cardBody}>
-                <Text style={s.cardName} numberOfLines={2}>{item.name}</Text>
-                <Text style={s.cardCategory}>{item.category}</Text>
-                <Text style={[s.statusDot, { color: STATUS_COLORS[item.status] }]}>
-                  ● {STATUS_LABELS[item.status]}
-                </Text>
-                {item.averageRating != null && (
-                  <Text style={s.rating}>{"★".repeat(Math.round(item.averageRating))} {item.averageRating}/5</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const cat = CAT_CONFIG[item.category] ?? { label: item.category, color: "#9a8b7c", emoji: "🎲" };
+            const isAvailable = item.status === "AVAILABLE";
+            return (
+              <TouchableOpacity style={s.card} onPress={() => router.push(`/game/${item.id}`)} activeOpacity={0.85}>
+                <View style={s.cardVisual}>
+                  <GameThumb game={item} />
+                  <View style={[s.catBadge, { backgroundColor: cat.color }]}>
+                    <Text style={s.catBadgeText}>{cat.label}</Text>
+                  </View>
+                </View>
+                <View style={s.cardBody}>
+                  <Text style={s.cardName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={[s.statusText, { color: isAvailable ? "#16a34a" : "#ea580c" }]}>
+                    ● {isAvailable ? "Disponible" : "Emprunté"}
+                  </Text>
+                  {item.averageRating != null && (
+                    <Text style={s.rating}>{"★".repeat(Math.round(item.averageRating))} {item.averageRating}/5</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
           ListEmptyComponent={
             <View style={{ alignItems: "center", marginTop: 60 }}>
               <Text style={{ fontSize: 48 }}>🎲</Text>
@@ -191,30 +226,37 @@ export default function GamesTab() {
 }
 
 const s = StyleSheet.create({
-  locationBanner: { backgroundColor: "#fde2d2", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f5bba8" },
-  locationBannerText: { fontSize: 13, color: "#d24a1f", fontWeight: "600" },
-  searchRow: { flexDirection: "row", padding: 12, paddingBottom: 0, gap: 8 },
-  searchInput: { flex: 1, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, padding: 12, fontSize: 15 },
-  addBtn: { backgroundColor: "#d24a1f", width: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  addBtnText: { color: "#fff", fontSize: 22, lineHeight: 28 },
-  chipRow: { marginTop: 10, flexGrow: 0, flexShrink: 0 },
-  filterRow: { paddingVertical: 8, flexGrow: 0, flexShrink: 0 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff", flexShrink: 0 },
-  chipActive: { backgroundColor: "#d24a1f", borderColor: "#d24a1f" },
-  chipText: { fontSize: 12, color: "#1e1610" },
-  chipTextActive: { color: "#fff" },
-  filterBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff", flexShrink: 0 },
-  filterActive: { backgroundColor: "#1e1610", borderColor: "#1e1610" },
-  sortActive: { backgroundColor: "#e8a82f", borderColor: "#e8a82f" },
-  filterText: { fontSize: 12, color: "#1e1610" },
-  filterTextActive: { color: "#fff" },
-  sortTextActive: { color: "#fff" },
-card: { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", borderWidth: 1.5, borderColor: "#ece1cd", elevation: 0 },
-  cover: { width: "100%", aspectRatio: 1 },
-  coverPlaceholder: { backgroundColor: "#fde2d2", alignItems: "center", justifyContent: "center" },
-  cardBody: { padding: 10 },
-  cardName: { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 2 },
-  cardCategory: { fontSize: 10, color: "#8a7a6a", marginBottom: 2, textTransform: "capitalize" },
-  statusDot: { fontSize: 11, fontWeight: "500" },
-  rating: { fontSize: 10, color: "#e8a82f", marginTop: 2 },
+  header:           { backgroundColor: "#d24a1f", paddingHorizontal: 16, paddingBottom: 18, flexDirection: "row", alignItems: "center" },
+  headerTitle:      { color: "#fff", fontSize: 22, fontWeight: "700" },
+  headerSub:        { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3 },
+  monCompteBtn:     { borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  monCompteBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  searchRow:        { flexDirection: "row", paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4, gap: 8 },
+  searchWrap:       { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, paddingHorizontal: 10, height: 44 },
+  searchIcon:       { fontSize: 14, marginRight: 6 },
+  searchInput:      { flex: 1, fontSize: 14, color: "#1e1610" },
+  addBtn:           { backgroundColor: "#d24a1f", width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  addBtnText:       { color: "#fff", fontSize: 22, lineHeight: 28 },
+  chipRow:          { flexGrow: 0, flexShrink: 0, paddingVertical: 8 },
+  filterRow:        { flexGrow: 0, flexShrink: 0, paddingVertical: 4 },
+  chip:             { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
+  chipActive:       { backgroundColor: "#1e1610", borderColor: "#1e1610" },
+  chipText:         { fontSize: 12, fontWeight: "500", color: "#1e1610" },
+  chipTextActive:   { color: "#fff", fontWeight: "600" },
+  filterBtn:        { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#ece1cd", backgroundColor: "#fff" },
+  filterActive:     { backgroundColor: "#1e1610", borderColor: "#1e1610" },
+  sortActive:       { backgroundColor: "#e8a82f", borderColor: "#e8a82f" },
+  filterText:       { fontSize: 12, fontWeight: "500", color: "#1e1610" },
+  filterTextActive: { color: "#fff", fontWeight: "600" },
+  sortTextActive:   { color: "#fff", fontWeight: "600" },
+  card:             { flex: 1, backgroundColor: "#fff", borderRadius: 14, overflow: "hidden", borderWidth: 1.5, borderColor: "#ece1cd" },
+  cardVisual:       { position: "relative" },
+  thumbImg:         { width: "100%", aspectRatio: 1 },
+  thumbPlaceholder: { width: "100%", aspectRatio: 1, alignItems: "center", justifyContent: "center" },
+  catBadge:         { position: "absolute", top: 8, right: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  catBadgeText:     { color: "#fff", fontSize: 10, fontWeight: "700" },
+  cardBody:         { padding: 10 },
+  cardName:         { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 3 },
+  statusText:       { fontSize: 11, fontWeight: "500", marginBottom: 2 },
+  rating:           { fontSize: 10, color: "#e8a82f" },
 });

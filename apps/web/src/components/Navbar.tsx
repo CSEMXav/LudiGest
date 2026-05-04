@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { label: "Accueil",      href: "/",         id: "home"     },
   { label: "Catalogue",    href: "/games",    id: "games"    },
   { label: "Mes emprunts", href: "/loans",    id: "loans"    },
-  { label: "Soirées",      href: "/sessions", id: "sessions" },
+  { label: "Sessions",      href: "/sessions", id: "sessions" },
   { label: "Membres",      href: "/members",  id: "members"  },
 ];
 

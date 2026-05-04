@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, FlatList, SectionList, TouchableOpacity, Image, StyleSheet, Alert,
+  View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Alert,
   ActivityIndicator, RefreshControl, Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiGet, apiPost } from "@/lib/api";
 import type { LoanDTO } from "@ludigest/types";
 
@@ -11,19 +12,42 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
 }
 
+function formatDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
 function isDueSoon(dueAt: string) {
   const ms = new Date(dueAt).getTime() - Date.now();
   return ms > 0 && ms <= 7 * 24 * 60 * 60 * 1000;
 }
 
+function hashColor(name: string): string {
+  const COLORS = ["#d24a1f", "#e8a82f", "#286b7a", "#6a8f3c", "#5b4d40", "#c54a7a"];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return COLORS[h % COLORS.length];
+}
+
+function LoanThumb({ loan, size = 52 }: { loan: LoanDTO; size?: number }) {
+  if (loan.gameCoverUrl) {
+    return <Image source={{ uri: loan.gameCoverUrl }} style={{ width: size, height: size, borderRadius: 10 }} resizeMode="cover" />;
+  }
+  const color = hashColor(loan.gameName);
+  return (
+    <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>{loan.gameName[0]?.toUpperCase()}</Text>
+    </View>
+  );
+}
+
 export default function LoansTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [active, setActive] = useState<LoanDTO[]>([]);
   const [history, setHistory] = useState<LoanDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [returnLoan, setReturnLoan] = useState<LoanDTO | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   async function load() {
     try {
@@ -60,92 +84,92 @@ export default function LoansTab() {
     }
   }
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color="#d24a1f" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 80 }} color="#d24a1f" />;
 
   return (
     <>
-      <FlatList
-        data={active}
-        keyExtractor={(l) => l.id}
-        contentContainerStyle={{ padding: 16 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
-        ListHeaderComponent={
-          <Text style={s.activeCount}>{active.length}/5 emprunt{active.length > 1 ? "s" : ""} en cours</Text>
-        }
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={{ fontSize: 48 }}>📭</Text>
-            <Text style={s.emptyText}>Aucun emprunt en cours</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)")}>
-              <Text style={s.link}>Parcourir les jeux →</Text>
-            </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
+        {/* Header rouge */}
+        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle}>Mes emprunts</Text>
+            <Text style={s.headerSub}>{active.length}/5 emprunt{active.length > 1 ? "s" : ""} actifs</Text>
           </View>
-        }
-        renderItem={({ item }) => {
-          const overdue = new Date(item.dueAt) < new Date();
-          const dueSoon = isDueSoon(item.dueAt);
-          return (
-            <View style={[s.card, overdue ? s.cardOverdue : dueSoon ? s.cardWarn : null]}>
-              <TouchableOpacity onPress={() => router.push(`/game/${item.gameId}`)} style={s.cardTop}>
-                {item.gameCoverUrl ? (
-                  <Image source={{ uri: item.gameCoverUrl }} style={s.cover} />
-                ) : (
-                  <View style={[s.cover, s.coverPlaceholder]}><Text>🎲</Text></View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={s.gameName}>{item.gameName}</Text>
-                  <Text style={[s.dueDate, overdue ? s.overdue : dueSoon ? s.dueSoon : null]}>
-                    {overdue ? "⚠ En retard — " : dueSoon ? "⏰ Bientôt — " : "Avant le "}
-                    {formatDate(item.dueAt)}
-                  </Text>
-                  {item.extendedCount > 0 && (
-                    <Text style={s.extended}>Prolongé {item.extendedCount}x</Text>
-                  )}
-                  <Text style={s.borrowedDate}>Emprunté le {formatDate(item.borrowedAt)}</Text>
-                </View>
+          <TouchableOpacity onPress={() => router.push("/account")} style={s.monCompteBtn}>
+            <Text style={s.monCompteBtnText}>Mon compte</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={active}
+          keyExtractor={(l) => l.id}
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Text style={{ fontSize: 48 }}>📭</Text>
+              <Text style={s.emptyText}>Aucun emprunt en cours</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)")}>
+                <Text style={s.link}>Parcourir les jeux →</Text>
               </TouchableOpacity>
-              <View style={s.actions}>
-                <TouchableOpacity style={s.btnReturn} onPress={() => setReturnLoan(item)}>
-                  <Text style={s.btnReturnText}>Rendre</Text>
-                </TouchableOpacity>
-                {item.extendedCount < 3 && (
-                  <TouchableOpacity style={s.btnExtend} onPress={() => doExtend(item.id)}>
-                    <Text style={s.btnExtendText}>Prolonger</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
             </View>
-          );
-        }}
-        ListFooterComponent={
-          history.length > 0 ? (
-            <View style={s.historySection}>
-              <TouchableOpacity style={s.historyToggle} onPress={() => setShowHistory((v) => !v)}>
-                <Text style={s.historyToggleText}>
-                  {showHistory ? "▲" : "▼"} Historique ({history.length} emprunt{history.length > 1 ? "s" : ""})
-                </Text>
-              </TouchableOpacity>
-              {showHistory && history.map((item) => (
-                <View key={item.id} style={s.historyCard}>
-                  <TouchableOpacity onPress={() => router.push(`/game/${item.gameId}`)} style={s.cardTop}>
-                    {item.gameCoverUrl ? (
-                      <Image source={{ uri: item.gameCoverUrl }} style={s.coverSmall} />
-                    ) : (
-                      <View style={[s.coverSmall, s.coverPlaceholder]}><Text style={{ fontSize: 16 }}>🎲</Text></View>
+          }
+          renderItem={({ item }) => {
+            const overdue = new Date(item.dueAt) < new Date();
+            const dueSoon = isDueSoon(item.dueAt);
+            return (
+              <View style={[s.card, overdue ? s.cardOverdue : dueSoon ? s.cardWarn : null]}>
+                <TouchableOpacity onPress={() => router.push(`/game/${item.gameId}`)} style={s.cardTop} activeOpacity={0.8}>
+                  <LoanThumb loan={item} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.gameName}>{item.gameName}</Text>
+                    <Text style={[s.dueDate, overdue ? s.overdue : dueSoon ? s.dueSoon : null]}>
+                      {overdue ? "⚠ En retard — " : dueSoon ? "⏰ Bientôt — " : "À rendre · "}
+                      {formatDateShort(item.dueAt)}
+                    </Text>
+                    {item.extendedCount > 0 && (
+                      <View style={s.extendedBadge}>
+                        <Text style={s.extendedBadgeText}>Prolongé {item.extendedCount}×</Text>
+                      </View>
                     )}
+                  </View>
+                </TouchableOpacity>
+                <View style={s.actions}>
+                  <TouchableOpacity style={s.btnReturn} onPress={() => setReturnLoan(item)}>
+                    <Text style={s.btnReturnText}>Rendre</Text>
+                  </TouchableOpacity>
+                  {item.extendedCount < 3 && (
+                    <TouchableOpacity style={s.btnExtend} onPress={() => doExtend(item.id)}>
+                      <Text style={s.btnExtendText}>Prolonger</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          }}
+          ListFooterComponent={
+            history.length > 0 ? (
+              <View style={s.historySection}>
+                <Text style={s.historySectionTitle}>HISTORIQUE</Text>
+                {history.map((item) => (
+                  <TouchableOpacity key={item.id} onPress={() => router.push(`/game/${item.gameId}`)} style={s.historyCard} activeOpacity={0.8}>
+                    <LoanThumb loan={item} size={40} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.gameName}>{item.gameName}</Text>
-                      <Text style={s.historyDate}>Emprunté le {formatDate(item.borrowedAt)}</Text>
                       <Text style={s.historyDate}>Rendu le {formatDate(item.returnedAt!)}</Text>
                     </View>
+                    <View style={s.rendуBadge}>
+                      <Text style={s.renduBadgeText}>Rendu</Text>
+                    </View>
                   </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          ) : null
-        }
-      />
+                ))}
+              </View>
+            ) : null
+          }
+        />
+      </View>
 
+      {/* Modal confirmation retour */}
       <Modal visible={!!returnLoan} transparent animationType="fade">
         <View style={s.modalOverlay}>
           <View style={s.modalBox}>
@@ -172,40 +196,42 @@ export default function LoansTab() {
 }
 
 const s = StyleSheet.create({
-  activeCount: { fontSize: 13, color: "#6b7280", marginBottom: 12 },
-  card: { backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 12, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  cardOverdue: { backgroundColor: "#fff5f5", borderWidth: 1, borderColor: "#fecaca" },
-  cardWarn: { backgroundColor: "#fefce8", borderWidth: 1, borderColor: "#fde68a" },
-  cardTop: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  cover: { width: 60, height: 60, borderRadius: 10 },
-  coverSmall: { width: 44, height: 44, borderRadius: 8 },
-  coverPlaceholder: { backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center" },
-  gameName: { fontSize: 15, fontWeight: "600", color: "#111827", marginBottom: 4 },
-  dueDate: { fontSize: 13, color: "#6b7280" },
-  overdue: { color: "#dc2626", fontWeight: "600" },
-  dueSoon: { color: "#d97706", fontWeight: "600" },
-  extended: { fontSize: 11, color: "#3b82f6", marginTop: 2 },
-  borrowedDate: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
-  actions: { flexDirection: "row", gap: 10 },
-  btnReturn: { flex: 1, backgroundColor: "#d24a1f", padding: 10, borderRadius: 10, alignItems: "center" },
-  btnReturnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  btnExtend: { flex: 1, borderWidth: 1, borderColor: "#d1d5db", padding: 10, borderRadius: 10, alignItems: "center" },
-  btnExtendText: { color: "#374151", fontWeight: "500", fontSize: 14 },
-  empty: { alignItems: "center", paddingTop: 80, gap: 8 },
-  emptyText: { color: "#9ca3af", fontSize: 15 },
-  link: { color: "#d24a1f", fontSize: 14, marginTop: 8 },
-  historySection: { marginTop: 8 },
-  historyToggle: { paddingVertical: 12, alignItems: "center" },
-  historyToggleText: { fontSize: 13, color: "#6b7280", fontWeight: "600" },
-  historyCard: { backgroundColor: "#f9fafb", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: "#e5e7eb" },
-  historyDate: { fontSize: 12, color: "#9ca3af", marginTop: 1 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
-  modalBox: { backgroundColor: "#fff", borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 },
-  modalTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginBottom: 10 },
-  modalBody: { fontSize: 14, color: "#4b5563", lineHeight: 20, marginBottom: 20 },
-  modalBtns: { flexDirection: "row", gap: 10 },
-  modalCancel: { flex: 1, borderWidth: 1, borderColor: "#d1d5db", padding: 12, borderRadius: 12, alignItems: "center" },
-  modalCancelText: { color: "#374151", fontWeight: "500" },
-  modalConfirm: { flex: 1, backgroundColor: "#d24a1f", padding: 12, borderRadius: 12, alignItems: "center" },
-  modalConfirmText: { color: "#fff", fontWeight: "600" },
+  header:            { backgroundColor: "#d24a1f", paddingHorizontal: 16, paddingBottom: 18, flexDirection: "row", alignItems: "center" },
+  headerTitle:       { color: "#fff", fontSize: 22, fontWeight: "700" },
+  headerSub:         { color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3 },
+  monCompteBtn:      { borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  monCompteBtnText:  { color: "#fff", fontSize: 12, fontWeight: "600" },
+  card:              { backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: "#ece1cd" },
+  cardOverdue:       { backgroundColor: "#fff5f5", borderColor: "#fecaca" },
+  cardWarn:          { backgroundColor: "#fefce8", borderColor: "#fde68a" },
+  cardTop:           { flexDirection: "row", gap: 12, marginBottom: 12, alignItems: "center" },
+  gameName:          { fontSize: 15, fontWeight: "600", color: "#1e1610", marginBottom: 3 },
+  dueDate:           { fontSize: 13, color: "#6b7280" },
+  overdue:           { color: "#dc2626", fontWeight: "600" },
+  dueSoon:           { color: "#d97706", fontWeight: "600" },
+  extendedBadge:     { marginTop: 4, alignSelf: "flex-start", backgroundColor: "#e0f2fe", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  extendedBadgeText: { fontSize: 10, color: "#0369a1", fontWeight: "600" },
+  actions:           { flexDirection: "row", gap: 10 },
+  btnReturn:         { flex: 1, backgroundColor: "#d24a1f", padding: 10, borderRadius: 10, alignItems: "center" },
+  btnReturnText:     { color: "#fff", fontWeight: "700", fontSize: 14 },
+  btnExtend:         { flex: 1, borderWidth: 1.5, borderColor: "#ece1cd", padding: 10, borderRadius: 10, alignItems: "center" },
+  btnExtendText:     { color: "#1e1610", fontWeight: "500", fontSize: 14 },
+  empty:             { alignItems: "center", paddingTop: 80, gap: 8 },
+  emptyText:         { color: "#9ca3af", fontSize: 15 },
+  link:              { color: "#d24a1f", fontSize: 14, marginTop: 8 },
+  historySection:    { marginTop: 16 },
+  historySectionTitle: { fontSize: 11, fontWeight: "700", color: "#9a8b7c", letterSpacing: 0.8, marginBottom: 10 },
+  historyCard:       { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: "#ece1cd" },
+  historyDate:       { fontSize: 12, color: "#9ca3af" },
+  rendуBadge:        { backgroundColor: "#e8f4ec", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  renduBadgeText:    { fontSize: 11, color: "#3a6a3e", fontWeight: "600" },
+  modalOverlay:      { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalBox:          { backgroundColor: "#fff", borderRadius: 20, padding: 24, width: "100%" },
+  modalTitle:        { fontSize: 17, fontWeight: "700", color: "#1e1610", marginBottom: 10 },
+  modalBody:         { fontSize: 14, color: "#4b5563", lineHeight: 20, marginBottom: 20 },
+  modalBtns:         { flexDirection: "row", gap: 10 },
+  modalCancel:       { flex: 1, borderWidth: 1, borderColor: "#d1d5db", padding: 12, borderRadius: 12, alignItems: "center" },
+  modalCancelText:   { color: "#374151", fontWeight: "500" },
+  modalConfirm:      { flex: 1, backgroundColor: "#d24a1f", padding: 12, borderRadius: 12, alignItems: "center" },
+  modalConfirmText:  { color: "#fff", fontWeight: "600" },
 });

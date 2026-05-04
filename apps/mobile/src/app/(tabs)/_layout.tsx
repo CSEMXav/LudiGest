@@ -42,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Liste des jeux",
+          headerShown: false,
           tabBarLabel: "Jeux",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎲</Text>,
         }}
@@ -58,7 +58,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="loans"
         options={{
-          title: "Mes emprunts",
+          headerShown: false,
           tabBarLabel: "Emprunts",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📚</Text>,
         }}
@@ -66,8 +66,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="sessions"
         options={{
-          title: "Soirées ludiques",
-          tabBarLabel: "Soirées",
+          title: "Sessions",
+          tabBarLabel: "Sessions",
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🎉</Text>,
         }}
       />
