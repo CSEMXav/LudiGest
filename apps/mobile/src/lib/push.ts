@@ -20,7 +20,12 @@ export async function registerPushToken(): Promise<void> {
 
     if (finalStatus !== "granted") return;
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
     const pushToken = tokenData.data;
 
     await apiFetch("/api/user/push-token", {

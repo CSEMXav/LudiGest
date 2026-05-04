@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Polygon } from "react-native-svg";
 import { apiGet, apiPost } from "@/lib/api";
-import { getStoredUser, getStoredLocation } from "@/lib/auth";
+import { getStoredUser, getStoredLocation, updateStoredUser } from "@/lib/auth";
 import { Pion, CAT_PION } from "@/components/Pion";
 import type { GameDTO, LoanDTO, GameSessionDTO } from "@ludigest/types";
 
@@ -74,18 +74,22 @@ export default function HomeTab() {
     if (isRefresh) setRefreshing(true);
     const [user, loc] = await Promise.all([getStoredUser(), getStoredLocation()]);
     setLocation(loc);
-    if (user?.name) {
-      const parts = user.name.trim().split(/\s+/);
+
+    function applyName(name: string) {
+      const parts = name.trim().split(/\s+/);
       setUserName(parts[0]);
       setInitials(parts.length > 1
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : parts[0].slice(0, 2).toUpperCase());
     }
+    if (user?.name) applyName(user.name);
+
     try {
-      const [loans, sessions, games] = await Promise.all([
+      const [loans, sessions, games, profile] = await Promise.all([
         apiGet<LoanDTO[]>("/api/loans?all=true"),
         apiGet<GameSessionDTO[]>("/api/sessions"),
         apiGet<GameDTO[]>(`/api/games?location=${encodeURIComponent(loc)}&status=AVAILABLE`),
+        apiGet<{ name: string }>("/api/user/profile"),
       ]);
       setActiveLoans(loans.filter((l) => !l.returnedAt));
       const upcoming = sessions
@@ -93,6 +97,10 @@ export default function HomeTab() {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
       setUpcomingSession(upcoming);
       setSuggestions(games.sort(() => Math.random() - 0.5).slice(0, 8));
+      if (profile?.name && profile.name !== user?.name) {
+        applyName(profile.name);
+        await updateStoredUser({ name: profile.name });
+      }
     } catch {}
     setLoading(false);
     setRefreshing(false);

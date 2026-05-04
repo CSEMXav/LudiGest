@@ -32,6 +32,12 @@ export async function getStoredLocation(): Promise<string> {
   return (await SecureStore.getItemAsync(LOCATION_KEY)) ?? "Joinville";
 }
 
+export async function updateStoredUser(updates: Partial<StoredUser>): Promise<void> {
+  const user = await getStoredUser();
+  if (!user) return;
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify({ ...user, ...updates }));
+}
+
 export async function saveLocation(location: string) {
   await SecureStore.setItemAsync(LOCATION_KEY, location);
   // Update stored user too

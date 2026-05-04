@@ -132,7 +132,7 @@ export default function LoansTab() {
                   </TouchableOpacity>
                   {item.extendedCount < 3 && (
                     <TouchableOpacity style={s.btnExtend} onPress={() => doExtend(item.id)}>
-                      <Text style={s.btnExtendText}>Prolonger</Text>
+                      <Text style={s.btnExtendText}>Prolonger (+1 semaine)</Text>
                     </TouchableOpacity>
                   )}
                 </View>

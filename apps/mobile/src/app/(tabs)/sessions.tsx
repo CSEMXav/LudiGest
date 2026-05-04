@@ -129,6 +129,11 @@ export default function SessionsScreen() {
                           <Text style={st.registeredBadgeText}>✓ Inscrit·e</Text>
                         </View>
                       )}
+                      {session.isPrivate && (
+                        <View style={st.privateBadge}>
+                          <Text style={st.privateBadgeText}>🔒 Privée</Text>
+                        </View>
+                      )}
                     </View>
 
                     <View style={st.body}>
@@ -215,6 +220,8 @@ const st = StyleSheet.create({
   band:           { height: 80, alignItems: "center", justifyContent: "center", position: "relative" },
   registeredBadge: { position: "absolute", top: 10, right: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 100, backgroundColor: "#dcfce7" },
   registeredBadgeText: { fontSize: 10, fontWeight: "700", color: "#166534" },
+  privateBadge: { position: "absolute", top: 10, left: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 100, backgroundColor: "rgba(0,0,0,0.35)" },
+  privateBadgeText: { fontSize: 10, fontWeight: "700", color: "#fff" },
   body:           { padding: 14 },
   name:           { fontSize: 17, fontWeight: "700", color: "#1e1610", letterSpacing: -0.4, lineHeight: 22, marginBottom: 6 },
   meta:           { fontSize: 12, color: "#5b4d40", marginTop: 2 },
