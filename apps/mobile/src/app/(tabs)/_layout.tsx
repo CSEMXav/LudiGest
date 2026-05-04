@@ -46,6 +46,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="games"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="scan"
         options={{
           title: "Emprunter un jeu",
