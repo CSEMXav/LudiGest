@@ -4,6 +4,9 @@
       "eas": {
         "projectId": "c6beaf44-8c96-42de-ab1d-61eb6744f8ea"
       }
+    },
+    "android": {
+      "package": "fr.bred.ludigest"
     }
   }
 }
