@@ -54,9 +54,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (loan.user.pushToken) {
     try {
-      await fetch("https://exp.host/--/api/v2/push/send", {
+      const pushRes = await fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Accept-Encoding": "gzip, deflate",
+        },
         body: JSON.stringify({
           to: loan.user.pushToken,
           title: isOverdue ? "⚠️ Emprunt en retard" : "⏰ Rappel d'emprunt",
@@ -65,10 +69,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             : `Pensez à rendre "${gameName}" avant le ${dateStr}`,
           sound: "default",
           channelId: "default",
+          priority: "high",
           data: { type: "loan_reminder", loanId: loan.id },
         }),
       });
-    } catch { /* push failure non-bloquant */ }
+      const pushResult = await pushRes.json();
+      const ticket = pushResult?.data;
+      if (ticket?.status === "error") {
+        console.error("[push] Expo Push error:", ticket.message, ticket.details);
+      } else {
+        console.log("[push] Ticket OK:", ticket?.id);
+      }
+    } catch (e) {
+      console.error("[push] fetch error:", e);
+    }
+  } else {
+    console.warn("[push] Pas de pushToken pour userId:", loan.user.id);
   }
 
   return NextResponse.json({ success: true, type });
