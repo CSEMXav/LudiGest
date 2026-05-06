@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   let game;
   if (barcode) {
-    game = await prisma.game.findUnique({ where: { barcode } });
+    game = await prisma.game.findFirst({ where: { barcode } });
     if (!game) {
       return NextResponse.json({ error: "Aucun jeu trouvé avec ce code-barre." }, { status: 404 });
     }
