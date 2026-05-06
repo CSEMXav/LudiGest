@@ -21,9 +21,9 @@ function getResend() {
   return new Resend(key);
 }
 
-export async function sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-  const link = `${baseUrl}/api/auth/verify-email?token=${token}`;
+export async function sendVerificationEmail(to: string, name: string, token: string, baseUrl?: string): Promise<void> {
+  const base = baseUrl ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const link = `${base}/api/auth/verify-email?token=${token}`;
 
   const resend = getResend();
   if (!resend) {

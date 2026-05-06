@@ -58,7 +58,7 @@ model Game {
   maxPlayers Int?
   duration   Int?
   coverUrl   String?
-  barcode    String?  @unique
+  barcode    String?
   status     String   @default("AVAILABLE")
   location   String   @default("Joinville")
   addedAt    DateTime @default(now())

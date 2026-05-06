@@ -2,7 +2,7 @@
   "expo": {
     "name": "LudiGest",
     "slug": "ludigest",
-    "version": "1.65.0",
+    "version": "1.66.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "ludigest",
@@ -22,7 +22,8 @@
       "package": "fr.bred.ludigest",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "plugins": [

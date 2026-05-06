@@ -81,6 +81,8 @@ export async function GET(req: NextRequest) {
             to: loan.user.pushToken,
             title: "⏰ Rappel d'emprunt",
             body: `Pensez à rendre "${gameName}" avant le ${dateStr}`,
+            sound: "default",
+            channelId: "default",
             data: { type: "loan_reminder", loanId: loan.id },
           }),
         });
@@ -148,6 +150,8 @@ export async function GET(req: NextRequest) {
             to: loan.user.pushToken,
             title: "⚠️ Emprunt en retard",
             body: `"${gameName}" aurait dû être rendu le ${dateStr}`,
+            sound: "default",
+            channelId: "default",
             data: { type: "loan_reminder", loanId: loan.id },
           }),
         });

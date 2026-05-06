@@ -63,6 +63,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           body: isOverdue
             ? `"${gameName}" aurait dû être rendu le ${dateStr}`
             : `Pensez à rendre "${gameName}" avant le ${dateStr}`,
+          sound: "default",
+          channelId: "default",
           data: { type: "loan_reminder", loanId: loan.id },
         }),
       });

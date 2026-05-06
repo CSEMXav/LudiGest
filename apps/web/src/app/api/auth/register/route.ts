@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     data: { userId: user.id, token, expiresAt },
   });
 
-  await sendVerificationEmail(user.email, firstName, token);
+  await sendVerificationEmail(user.email, firstName, token, new URL(req.url).origin);
 
   return NextResponse.json({ success: true }, { status: 201 });
 }

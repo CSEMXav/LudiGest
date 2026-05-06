@@ -157,7 +157,9 @@ export default function AdminLoansPage() {
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((l) =>
-        (l.userName?.toLowerCase() ?? "").includes(q) || (l.userEmail?.toLowerCase() ?? "").includes(q)
+        (l.userName?.toLowerCase() ?? "").includes(q) ||
+        (l.userEmail?.toLowerCase() ?? "").includes(q) ||
+        (l.gameName?.toLowerCase() ?? "").includes(q)
       );
     }
     if (overdueOnly) {
@@ -192,7 +194,7 @@ export default function AdminLoansPage() {
       {/* Search */}
       <input
         type="search"
-        placeholder="Rechercher par nom ou email..."
+        placeholder="Rechercher par nom, email ou jeu..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full max-w-sm border border-gray-300 rounded-xl px-4 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-red-300"

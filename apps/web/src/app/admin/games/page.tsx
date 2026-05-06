@@ -348,6 +348,7 @@ export default function AdminGamesPage() {
   const [enriching, setEnriching] = useState<Record<string, boolean>>({});
   const [editingGame, setEditingGame] = useState<GameDTO | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [duplicatesOnly, setDuplicatesOnly] = useState(false);
 
   const currentLocation = session?.user.location;
 
@@ -413,6 +414,22 @@ export default function AdminGamesPage() {
     if (res.ok) loadGames();
   }
 
+  const duplicateNames = new Set(
+    Object.entries(
+      games.reduce<Record<string, number>>((acc, g) => {
+        const key = g.name.trim().toLowerCase();
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {})
+    )
+    .filter(([, count]) => count > 1)
+    .map(([name]) => name)
+  );
+
+  const displayedGames = duplicatesOnly
+    ? games.filter((g) => duplicateNames.has(g.name.trim().toLowerCase()))
+    : games;
+
   const catConfig = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
 
   return (
@@ -471,6 +488,18 @@ export default function AdminGamesPage() {
             </button>
           ))}
           <div className="w-px h-5 bg-gray-200 mx-1" />
+          {/* Doublons */}
+          <button
+            onClick={() => setDuplicatesOnly((v) => !v)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              duplicatesOnly
+                ? "bg-orange-500 text-white border-orange-500"
+                : "border-gray-300 text-gray-600 hover:border-gray-400 bg-white"
+            }`}
+          >
+            🔁 Doublons{duplicateNames.size > 0 && !duplicatesOnly && ` (${duplicateNames.size})`}
+          </button>
+          <div className="w-px h-5 bg-gray-200 mx-1" />
           {/* Tri */}
           {SORTS.map((s) => (
             <button
@@ -503,8 +532,10 @@ export default function AdminGamesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {games.map((g) => (
-                <tr key={g.id} className="hover:bg-gray-50">
+              {displayedGames.map((g) => {
+                const isDuplicate = duplicateNames.has(g.name.trim().toLowerCase());
+                return (
+                <tr key={g.id} className={isDuplicate ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"}>
                   {/* Nom — cliquable pour éditer */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -524,6 +555,11 @@ export default function AdminGamesPage() {
                           >
                             {g.name}
                           </button>
+                          {isDuplicate && (
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-orange-100 text-orange-600" title="Nom en doublon">
+                              🔁
+                            </span>
+                          )}
                           {(g.reportCount ?? 0) > 0 && (
                             <a
                               href={`/games/${g.id}`}
@@ -618,7 +654,8 @@ export default function AdminGamesPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
