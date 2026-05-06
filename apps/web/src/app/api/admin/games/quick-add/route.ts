@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   // Vérifie si barcode déjà utilisé
   const barcode = bggDetails?.barcode ?? null;
   if (barcode) {
-    const exists = await prisma.game.findUnique({ where: { barcode } });
+    const exists = await prisma.game.findFirst({ where: { barcode } });
     if (exists) bggDetails = { ...bggDetails!, barcode: null };
   }
 
