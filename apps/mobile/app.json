@@ -8,6 +8,7 @@
     "scheme": "ludigest",
     "userInterfaceStyle": "automatic",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#C8102E"
     },
@@ -17,6 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#C8102E"
       },
       "package": "fr.bred.ludigest",

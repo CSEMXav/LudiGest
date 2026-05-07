@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import { getToken } from "@/lib/auth";
 import { registerPushToken } from "@/lib/push";
@@ -14,16 +14,39 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   const router = useRouter();
+  const notifListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     getToken().then((token) => {
       if (token) {
         router.replace("/(tabs)");
-        registerPushToken(); // re-register on every app start to keep DB token fresh
+        registerPushToken();
       } else {
         router.replace("/(auth)/login");
       }
     });
+  }, []);
+
+  useEffect(() => {
+    // Notif reçue en foreground
+    notifListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log("[push] Notification reçue en foreground :", JSON.stringify(notification));
+    });
+
+    // Utilisateur a tapé sur la notification
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log("[push] Tap sur notification :", JSON.stringify(response));
+      const data = response.notification.request.content.data as { type?: string; loanId?: string };
+      if (data?.type === "loan_reminder") {
+        router.push("/(tabs)/loans");
+      }
+    });
+
+    return () => {
+      notifListener.current?.remove();
+      responseListener.current?.remove();
+    };
   }, []);
 
   return (
