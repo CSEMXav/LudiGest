@@ -37,9 +37,15 @@ export default function RootLayout() {
     // Utilisateur a tapé sur la notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       console.log("[push] Tap sur notification :", JSON.stringify(response));
-      const data = response.notification.request.content.data as { type?: string; loanId?: string };
+      const data = response.notification.request.content.data as { type?: string; loanId?: string; gameId?: string };
       if (data?.type === "loan_reminder") {
         router.push("/(tabs)/loans");
+      } else if (data?.type === "game_available" && data.gameId) {
+        router.push(`/game/${data.gameId}`);
+      } else if (data?.type === "game_wanted" && data.gameId) {
+        router.push(`/game/${data.gameId}`);
+      } else if (data?.type === "session_reminder") {
+        router.push("/(tabs)/sessions");
       }
     });
 
