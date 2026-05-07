@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, saveLocation, logout, updateStoredUser } from "@/lib/auth";
 import { apiGet, apiPatch } from "@/lib/api";
+import { registerPushToken } from "@/lib/push";
 import { LOCATIONS } from "@ludigest/types";
 import type { StoredUser } from "@/lib/auth";
 
@@ -77,6 +78,7 @@ export default function AccountScreen() {
   const [locationSaving, setLocationSaving] = useState(false);
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [pushActivating, setPushActivating] = useState(false);
 
   async function load(silent = false) {
     if (!silent) {
@@ -137,6 +139,20 @@ export default function AccountScreen() {
   async function handleLogout() {
     await logout();
     router.replace("/(auth)/login");
+  }
+
+  async function handleActivatePush() {
+    setPushActivating(true);
+    const ok = await registerPushToken();
+    setPushActivating(false);
+    if (ok) {
+      Alert.alert("Notifications activées", "Vous recevrez désormais les rappels et alertes sur ce téléphone.");
+    } else {
+      Alert.alert(
+        "Notifications non activées",
+        "Vérifiez que les notifications sont autorisées pour LudiGest dans les réglages de votre téléphone."
+      );
+    }
   }
 
   const initials = (() => {
@@ -298,6 +314,21 @@ export default function AccountScreen() {
             ))}
           </View>
         )}
+
+        {/* Notifications push */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Notifications push</Text>
+          <Text style={s.cardDesc}>Recevez des rappels d'emprunt et alertes directement sur votre téléphone.</Text>
+          <TouchableOpacity
+            style={[s.saveBtn, pushActivating && { opacity: 0.6 }]}
+            onPress={handleActivatePush}
+            disabled={pushActivating}
+          >
+            {pushActivating
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={s.saveBtnText}>🔔 Activer les notifications</Text>}
+          </TouchableOpacity>
+        </View>
 
         {/* Déconnexion */}
         <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>

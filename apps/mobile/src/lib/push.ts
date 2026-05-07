@@ -4,11 +4,11 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { apiFetch } from "./api";
 
-export async function registerPushToken(): Promise<void> {
+export async function registerPushToken(): Promise<boolean> {
   try {
-    if (!Device.isDevice) return;
+    if (!Device.isDevice) return false;
     // Push notifications removed from Expo Go since SDK 53 — skip silently
-    if (Constants.appOwnership === "expo") return;
+    if (Constants.appOwnership === "expo") return false;
 
     // Android : créer le canal EN PREMIER, avant toute demande de permission
     // ou récupération de token — sans canal, Android 8+ rejette silencieusement
@@ -33,7 +33,7 @@ export async function registerPushToken(): Promise<void> {
 
     if (finalStatus !== "granted") {
       console.log("[push] Permission refusée");
-      return;
+      return false;
     }
 
     const projectId =
@@ -42,7 +42,7 @@ export async function registerPushToken(): Promise<void> {
 
     if (!projectId) {
       console.warn("[push] projectId EAS introuvable — push désactivé");
-      return;
+      return false;
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
@@ -55,7 +55,9 @@ export async function registerPushToken(): Promise<void> {
     });
 
     console.log("[push] Token enregistré en base");
+    return true;
   } catch (err) {
     console.log("[push] registerPushToken error:", err);
+    return false;
   }
 }
