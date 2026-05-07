@@ -6,6 +6,8 @@ export interface ExcelGameRow {
   name: string;
   category: string;
   addedAt: Date;
+  bggId?: string;
+  barcode?: string;
 }
 
 function parseDate(value: ExcelJS.CellValue): Date | null {
@@ -37,7 +39,11 @@ export async function parseGameExcel(buffer: Buffer): Promise<ExcelGameRow[]> {
     const categoryRaw = String(row.getCell(2).value ?? "").trim().toLowerCase();
     const category    = VALID_CATEGORIES.includes(categoryRaw) ? categoryRaw : "famille";
     const addedAt     = parseDate(row.getCell(3).value) ?? today;
-    if (name) rows.push({ name, category, addedAt });
+    const bggIdRaw    = String(row.getCell(4).value ?? "").trim();
+    const barcodeRaw  = String(row.getCell(5).value ?? "").trim();
+    const bggId       = bggIdRaw || undefined;
+    const barcode     = barcodeRaw || undefined;
+    if (name) rows.push({ name, category, addedAt, bggId, barcode });
   });
 
   return rows;

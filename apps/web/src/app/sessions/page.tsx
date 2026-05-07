@@ -29,6 +29,39 @@ const EMPTY_FORM: CreateSessionForm = {
   name: "", date: "", location: "", startTime: "", imageUrl: "", info: "", maxParticipants: "",
 };
 
+function RegisterForm({ tint, submitting, onCancel, onConfirm }: {
+  tint: string;
+  submitting: boolean;
+  onCancel: () => void;
+  onConfirm: (guestName: string) => void;
+}) {
+  const [guestName, setGuestName] = useState("");
+  return (
+    <div className="space-y-3 w-full">
+      <div>
+        <label className="block text-xs font-medium mb-1" style={{ color: "var(--p-ink2)" }}>Accompagnant(e) ? (optionnel)</label>
+        <input
+          type="text"
+          value={guestName}
+          onChange={(e) => setGuestName(e.target.value)}
+          placeholder="Prénom Nom"
+          autoFocus
+          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
+          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}>Annuler</button>
+        <button onClick={() => onConfirm(guestName)} disabled={submitting}
+          className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors disabled:opacity-50"
+          style={{ background: tint }}>{submitting ? "…" : "Confirmer"}</button>
+      </div>
+    </div>
+  );
+}
+
 export default function SessionsPage() {
   const { data: authSession } = useSession();
   const userId = (authSession?.user as { id?: string })?.id;
@@ -36,7 +69,6 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<GameSessionDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionSession, setActionSession] = useState<GameSessionDTO | null>(null);
-  const [guestName, setGuestName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
 
@@ -82,7 +114,7 @@ export default function SessionsPage() {
     setTimeout(() => setMsg(null), 3500);
   }
 
-  async function register(s: GameSessionDTO) {
+  async function register(s: GameSessionDTO, guestName: string) {
     setSubmitting(true);
     const res = await fetch(`/api/sessions/${s.id}/register`, {
       method: "POST",
@@ -91,7 +123,6 @@ export default function SessionsPage() {
     });
     setSubmitting(false);
     setActionSession(null);
-    setGuestName("");
     if (res.ok) { flash(s.id, "Inscription enregistrée !", true); load(); }
     else { const d = await res.json(); flash(s.id, d.error ?? "Erreur.", false); }
   }
@@ -341,31 +372,16 @@ export default function SessionsPage() {
               ) : isPending ? (
                 <>
                   {actionSession?.id === s.id ? (
-                    <div className="space-y-3 w-full">
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: "var(--p-ink2)" }}>Accompagnant(e) ? (optionnel)</label>
-                        <input
-                          type="text"
-                          value={guestName}
-                          onChange={(e) => setGuestName(e.target.value)}
-                          placeholder="Prénom Nom"
-                          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setActionSession(null); setGuestName(""); }}
-                          className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
-                          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}>Annuler</button>
-                        <button onClick={() => register(s)} disabled={submitting}
-                          className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors disabled:opacity-50"
-                          style={{ background: tint }}>{submitting ? "…" : "Confirmer"}</button>
-                      </div>
-                    </div>
+                    <RegisterForm
+                      tint={tint}
+                      submitting={submitting}
+                      onCancel={() => setActionSession(null)}
+                      onConfirm={(guestName) => register(s, guestName)}
+                    />
                   ) : (
                     <>
                       <button
-                        onClick={() => { setActionSession(s); setGuestName(""); }}
+                        onClick={() => setActionSession(s)}
                         className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors"
                         style={{ background: tint }}
                       >

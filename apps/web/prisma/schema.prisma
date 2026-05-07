@@ -32,6 +32,7 @@ model User {
   notifications          UserNotification[]
   createdSessions        GameSession[]              @relation("CreatedSessions")
   privateInvitations     PrivateSessionInvitation[]
+  gameWaitlists          GameWaitlist[]
 }
 
 model EmailVerification {
@@ -63,9 +64,10 @@ model Game {
   location   String   @default("Joinville")
   addedAt    DateTime @default(now())
 
-  loans   Loan[]
-  ratings Rating[]
-  reports GameReport[]
+  loans     Loan[]
+  ratings   Rating[]
+  reports   GameReport[]
+  waitlists GameWaitlist[]
 }
 
 model GameReport {
@@ -214,4 +216,18 @@ model Rating {
 
   @@unique([userId, gameId])
   @@index([gameId])
+}
+
+model GameWaitlist {
+  id        String   @id @default(cuid())
+  gameId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@index([gameId])
+  @@index([userId])
 }

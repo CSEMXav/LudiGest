@@ -8,7 +8,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Status = "scanning" | "found" | "notfound" | "error" | "denied";
+type Status = "scanning" | "found" | "borrowing" | "borrowed" | "borrow_error" | "notfound" | "error" | "denied";
 
 export function BarcodeScannerModal({ onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -18,6 +18,8 @@ export function BarcodeScannerModal({ onClose }: Props) {
   const [status, setStatus] = useState<Status>("scanning");
   const [gameName, setGameName] = useState("");
   const [gameId, setGameId] = useState("");
+  const [barcodeRef, setBarcodeRef] = useState("");
+  const [borrowError, setBorrowError] = useState("");
 
   const startScan = useCallback(() => {
     readerRef.current?.reset();
@@ -38,6 +40,7 @@ export function BarcodeScannerModal({ onClose }: Props) {
               if (Array.isArray(data) && data.length > 0) {
                 setGameId(data[0].id);
                 setGameName(data[0].name);
+                setBarcodeRef(barcode);
                 setStatus("found");
               } else {
                 setStatus("notfound");
@@ -63,11 +66,33 @@ export function BarcodeScannerModal({ onClose }: Props) {
   }, [startScan]);
 
   function handleRetry() {
+    setBorrowError("");
     setStatus("scanning");
     startScan();
   }
 
-  function handleGo() {
+  async function handleBorrow() {
+    setStatus("borrowing");
+    try {
+      const res = await fetch("/api/loans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: barcodeRef }),
+      });
+      if (res.ok) {
+        setStatus("borrowed");
+      } else {
+        const d = await res.json();
+        setBorrowError(d.error ?? "Erreur lors de l'emprunt.");
+        setStatus("borrow_error");
+      }
+    } catch {
+      setBorrowError("Erreur réseau.");
+      setStatus("borrow_error");
+    }
+  }
+
+  function handleGoToGame() {
     router.push(`/games/${gameId}`);
     onClose();
   }
@@ -108,11 +133,24 @@ export function BarcodeScannerModal({ onClose }: Props) {
           {/* Result overlay */}
           {status !== "scanning" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-              {status === "found" && (
+              {(status === "found" || status === "borrowing") && (
                 <div className="text-center text-white px-6">
                   <div className="text-4xl mb-2">🎲</div>
                   <p className="font-semibold text-lg">{gameName}</p>
                   <p className="text-sm text-white/60 mt-1">Jeu trouvé !</p>
+                </div>
+              )}
+              {status === "borrowed" && (
+                <div className="text-center text-white px-6">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p className="font-semibold text-lg">{gameName}</p>
+                  <p className="text-sm text-white/60 mt-1">Emprunt enregistré — 4 semaines</p>
+                </div>
+              )}
+              {status === "borrow_error" && (
+                <div className="text-center text-white px-6">
+                  <div className="text-4xl mb-2">⚠️</div>
+                  <p className="font-semibold">{borrowError}</p>
                 </div>
               )}
               {status === "notfound" && (
@@ -157,10 +195,45 @@ export function BarcodeScannerModal({ onClose }: Props) {
                 Rescanner
               </button>
               <button
-                onClick={handleGo}
+                onClick={handleBorrow}
+                className="flex-1 py-2.5 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Emprunter ce jeu
+              </button>
+            </div>
+          )}
+          {status === "borrowing" && (
+            <p className="text-sm text-center text-gray-500">Enregistrement de l&apos;emprunt…</p>
+          )}
+          {status === "borrowed" && (
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors"
+              >
+                Fermer
+              </button>
+              <button
+                onClick={handleGoToGame}
                 className="flex-1 py-2.5 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Voir le jeu →
+              </button>
+            </div>
+          )}
+          {status === "borrow_error" && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleRetry}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors"
+              >
+                Rescanner
+              </button>
+              <button
+                onClick={handleGoToGame}
+                className="flex-1 py-2.5 bg-[#C8102E] text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Voir le jeu
               </button>
             </div>
           )}

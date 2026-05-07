@@ -185,6 +185,8 @@ export default function GameDetailPage() {
   const [loading, setLoading] = useState(true);
   const [borrowing, setBorrowing] = useState(false);
   const [message, setMessage] = useState("");
+  const [waitlisting, setWaitlisting] = useState(false);
+  const [isWaitlisted, setIsWaitlisted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [reports, setReports] = useState<GameReportItem[]>([]);
@@ -195,7 +197,9 @@ export default function GameDetailPage() {
   async function loadGame() {
     const res = await fetch(`/api/games/${id}`);
     if (!res.ok) { router.push("/games"); return; }
-    setGame(await res.json());
+    const data = await res.json();
+    setGame(data);
+    setIsWaitlisted(!!data.isWaitlisted);
     setLoading(false);
   }
 
@@ -206,6 +210,20 @@ export default function GameDetailPage() {
 
   useEffect(() => { loadGame(); }, [id]);
   useEffect(() => { if (isAdmin) loadReports(); }, [id, isAdmin]);
+
+  async function toggleWaitlist() {
+    setWaitlisting(true);
+    const method = isWaitlisted ? "DELETE" : "POST";
+    const res = await fetch(`/api/games/${id}/waitlist`, { method });
+    setWaitlisting(false);
+    if (res.ok) {
+      setIsWaitlisted(!isWaitlisted);
+      setMessage(isWaitlisted ? "Vous ne serez plus averti." : "Vous serez averti par email et notification quand ce jeu sera rendu !");
+    } else {
+      const d = await res.json();
+      setMessage(d.error ?? "Erreur");
+    }
+  }
 
   async function borrow() {
     setBorrowing(true);
@@ -366,6 +384,18 @@ export default function GameDetailPage() {
                   style={{ background: "var(--p-primary)" }}
                 >
                   {borrowing ? "Emprunt en cours..." : "Emprunter ce jeu"}
+                </button>
+              )}
+              {game.status === "BORROWED" && !game.activeLoan?.isCurrentUser && session && (
+                <button
+                  onClick={toggleWaitlist}
+                  disabled={waitlisting}
+                  className="px-5 py-2.5 rounded-xl font-medium disabled:opacity-50 transition-colors text-sm"
+                  style={isWaitlisted
+                    ? { border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }
+                    : { border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
+                >
+                  {waitlisting ? "…" : isWaitlisted ? "✓ Alerte activée" : "🔔 M'avertir quand disponible"}
                 </button>
               )}
               {isAdmin && (

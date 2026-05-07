@@ -244,6 +244,63 @@ export async function sendOverdueEmail(to: string, name: string, gameName: strin
   });
 }
 
+export async function sendGameAvailableEmail(to: string, name: string, gameName: string, gameUrl: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Jeu disponible pour ${to} : "${gameName}"\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎲 "${gameName}" est de nouveau disponible !`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonne nouvelle ! Le jeu que vous attendiez est de nouveau disponible :</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${gameName}</p>
+        </div>
+        <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Emprunter ce jeu
+        </a>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendGameWantedEmail(to: string, borrowerName: string, gameName: string, gameUrl: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Jeu convoité pour emprunteur ${to} : "${gameName}"\n`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `💡 Quelqu'un attend "${gameName}" — pensez à le rendre !`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
+        <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+        <p>Bonjour <strong>${borrowerName}</strong>,</p>
+        <p>Un(e) collègue attend de pouvoir emprunter le jeu que vous avez actuellement :</p>
+        <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
+          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${gameName}</p>
+        </div>
+        <p>Si vous avez fini de jouer, pensez à le ramener à la ludothèque !</p>
+        <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Voir le jeu
+        </a>
+        <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSessionUpdateEmail(
   to: string,
   userName: string,

@@ -14,20 +14,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const game = await prisma.game.findUnique({
-    where: { id: params.id },
-    include: {
-      ratings: {
-        include: { user: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
+  const [game, waitlistEntry] = await Promise.all([
+    prisma.game.findUnique({
+      where: { id: params.id },
+      include: {
+        ratings: {
+          include: { user: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+        loans: {
+          where: { returnedAt: null },
+          select: { dueAt: true, userId: true },
+          take: 1,
+        },
       },
-      loans: {
-        where: { returnedAt: null },
-        select: { dueAt: true, userId: true },
-        take: 1,
-      },
-    },
-  });
+    }),
+    prisma.gameWaitlist.findUnique({
+      where: { gameId_userId: { gameId: params.id, userId: user.id } },
+    }),
+  ]);
 
   if (!game) return NextResponse.json({ error: "Jeu introuvable" }, { status: 404 });
   if (game.status === "SUSPENDED" && user.role !== "ADMIN") {
@@ -54,6 +59,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       createdAt: r.createdAt.toISOString(),
     })),
     activeLoan: game.loans[0] ? { dueAt: game.loans[0].dueAt.toISOString(), isCurrentUser: game.loans[0].userId === user.id } : null,
+    isWaitlisted: !!waitlistEntry,
   });
 }
 
