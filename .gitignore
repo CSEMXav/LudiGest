@@ -40,4 +40,9 @@ apps/mobile/ios/
 # Claude Code
 .claude/
 
+# Firebase service account keys (privé, ne jamais committer)
+*.json.key
+ludigest-*.json
+*-firebase-adminsdk-*.json
+
 .vercel
