@@ -399,30 +399,15 @@ export default function SessionsPage() {
                 </>
               ) : !isPrivate || isCreator ? (
                 actionSession?.id === s.id ? (
-                  <div className="space-y-3 w-full">
-                    <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: "var(--p-ink2)" }}>Accompagnant(e) ? (optionnel)</label>
-                      <input
-                        type="text"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        placeholder="Prénom Nom de l'accompagnant"
-                        className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-                        style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => { setActionSession(null); setGuestName(""); }}
-                        className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
-                        style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}>Annuler</button>
-                      <button onClick={() => register(s)} disabled={submitting}
-                        className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors disabled:opacity-50"
-                        style={{ background: "var(--p-primary)" }}>{submitting ? "…" : "Confirmer l'inscription"}</button>
-                    </div>
-                  </div>
+                  <RegisterForm
+                    tint={tint}
+                    submitting={submitting}
+                    onCancel={() => setActionSession(null)}
+                    onConfirm={(guestName) => register(s, guestName)}
+                  />
                 ) : (
                   <button
-                    onClick={() => { setActionSession(s); setGuestName(""); }}
+                    onClick={() => setActionSession(s)}
                     className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors"
                     style={{ background: "var(--p-primary)" }}
                   >
