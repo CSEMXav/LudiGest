@@ -34,15 +34,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // Notifier l'emprunteur actuel
   const activeLoan = game.loans[0];
-  if (activeLoan) {
+  let emailSent = false;
+  let emailError: string | null = null;
+
+  if (!activeLoan) {
+    console.warn(`[waitlist] Aucun emprunt actif trouvé pour le jeu ${params.id} (${game.name}) — mail non envoyé`);
+  } else {
     const gameUrl = `${BASE_URL}/games/${params.id}`;
     const borrower = activeLoan.user;
     const borrowerName = borrower.firstName ?? borrower.name;
 
+    console.log(`[waitlist] Envoi mail à l'emprunteur ${borrower.email} pour "${game.name}"`);
+
     try {
       await sendGameWantedEmail(borrower.email, borrowerName, game.name, gameUrl);
+      emailSent = true;
+      console.log(`[waitlist] Mail envoyé avec succès à ${borrower.email}`);
     } catch (err) {
-      console.error("sendGameWantedEmail error:", err);
+      emailError = err instanceof Error ? err.message : String(err);
+      console.error(`[waitlist] Échec envoi mail à ${borrower.email} :`, emailError);
     }
 
     // Notification in-app pour l'emprunteur
@@ -55,7 +65,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           message: "Pensez à le ramener à la ludothèque si vous avez fini !",
         },
       });
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("[waitlist] Échec création notif in-app :", err);
+    }
 
     // Push notification pour l'emprunteur
     if (borrower.pushToken) {
@@ -70,11 +82,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             data: { type: "game_wanted", gameId: params.id },
           }]),
         });
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.error("[waitlist] Échec push notification :", err);
+      }
     }
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    debug: { activeLoanFound: !!activeLoan, emailSent, emailError },
+  });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
