@@ -387,16 +387,20 @@ export default function GameDetailPage() {
                 </button>
               )}
               {game.status === "BORROWED" && !game.activeLoan?.isCurrentUser && session && (
-                <button
-                  onClick={toggleWaitlist}
-                  disabled={waitlisting}
-                  className="px-5 py-2.5 rounded-xl font-medium disabled:opacity-50 transition-colors text-sm"
-                  style={isWaitlisted
-                    ? { border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }
-                    : { border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
-                >
-                  {waitlisting ? "…" : isWaitlisted ? "✓ Alerte activée" : "🔔 M'avertir quand disponible"}
-                </button>
+                isWaitlisted ? (
+                  <p className="text-sm py-2 px-1" style={{ color: "var(--p-ink3)" }}>
+                    🔔 Vous serez averti quand ce jeu sera disponible
+                  </p>
+                ) : (
+                  <button
+                    onClick={toggleWaitlist}
+                    disabled={waitlisting}
+                    className="px-5 py-2.5 rounded-xl font-medium disabled:opacity-50 transition-colors text-sm"
+                    style={{ border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
+                  >
+                    {waitlisting ? "…" : "🔔 M'avertir quand disponible"}
+                  </button>
+                )
               )}
               {isAdmin && (
                 <button
