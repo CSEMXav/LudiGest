@@ -10,7 +10,7 @@ const SIDEBAR_ITEMS = [
   { href: "/games",    label: "Jeux",     icon: <DieIcon /> },
   { href: "/loans",    label: "Emprunts", icon: <CardIcon /> },
   { href: "/members",  label: "Membres",  icon: <MeepleIcon /> },
-  { href: "/sessions", label: "Soirées",  icon: <StarIcon /> },
+  { href: "/sessions", label: "Sessions",  icon: <StarIcon /> },
 ];
 
 const ADMIN_TABS = [
@@ -18,7 +18,7 @@ const ADMIN_TABS = [
   { href: "/admin/games",          label: "Jeux" },
   { href: "/admin/loans",          label: "Emprunts" },
   { href: "/admin/users",          label: "Utilisateurs" },
-  { href: "/admin/sessions",       label: "Soirées" },
+  { href: "/admin/sessions",       label: "Sessions" },
   { href: "/admin/email-settings", label: "Emails" },
   { href: "/admin/import",         label: "Import" },
 ];

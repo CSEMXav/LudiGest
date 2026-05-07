@@ -223,7 +223,7 @@ export default function AdminSessionsPage() {
       <div className="flex items-end justify-between mb-6">
         <div>
           <h1 className="font-display text-4xl font-bold tracking-tight leading-none" style={{ color: "var(--p-ink)" }}>
-            Soirées ludiques
+            Sessions ludiques
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
             {sessions.length} session{sessions.length !== 1 ? "s" : ""} à venir

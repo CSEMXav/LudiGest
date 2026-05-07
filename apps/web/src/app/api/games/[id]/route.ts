@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }),
     prisma.gameWaitlist.findUnique({
       where: { gameId_userId: { gameId: params.id, userId: user.id } },
-    }),
+    }).catch(() => null),
   ]);
 
   if (!game) return NextResponse.json({ error: "Jeu introuvable" }, { status: 404 });

@@ -223,7 +223,7 @@ export default function EmailSettingsPage() {
               </div>
             </Collapsible>
 
-            <Collapsible title="Invitation aux soirées" icon="🎲">
+            <Collapsible title="Invitation aux sessions" icon="🎲">
               <div className="space-y-3 mt-2">
                 <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Utilisé lors des invitations admin et des sessions privées.</p>
                 <Field label="Objet" hint={SESSION_VARS_HINT}>

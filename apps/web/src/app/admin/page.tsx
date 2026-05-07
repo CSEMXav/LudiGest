@@ -84,7 +84,7 @@ export default async function AdminDashboard() {
           className="px-4 py-2.5 rounded-full text-sm font-bold text-white"
           style={{ background: "var(--p-ink)" }}
         >
-          + Nouvelle soirée
+          + Nouvelle session
         </a>
       </div>
 
