@@ -25,8 +25,14 @@ export async function runSendReminders(): Promise<ReminderResult> {
   const details: string[] = [];
 
   // ── 1. Upcoming reminders ──────────────────────────────────────────────────
-  const reminderWindowStart = new Date(now.getTime() + (reminderDaysBefore - 0.5) * 24 * 60 * 60 * 1000);
-  const reminderWindowEnd   = new Date(now.getTime() + (reminderDaysBefore + 0.5) * 24 * 60 * 60 * 1000);
+  // Comparaison par jour calendaire UTC pour éviter les décalages horaires
+  const targetDay = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + reminderDaysBefore,
+  ));
+  const reminderWindowStart = targetDay; // début du jour cible (00:00 UTC)
+  const reminderWindowEnd   = new Date(targetDay.getTime() + 24 * 60 * 60 * 1000 - 1); // fin du jour cible (23:59:59 UTC)
 
   const upcomingLoans = await prisma.loan.findMany({
     where: { returnedAt: null, dueAt: { gte: reminderWindowStart, lte: reminderWindowEnd } },
@@ -145,7 +151,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
     }
   }
 
-  console.log(`[reminders] sent=${sent} reminders=${remindersCount} overdue=${overdueCount} skipped=${skipped}`);
+  console.log(`[reminders] sent=${sent} reminders=${remindersCount} overdue=${overdueCount} skipped=${skipped} window=${reminderWindowStart.toISOString()}→${reminderWindowEnd.toISOString()}`);
   details.forEach((d) => console.log(`[reminders] ${d}`));
 
   return { sent, remindersCount, overdueCount, skipped, details };
