@@ -4,3 +4,6 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# Firebase — ne pas committer, contient des clés API
+google-services.json
