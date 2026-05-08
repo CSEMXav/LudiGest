@@ -11,6 +11,10 @@ interface EmailConfig {
   overdueBody: string;
   sessionInviteSubject: string;
   sessionInviteBody: string;
+  manualOverdueSubject: string;
+  manualOverdueBody: string;
+  waitlistSubject: string;
+  waitlistBody: string;
 }
 
 interface EmailLog {
@@ -237,6 +241,36 @@ export default function EmailSettingsPage() {
                 </Field>
               </div>
             </Collapsible>
+
+            <Collapsible title="Retard manuel (admin)" icon="🔔">
+              <div className="space-y-3 mt-2">
+                <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé quand un admin clique sur le bouton &quot;Retard&quot; d&apos;un emprunt.</p>
+                <Field label="Objet" hint={VARS_HINT}>
+                  <input type="text" value={config.manualOverdueSubject ?? ""} onChange={(e) => set("manualOverdueSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.manualOverdueBody ?? ""} onChange={(e) => set("manualOverdueBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Quelqu'un attend votre jeu" icon="💡">
+              <div className="space-y-3 mt-2">
+                <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé à l&apos;emprunteur quand quelqu&apos;un clique sur &quot;M&apos;avertir quand disponible&quot;.</p>
+                <Field label="Objet" hint="Variables : {{userName}}, {{gameName}}, {{gameUrl}}">
+                  <input type="text" value={config.waitlistSubject ?? ""} onChange={(e) => set("waitlistSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.waitlistBody ?? ""} onChange={(e) => set("waitlistBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
           </div>
         </section>
 
@@ -256,6 +290,7 @@ export default function EmailSettingsPage() {
                 ["{{sessionLocation}}", "Lieu"],
                 ["{{registerUrl}}", "Lien d'inscription"],
                 ["{{inviterName}}", "Nom de l'invitant (sessions privées)"],
+                ["{{gameUrl}}", "Lien vers la fiche du jeu"],
               ].map(([v, d]) => (
                 <li key={v} className="flex items-center gap-2 text-xs">
                   <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: "var(--p-bg)", color: "var(--p-primary)" }}>{v}</code>

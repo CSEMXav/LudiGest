@@ -301,6 +301,34 @@ export async function sendGameWantedEmail(to: string, borrowerName: string, game
   });
 }
 
+export async function sendConfiguredManualOverdueEmail(to: string, vars: { userName: string; gameName: string; dueAt: string }): Promise<void> {
+  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const subject = config?.manualOverdueSubject
+    ? applyTemplate(config.manualOverdueSubject, vars as Record<string, string>)
+    : `⚠ Retard (rappel admin) : veuillez rendre "${vars.gameName}"`;
+  const bodyText = config?.manualOverdueBody
+    ? applyTemplate(config.manualOverdueBody, vars as Record<string, string>)
+    : `Bonjour ${vars.userName},\n\nCe rappel vous est envoyé par l'administrateur.\n\nLe jeu "${vars.gameName}" aurait dû être rendu le ${vars.dueAt}.\n\nLudothèque BRED`;
+
+  const resend = getResend();
+  if (!resend) { console.log(`\n📧 [DEV] Retard manuel pour ${to} : "${vars.gameName}"\n`); return; }
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
+}
+
+export async function sendConfiguredWaitlistEmail(to: string, vars: { userName: string; gameName: string; gameUrl: string }): Promise<void> {
+  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const subject = config?.waitlistSubject
+    ? applyTemplate(config.waitlistSubject, vars as Record<string, string>)
+    : `💡 Quelqu'un attend "${vars.gameName}" — pensez à le rendre !`;
+  const bodyText = config?.waitlistBody
+    ? applyTemplate(config.waitlistBody, vars as Record<string, string>)
+    : `Bonjour ${vars.userName},\n\nUn(e) collègue attend "${vars.gameName}".\n\nPensez à le ramener à la ludothèque !\n\n${vars.gameUrl}\n\nLudothèque BRED`;
+
+  const resend = getResend();
+  if (!resend) { console.log(`\n📧 [DEV] Waitlist pour ${to} : "${vars.gameName}"\n`); return; }
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
+}
+
 export async function sendSessionUpdateEmail(
   to: string,
   userName: string,

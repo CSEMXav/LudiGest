@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import type { LoanDTO } from "@ludigest/types";
 
 interface ReminderLog {
-  type: "reminder" | "overdue";
+  type: "reminder" | "overdue" | "overdue_manual";
   sentAt: string;
 }
 
@@ -60,11 +60,11 @@ function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
               <ul className="space-y-1.5">
                 {reminders.map((r, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className={r.type === "overdue" ? "text-red-400" : "text-blue-400"}>
-                      {r.type === "overdue" ? "⚠️" : "📧"}
+                    <span className={r.type === "overdue" || r.type === "overdue_manual" ? "text-red-400" : "text-blue-400"}>
+                      {r.type === "overdue" || r.type === "overdue_manual" ? "⚠️" : "📧"}
                     </span>
                     <span>
-                      <span className="font-medium">{r.type === "overdue" ? "Retard" : "Rappel"}</span>
+                      <span className="font-medium">{r.type === "overdue" ? "Retard auto" : r.type === "overdue_manual" ? "Retard manuel" : "Rappel préventif"}</span>
                       <br />
                       <span className="text-gray-400">{formatDateTime(r.sentAt)}</span>
                     </span>

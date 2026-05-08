@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendReminderEmail, sendOverdueEmail } from "@/lib/email";
+import { sendReminderEmail, sendConfiguredManualOverdueEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -23,10 +23,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const isOverdue = new Date(loan.dueAt) < new Date();
-  const type = isOverdue ? "overdue" : "reminder";
+  const type = isOverdue ? "overdue_manual" : "reminder";
+
+  const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
   if (isOverdue) {
-    await sendOverdueEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
+    await sendConfiguredManualOverdueEmail(loan.user.email, {
+      userName: loan.user.name,
+      gameName: loan.game.name,
+      dueAt: dateStr,
+    });
   } else {
     await sendReminderEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
   }
@@ -38,7 +44,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await prisma.loanReminder.create({ data: { loanId: loan.id, type } });
   } catch { /* LoanReminder table may not exist yet */ }
 
-  const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const gameName = loan.game.name;
 
   try {

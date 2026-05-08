@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
-import { sendGameWantedEmail } from "@/lib/email";
+import { sendConfiguredWaitlistEmail } from "@/lib/email";
 
 async function getUser(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     console.log(`[waitlist] Envoi mail à l'emprunteur ${borrower.email} pour "${game.name}"`);
 
     try {
-      await sendGameWantedEmail(borrower.email, borrowerName, game.name, gameUrl);
+      await sendConfiguredWaitlistEmail(borrower.email, { userName: borrowerName, gameName: game.name, gameUrl });
       emailSent = true;
       console.log(`[waitlist] Mail envoyé avec succès à ${borrower.email}`);
     } catch (err) {
