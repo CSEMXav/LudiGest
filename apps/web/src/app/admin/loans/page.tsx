@@ -99,6 +99,8 @@ export default function AdminLoansPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editDates, setEditDates] = useState<EditDatesModal | null>(null);
   const [savingDates, setSavingDates] = useState(false);
+  const [runningReminders, setRunningReminders] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{ sent: number; skipped: number; details: string[] } | null>(null);
 
   async function loadLoans() {
     setLoading(true);
@@ -125,6 +127,16 @@ export default function AdminLoansPage() {
     } else {
       setMessages((m) => ({ ...m, [loanId]: data.error ?? "Erreur envoi" }));
     }
+  }
+
+  async function runReminders() {
+    setRunningReminders(true);
+    setReminderResult(null);
+    const res = await fetch("/api/admin/run-reminders", { method: "POST" });
+    const data = await res.json();
+    setReminderResult(data);
+    setRunningReminders(false);
+    if (res.ok) loadLoans();
   }
 
   async function saveDates() {
@@ -189,6 +201,28 @@ export default function AdminLoansPage() {
             En retard uniquement
           </label>
         </div>
+      </div>
+
+      {/* Run reminders */}
+      <div className="mb-4 flex flex-wrap items-start gap-3">
+        <button
+          onClick={runReminders}
+          disabled={runningReminders}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {runningReminders ? "⏳ Envoi en cours..." : "📧 Lancer les relances maintenant"}
+        </button>
+        {reminderResult && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-700 max-w-lg">
+            <p className="font-semibold mb-1">
+              {reminderResult.sent === 0 ? "Aucun mail envoyé" : `${reminderResult.sent} mail(s) envoyé(s)`}
+              {reminderResult.skipped > 0 && <span className="text-gray-400 font-normal ml-2">({reminderResult.skipped} ignoré(s))</span>}
+            </p>
+            <ul className="text-xs text-gray-500 space-y-0.5">
+              {reminderResult.details.map((d, i) => <li key={i}>{d}</li>)}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Search */}
