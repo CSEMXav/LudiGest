@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     for (const registeredUserId of registeredUserIds) {
       const user = await prisma.user.findUnique({
         where: { id: registeredUserId },
-        select: { email: true, name: true, firstName: true, nickname: true },
+        select: { email: true, name: true, firstName: true, nickname: true, pushToken: true },
       });
       if (!user) continue;
 
@@ -106,6 +106,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         });
       } catch {
         /* ignore notification errors */
+      }
+
+      // Push notification
+      if (user.pushToken) {
+        try {
+          await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: user.pushToken,
+              title: `📝 Session mise à jour : ${updated.name}`,
+              body: `${newDateStr} à ${updated.startTime} — ${updated.location}`,
+              sound: "default",
+              channelId: "default",
+              data: { type: "session_reminder", sessionId: updated.id },
+            }),
+          });
+        } catch {
+          /* push failure non-bloquant */
+        }
       }
     }
 
