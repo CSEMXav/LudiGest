@@ -143,15 +143,12 @@ export default function AccountScreen() {
 
   async function handleActivatePush() {
     setPushActivating(true);
-    const ok = await registerPushToken();
+    const err = await registerPushToken();
     setPushActivating(false);
-    if (ok) {
-      Alert.alert("Notifications activées", "Vous recevrez désormais les rappels et alertes sur ce téléphone.");
+    if (!err) {
+      Alert.alert("Notifications activées ✓", "Vous recevrez désormais les rappels et alertes sur ce téléphone.");
     } else {
-      Alert.alert(
-        "Notifications non activées",
-        "Vérifiez que les notifications sont autorisées pour LudiGest dans les réglages de votre téléphone."
-      );
+      Alert.alert("Notifications non activées", err);
     }
   }
 
