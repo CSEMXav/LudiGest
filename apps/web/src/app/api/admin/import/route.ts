@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
             // Vérifier si le jeu existe déjà (par bggId si fourni, sinon par nom)
             if (!forceNames.has(row.name)) {
               const existing = row.bggId
-                ? await prisma.game.findFirst({ where: { OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
-                : await prisma.game.findFirst({ where: { name: { equals: row.name } } });
+                ? await prisma.game.findFirst({ where: { location, OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
+                : await prisma.game.findFirst({ where: { location, name: { equals: row.name } } });
 
               if (existing) {
                 skipped++;

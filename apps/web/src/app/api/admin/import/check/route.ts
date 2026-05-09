@@ -29,12 +29,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Le fichier ne contient aucune donnée." }, { status: 400 });
   }
 
+  const location = session.user.location;
   const duplicates: { name: string; existingName: string; existingId: string }[] = [];
 
   for (const row of rows) {
     const existing = row.bggId
-      ? await prisma.game.findFirst({ where: { OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
-      : await prisma.game.findFirst({ where: { name: { equals: row.name } } });
+      ? await prisma.game.findFirst({ where: { location, OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
+      : await prisma.game.findFirst({ where: { location, name: { equals: row.name } } });
 
     if (existing) {
       duplicates.push({ name: row.name, existingName: existing.name, existingId: existing.id });

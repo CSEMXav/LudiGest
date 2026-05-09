@@ -47,23 +47,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (!force) {
-    // Vérifie si un jeu avec le même bggId existe déjà
+    // Vérifie si un jeu avec le même bggId existe déjà dans cette bibliothèque
     const bggId = bggDetails?.bggId ?? null;
     if (bggId) {
-      const exists = await prisma.game.findUnique({ where: { bggId } });
+      const exists = await prisma.game.findFirst({ where: { bggId, location: user.location } });
       if (exists) {
         return NextResponse.json(
-          { error: `Ce jeu existe déjà dans la bibliothèque (${exists.name}).`, duplicate: { id: exists.id, name: exists.name }, canForce: true },
+          { error: `Ce jeu existe déjà dans cette bibliothèque (${exists.name}).`, duplicate: { id: exists.id, name: exists.name }, canForce: true },
           { status: 409 }
         );
       }
     }
 
-    // Vérifie si un jeu avec le même nom existe déjà
-    const existsByName = await prisma.game.findFirst({ where: { name: { equals: bggDetails?.name ?? name } } });
+    // Vérifie si un jeu avec le même nom existe déjà dans cette bibliothèque
+    const existsByName = await prisma.game.findFirst({ where: { name: { equals: bggDetails?.name ?? name }, location: user.location } });
     if (existsByName) {
       return NextResponse.json(
-        { error: `Un jeu avec ce nom existe déjà (${existsByName.name}).`, duplicate: { id: existsByName.id, name: existsByName.name }, canForce: true },
+        { error: `Un jeu avec ce nom existe déjà dans cette bibliothèque (${existsByName.name}).`, duplicate: { id: existsByName.id, name: existsByName.name }, canForce: true },
         { status: 409 }
       );
     }
