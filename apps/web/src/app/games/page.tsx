@@ -35,6 +35,62 @@ const PLAYERS_OPTIONS = [
   { label: "6+",  value: "6" },
 ];
 
+interface GameGroup {
+  key: string;
+  representative: GameDTO;
+  copies: GameDTO[];
+  availableCount: number;
+  totalCount: number;
+}
+
+function groupByName(games: GameDTO[]): GameGroup[] {
+  const map = new Map<string, GameDTO[]>();
+  for (const g of games) {
+    const key = g.name.toLowerCase().trim();
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(g);
+  }
+  return Array.from(map.values()).map((copies) => {
+    const availableCount = copies.filter((c) => c.status === "AVAILABLE").length;
+    const representative = copies.find((c) => c.status === "AVAILABLE") ?? copies[0];
+    return { key: representative.name.toLowerCase().trim(), representative, copies, availableCount, totalCount: copies.length };
+  });
+}
+
+function CopiesModal({ group, onClose }: { group: GameGroup; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="font-semibold text-gray-900">{group.representative.name}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{group.totalCount} exemplaires en bibliothèque</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {group.copies.map((copy, i) => (
+            <a
+              key={copy.id}
+              href={`/games/${copy.id}`}
+              className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-sm text-gray-700">Exemplaire {i + 1}</span>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                copy.status === "AVAILABLE"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-100 text-gray-500"
+              }`}>
+                {copy.status === "AVAILABLE" ? "Disponible" : "Emprunté"}
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GridIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
@@ -90,6 +146,7 @@ export default function GamesPage() {
   const [fromDate,    setFromDate]    = useState("");
   const [toDate,      setToDate]      = useState("");
   const [showScanner, setShowScanner] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<GameGroup | null>(null);
 
   const hasActiveFilters = !!(category || minStars || maxDuration || players || fromDate || toDate);
 
@@ -135,6 +192,7 @@ export default function GamesPage() {
     }
   });
 
+  const grouped = groupByName(sortedGames);
   const available = games.filter((g) => g.status === "AVAILABLE").length;
   const borrowed  = games.filter((g) => g.status === "BORROWED").length;
 
@@ -157,7 +215,7 @@ export default function GamesPage() {
           <p className="text-[13px] mt-2" style={{ color: "var(--p-ink2)" }}>
             <strong style={{ color: "var(--p-ink)" }}>{available} jeux disponibles</strong>
             {borrowed > 0 && <> · {borrowed} empruntés</>}
-            {games.length > 0 && <> · {sortedGames.length} résultat{sortedGames.length > 1 ? "s" : ""} affiché{sortedGames.length > 1 ? "s" : ""}</>}
+            {games.length > 0 && <> · {grouped.length} titre{grouped.length > 1 ? "s" : ""} affiché{grouped.length > 1 ? "s" : ""}</>}
           </p>
         </div>
         <a
@@ -462,7 +520,7 @@ export default function GamesPage() {
             ))}
           </div>
         )
-      ) : sortedGames.length === 0 ? (
+      ) : grouped.length === 0 ? (
         <div className="text-center py-20 flex flex-col items-center gap-4" style={{ color: "var(--p-ink3)" }}>
           <Pion tint="#9a8b7c" kind="meeple" w={80} h={80} />
           <p className="text-base">Aucun jeu trouvé.</p>
@@ -474,15 +532,42 @@ export default function GamesPage() {
         </div>
       ) : viewMode === "grid" ? (
         <div className={`grid ${cols} gap-4`}>
-          {sortedGames.map((g) => <GameCard key={g.id} game={g} dense={dense} />)}
+          {grouped.map((group) => (
+            <div key={group.key} className="relative">
+              <GameCard game={group.representative} dense={dense} />
+              {group.totalCount > 1 && (
+                <button
+                  onClick={() => setSelectedGroup(group)}
+                  className="absolute top-2 left-2 z-10 flex items-center gap-1 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md transition-opacity hover:opacity-80"
+                  style={{ background: group.availableCount > 0 ? "#1e1610" : "#C8102E" }}
+                >
+                  {group.availableCount}/{group.totalCount} ex.
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {sortedGames.map((g) => <GameListRow key={g.id} game={g} />)}
+          {grouped.map((group) => (
+            <div key={group.key} className="relative">
+              <GameListRow game={group.representative} />
+              {group.totalCount > 1 && (
+                <button
+                  onClick={() => setSelectedGroup(group)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md transition-opacity hover:opacity-80"
+                  style={{ background: group.availableCount > 0 ? "#1e1610" : "#C8102E" }}
+                >
+                  {group.availableCount}/{group.totalCount} ex.
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
       {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} />}
+      {selectedGroup && <CopiesModal group={selectedGroup} onClose={() => setSelectedGroup(null)} />}
     </div>
   );
 }

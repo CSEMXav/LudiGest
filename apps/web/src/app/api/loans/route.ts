@@ -70,9 +70,14 @@ export async function POST(req: NextRequest) {
 
   let game;
   if (barcode) {
-    game = await prisma.game.findFirst({ where: { barcode } });
+    // En cas de jeux en doublon avec le même code-barre, on prend le premier disponible
+    game = await prisma.game.findFirst({ where: { barcode, status: "AVAILABLE" } });
     if (!game) {
-      return NextResponse.json({ error: "Aucun jeu trouvé avec ce code-barre." }, { status: 404 });
+      const anyWithBarcode = await prisma.game.findFirst({ where: { barcode } });
+      if (!anyWithBarcode) {
+        return NextResponse.json({ error: "Aucun jeu trouvé avec ce code-barre." }, { status: 404 });
+      }
+      return NextResponse.json({ error: "Tous les exemplaires de ce jeu sont déjà empruntés." }, { status: 409 });
     }
   } else if (gameId) {
     game = await prisma.game.findUnique({ where: { id: gameId } });

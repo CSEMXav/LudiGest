@@ -4,7 +4,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { apiPost } from "@/lib/api";
+import { apiPost, ApiError } from "@/lib/api";
 import type { GameCategory } from "@ludigest/types";
 
 const CATEGORIES: { key: GameCategory; label: string; color: string }[] = [
@@ -23,7 +23,7 @@ export default function AddGameScreen() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ name: string; coverUrl?: string | null; bggFound: boolean } | null>(null);
 
-  async function submit() {
+  async function submit(force = false) {
     if (!name.trim()) return Alert.alert("Erreur", "Le nom du jeu est requis.");
     if (!category) return Alert.alert("Erreur", "Choisissez une catégorie.");
 
@@ -32,11 +32,23 @@ export default function AddGameScreen() {
     try {
       const data = await apiPost<{ name: string; coverUrl?: string | null; bggFound: boolean }>(
         "/api/admin/games/quick-add",
-        { name: name.trim(), category }
+        { name: name.trim(), category, force }
       );
       setResult(data);
-    } catch (err: any) {
-      Alert.alert("Erreur", err.message);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && err.canForce) {
+        setLoading(false);
+        Alert.alert(
+          "Jeu déjà existant",
+          err.message,
+          [
+            { text: "Annuler", style: "cancel" },
+            { text: "Créer en doublon", onPress: () => submit(true) },
+          ]
+        );
+        return;
+      }
+      Alert.alert("Erreur", err instanceof Error ? err.message : "Une erreur est survenue.");
     }
     setLoading(false);
   }

@@ -57,7 +57,7 @@ function LoginForm() {
           <div className="text-5xl mb-3">🎲</div>
           <h1 className="text-2xl font-bold text-gray-900">LudiGest</h1>
           <p className="text-gray-500 text-sm mt-1">Ludothèque BRED</p>
-          <p className="text-gray-400 text-xs mt-1">v0.80</p>
+          <p className="text-gray-400 text-xs mt-1">v0.81</p>
         </div>
 
         {resetSuccess && (

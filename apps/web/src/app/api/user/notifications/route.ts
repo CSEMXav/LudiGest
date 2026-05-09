@@ -16,17 +16,20 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
   try {
-    // All session notifications (both read and unread)
+    const now = new Date();
+
+    // Session notifications — only keep those whose session hasn't passed yet (or non-session notifs)
     const sessionNotifs = await prisma.userNotification.findMany({
       where: { userId },
+      include: { session: { select: { date: true } } },
       orderBy: { createdAt: "desc" },
     });
 
-    // All loan reminders — fallback to empty if table doesn't exist yet
+    // Loan reminders — only active loans (not yet returned)
     let loanReminders: Array<{ id: string; type: string; sentAt: Date; loan: { id: string; dueAt: Date; returnedAt: Date | null; game: { name: string } } }> = [];
     try {
       loanReminders = await prisma.loanReminder.findMany({
-        where: { loan: { userId } },
+        where: { loan: { userId, returnedAt: null } },
         include: {
           loan: {
             select: { id: true, dueAt: true, returnedAt: true, game: { select: { name: true } } },
@@ -37,27 +40,27 @@ export async function GET(req: NextRequest) {
     } catch { /* LoanReminder table may not exist yet */ }
 
     const notifications = [
-      ...sessionNotifs.map((n) => ({
-        id: n.id,
-        type: n.type as "SESSION_INVITE" | "SESSION_REMINDER" | "GAME_REPORT",
-        title: n.title,
-        message: n.message,
-        sessionId: n.sessionId,
-        loanId: null,
-        createdAt: n.createdAt.toISOString(),
-        read: n.readAt !== null,
-      })),
+      ...sessionNotifs
+        .filter((n) => !n.session || new Date(n.session.date) >= now)
+        .map((n) => ({
+          id: n.id,
+          type: n.type as "SESSION_INVITE" | "SESSION_REMINDER" | "GAME_REPORT",
+          title: n.title,
+          message: n.message,
+          sessionId: n.sessionId,
+          loanId: null,
+          createdAt: n.createdAt.toISOString(),
+          read: n.readAt !== null,
+        })),
       ...loanReminders.map((r) => ({
         id: r.id,
         type: "LOAN_REMINDER" as const,
         title: `Rappel : ${r.loan.game.name}`,
-        message: r.loan.returnedAt
-          ? `Rendu le ${r.loan.returnedAt.toLocaleDateString("fr-FR")}`
-          : `À rendre avant le ${r.loan.dueAt.toLocaleDateString("fr-FR")}`,
+        message: `À rendre avant le ${r.loan.dueAt.toLocaleDateString("fr-FR")}`,
         sessionId: null,
         loanId: r.loan.id,
         createdAt: r.sentAt.toISOString(),
-        read: r.loan.returnedAt !== null,
+        read: false,
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

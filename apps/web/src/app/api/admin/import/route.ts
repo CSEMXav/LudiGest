@@ -36,6 +36,11 @@ export async function POST(req: NextRequest) {
   }
 
   const location = session.user.location;
+  const forceNamesRaw = formData.get("forceNames");
+  const forceNames: Set<string> = new Set(
+    forceNamesRaw ? (JSON.parse(forceNamesRaw as string) as string[]) : []
+  );
+  const total = rows.length;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -44,29 +49,32 @@ export async function POST(req: NextRequest) {
       const errors: { name: string; reason: string }[] = [];
 
       const send = (extra?: object) =>
-        controller.enqueue(sseChunk({ created, skipped, errors, ...extra }));
+        controller.enqueue(sseChunk({ created, skipped, errors, total, ...extra }));
 
       try {
         for (let i = 0; i < rows.length; i++) {
           if (req.signal.aborted) break;
 
           const row = rows[i];
-          const progress = Math.round(((i + 1) / rows.length) * 100);
+          const current = i + 1;
+          const progress = Math.round((current / rows.length) * 100);
 
           try {
             // Vérifier si le jeu existe déjà (par bggId si fourni, sinon par nom)
-            const existing = row.bggId
-              ? await prisma.game.findFirst({ where: { OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
-              : await prisma.game.findFirst({ where: { name: { equals: row.name } } });
+            if (!forceNames.has(row.name)) {
+              const existing = row.bggId
+                ? await prisma.game.findFirst({ where: { OR: [{ bggId: row.bggId }, { name: { equals: row.name } }] } })
+                : await prisma.game.findFirst({ where: { name: { equals: row.name } } });
 
-            if (existing) {
-              skipped++;
-              send({ progress });
-              continue;
+              if (existing) {
+                skipped++;
+                send({ progress, current });
+                continue;
+              }
             }
 
             let details = null;
-            let bggIdToUse = row.bggId ?? null;
+            let bggIdToUse: string | null = row.bggId ?? null;
 
             if (bggIdToUse) {
               // BGG ID fourni directement → récupérer les détails sans chercher
@@ -88,6 +96,9 @@ export async function POST(req: NextRequest) {
 
             // Le code barre du fichier prime sur celui de BGG
             const barcode = row.barcode ?? details?.barcode ?? null;
+
+            // Si force-create, on ne stocke pas le bggId pour éviter la contrainte unique
+            if (forceNames.has(row.name)) bggIdToUse = null;
 
             await prisma.game.create({
               data: {
@@ -111,10 +122,10 @@ export async function POST(req: NextRequest) {
             errors.push({ name: row.name, reason: err instanceof Error ? err.message : "Erreur inconnue" });
           }
 
-          send({ progress });
+          send({ progress, current });
         }
 
-        send({ progress: 100, done: true });
+        send({ progress: 100, current: total, done: true });
       } catch (err) {
         controller.enqueue(sseChunk({ error: err instanceof Error ? err.message : "Erreur inattendue", done: true }));
       } finally {

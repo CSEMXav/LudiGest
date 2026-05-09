@@ -6,7 +6,7 @@
       }
     },
     "android": {
-      "package": "fr.bred.ludigest"
+      "package": "com.ludigest.app"
     }
   }
 }

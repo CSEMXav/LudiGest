@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, Image, StyleSheet,
-  ActivityIndicator, ScrollView, RefreshControl,
+  ActivityIndicator, ScrollView, RefreshControl, Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Svg, { Defs, Pattern, Rect, Line } from "react-native-svg";
@@ -10,6 +10,28 @@ import { getStoredUser, getStoredLocation } from "@/lib/auth";
 import type { GameDTO, GameCategory } from "@ludigest/types";
 import { Pion, CAT_PION } from "@/components/Pion";
 import { PhoneHeader } from "@/components/PhoneHeader";
+
+interface GameGroup {
+  key: string;
+  representative: GameDTO;
+  copies: GameDTO[];
+  availableCount: number;
+  totalCount: number;
+}
+
+function groupByName(games: GameDTO[]): GameGroup[] {
+  const map = new Map<string, GameDTO[]>();
+  for (const g of games) {
+    const key = g.name.toLowerCase().trim();
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(g);
+  }
+  return Array.from(map.values()).map((copies) => {
+    const availableCount = copies.filter((c) => c.status === "AVAILABLE").length;
+    const representative = copies.find((c) => c.status === "AVAILABLE") ?? copies[0];
+    return { key: representative.name.toLowerCase().trim(), representative, copies, availableCount, totalCount: copies.length };
+  });
+}
 
 const CAT_CONFIG: Record<string, { label: string; color: string }> = {
   escape:   { label: "Escape",   color: "#d24a1f" },
@@ -137,10 +159,11 @@ export default function GamesTab() {
 
   const onRefresh = useCallback(() => load(search, status, category, true), [search, status, category]);
   const sorted = sortGames(games, sort);
+  const grouped = groupByName(sorted);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fef9f0" }}>
-      <PhoneHeader title="Liste des jeux" subtitle={`📍 ${location || "…"} · ${games.length} jeux`} />
+      <PhoneHeader title="Liste des jeux" subtitle={`📍 ${location || "…"} · ${grouped.length} titre${grouped.length > 1 ? "s" : ""} · ${games.length} ex.`} />
 
       {/* Recherche */}
       <View style={s.searchRow}>
@@ -200,27 +223,50 @@ export default function GamesTab() {
         <ActivityIndicator style={{ marginTop: 40 }} color="#d24a1f" />
       ) : (
         <FlatList
-          data={sorted}
-          keyExtractor={(g) => g.id}
+          data={grouped}
+          keyExtractor={(g) => g.key}
           numColumns={2}
           contentContainerStyle={{ padding: 12, paddingBottom: 32 }}
           columnWrapperStyle={{ gap: 12 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d24a1f" />}
-          renderItem={({ item }) => {
+          renderItem={({ item: group }) => {
+            const item = group.representative;
             const cat = CAT_CONFIG[item.category] ?? { label: item.category, color: "#9a8b7c" };
             const isAvailable = item.status === "AVAILABLE";
             const activeLoan = (item as GameDTO & { activeLoan?: { dueAt: string } }).activeLoan;
             return (
               <TouchableOpacity
                 style={[s.card, { borderTopColor: cat.color }]}
-                onPress={() => router.push(`/game/${item.id}`)}
+                onPress={() => {
+                  if (group.totalCount > 1) {
+                    Alert.alert(
+                      item.name,
+                      `${group.availableCount}/${group.totalCount} exemplaire(s) disponible(s)`,
+                      [
+                        ...group.copies.map((copy, i) => ({
+                          text: `Exemplaire ${i + 1} — ${copy.status === "AVAILABLE" ? "Disponible" : "Emprunté"}`,
+                          onPress: () => router.push(`/game/${copy.id}`),
+                          style: copy.status === "AVAILABLE" ? "default" as const : "destructive" as const,
+                        })),
+                        { text: "Annuler", style: "cancel" as const },
+                      ]
+                    );
+                  } else {
+                    router.push(`/game/${item.id}`);
+                  }
+                }}
                 activeOpacity={0.85}
               >
                 {/* Zone visuelle */}
                 <View style={s.cardVisual}>
                   <GameVisual game={item} color={cat.color} />
                   {!isAvailable && <BorrowedOverlay />}
+                  {group.totalCount > 1 && (
+                    <View style={[s.badge, { backgroundColor: group.availableCount > 0 ? "#1e1610" : "#C8102E" }]}>
+                      <Text style={s.badgeText}>{group.availableCount}/{group.totalCount} ex.</Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* Bandeau catégorie */}
@@ -291,4 +337,6 @@ const s = StyleSheet.create({
   cardBody:          { padding: 10 },
   cardName:          { fontSize: 13, fontWeight: "700", color: "#1e1610", lineHeight: 17, marginBottom: 3 },
   rating:            { fontSize: 10, color: "#e8a82f", fontWeight: "600" },
+  badge:             { position: "absolute", top: 6, left: 6, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3 },
+  badgeText:         { color: "#fff", fontSize: 9, fontWeight: "800" },
 });

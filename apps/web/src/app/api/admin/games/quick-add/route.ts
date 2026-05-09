@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
-  const { name, category, bggId: bggIdInput } = await req.json();
+  const { name, category, bggId: bggIdInput, force } = await req.json();
   if (!name || !category) {
     return NextResponse.json({ error: "Nom et catégorie requis." }, { status: 400 });
   }
@@ -46,18 +46,34 @@ export async function POST(req: NextRequest) {
     // BGG unavailable — on crée le jeu avec le minimum
   }
 
-  // Vérifie si barcode déjà utilisé
-  const barcode = bggDetails?.barcode ?? null;
-  if (barcode) {
-    const exists = await prisma.game.findFirst({ where: { barcode } });
-    if (exists) bggDetails = { ...bggDetails!, barcode: null };
+  if (!force) {
+    // Vérifie si un jeu avec le même bggId existe déjà
+    const bggId = bggDetails?.bggId ?? null;
+    if (bggId) {
+      const exists = await prisma.game.findUnique({ where: { bggId } });
+      if (exists) {
+        return NextResponse.json(
+          { error: `Ce jeu existe déjà dans la bibliothèque (${exists.name}).`, duplicate: { id: exists.id, name: exists.name }, canForce: true },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Vérifie si un jeu avec le même nom existe déjà
+    const existsByName = await prisma.game.findFirst({ where: { name: { equals: bggDetails?.name ?? name } } });
+    if (existsByName) {
+      return NextResponse.json(
+        { error: `Un jeu avec ce nom existe déjà (${existsByName.name}).`, duplicate: { id: existsByName.id, name: existsByName.name }, canForce: true },
+        { status: 409 }
+      );
+    }
   }
 
-  // Vérifie si bggId déjà utilisé
-  const bggId = bggDetails?.bggId ?? null;
-  if (bggId) {
-    const exists = await prisma.game.findUnique({ where: { bggId } });
-    if (exists) return NextResponse.json({ error: `Ce jeu existe déjà dans la bibliothèque (${exists.name}).` }, { status: 409 });
+  // Vérifie si barcode déjà utilisé — dans ce cas on l'écarte sans bloquer
+  let barcode = bggDetails?.barcode ?? null;
+  if (barcode) {
+    const exists = await prisma.game.findFirst({ where: { barcode } });
+    if (exists) barcode = null;
   }
 
   const game = await prisma.game.create({
@@ -71,8 +87,8 @@ export async function POST(req: NextRequest) {
       maxPlayers: bggDetails?.maxPlayers ?? null,
       duration: bggDetails?.duration ?? null,
       coverUrl: bggDetails?.coverUrl ?? null,
-      barcode: bggDetails?.barcode ?? null,
-      bggId: bggDetails?.bggId ?? null,
+      barcode,
+      bggId: force ? null : (bggDetails?.bggId ?? null),
       location: user.location,
     },
   });

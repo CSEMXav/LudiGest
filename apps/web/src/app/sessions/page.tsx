@@ -91,6 +91,7 @@ export default function SessionsPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
 
   async function load() {
     try {
@@ -234,6 +235,7 @@ export default function SessionsPage() {
   async function openInviteModal(s: GameSessionDTO) {
     setInviteSession(s);
     setSelectedUserIds(new Set());
+    setMemberSearch("");
     setLoadingMembers(true);
     const [membersRes, invRes] = await Promise.all([
       fetch("/api/members"),
@@ -665,11 +667,20 @@ export default function SessionsPage() {
                 <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />)}</div>
               ) : (
                 <>
+                  <input
+                    type="search"
+                    placeholder="Rechercher un membre…"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  />
                   <div className="space-y-1 max-h-52 overflow-y-auto border border-gray-200 rounded-xl p-2">
-                    {members.filter((m) => !alreadyInvitedIds.has(m.id)).length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-3">Tous les membres ont déjà été invités.</p>
+                    {members.filter((m) => !alreadyInvitedIds.has(m.id) && m.nickname.toLowerCase().includes(memberSearch.toLowerCase())).length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-3">
+                        {memberSearch ? "Aucun membre trouvé." : "Tous les membres ont déjà été invités."}
+                      </p>
                     ) : (
-                      members.filter((m) => !alreadyInvitedIds.has(m.id)).map((m) => (
+                      members.filter((m) => !alreadyInvitedIds.has(m.id) && m.nickname.toLowerCase().includes(memberSearch.toLowerCase())).map((m) => (
                         <label key={m.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1.5">
                           <input
                             type="checkbox"

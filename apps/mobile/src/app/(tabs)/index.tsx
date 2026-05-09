@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Polygon } from "react-native-svg";
+import Svg, { Polygon, G } from "react-native-svg";
 import { apiGet, apiPost } from "@/lib/api";
 import { getStoredUser, getStoredLocation, updateStoredUser } from "@/lib/auth";
 import { Pion, CAT_PION } from "@/components/Pion";
@@ -45,12 +45,12 @@ function HeroHexPattern() {
     <Svg width={200} height={160} viewBox="0 0 200 160"
       style={{ position: "absolute", right: -30, top: -10, opacity: 0.15 }}>
       {hexes.map(({ r, c }) => (
-        <Polygon key={`${r}-${c}`}
-          points="20,2 36,12 36,30 20,40 4,30 4,12"
-          fill="none" stroke="#fff" strokeWidth="1"
-          translateX={c * 34 + (r % 2) * 17}
-          translateY={r * 30}
-        />
+        <G key={`${r}-${c}`} transform={`translate(${c * 34 + (r % 2) * 17}, ${r * 30})`}>
+          <Polygon
+            points="20,2 36,12 36,30 20,40 4,30 4,12"
+            fill="none" stroke="#fff" strokeWidth="1"
+          />
+        </G>
       ))}
     </Svg>
   );

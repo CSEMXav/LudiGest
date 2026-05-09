@@ -219,18 +219,25 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ name: string; bggFound: boolean } | null>(null);
   const [error, setError] = useState("");
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
 
-  async function submit() {
+  async function submit(force = false) {
     if (!name.trim() || !category) return;
     setLoading(true);
     setError("");
+    setDuplicate(null);
     const res = await fetch("/api/admin/games/quick-add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), category, bggId: bggId.trim() || undefined }),
+      body: JSON.stringify({ name: name.trim(), category, bggId: bggId.trim() || undefined, force }),
     });
     const data = await res.json();
     setLoading(false);
+    if (res.status === 409 && data.canForce) {
+      setDuplicate(data.duplicate);
+      setError(data.error);
+      return;
+    }
     if (!res.ok) { setError(data.error ?? "Erreur"); return; }
     setResult(data);
     onAdded();
@@ -303,13 +310,25 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
                 ))}
               </div>
             </div>
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            {error && (
+              <div className="bg-red-50 rounded-lg px-3 py-2 space-y-2">
+                <p className="text-sm text-red-600">{error}</p>
+                {duplicate && (
+                  <button
+                    onClick={() => submit(true)}
+                    className="text-xs font-medium text-orange-600 hover:text-orange-800 underline"
+                  >
+                    Créer quand même en doublon
+                  </button>
+                )}
+              </div>
+            )}
             <div className="flex gap-3 pt-1">
               <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                 Annuler
               </button>
               <button
-                onClick={submit}
+                onClick={() => submit()}
                 disabled={loading || !name.trim() || !category}
                 className="flex-1 px-4 py-2 bg-[#C8102E] text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
