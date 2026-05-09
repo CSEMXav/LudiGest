@@ -69,6 +69,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Si le bggId est déjà utilisé dans une autre bibliothèque, on le met à null
+  if (!force && bggDetails?.bggId) {
+    const bggIdTaken = await prisma.game.findUnique({ where: { bggId: bggDetails.bggId } });
+    if (bggIdTaken) bggDetails = { ...bggDetails, bggId: null };
+  }
+
   // Vérifie si barcode déjà utilisé — dans ce cas on l'écarte sans bloquer
   let barcode = bggDetails?.barcode ?? null;
   if (barcode) {
