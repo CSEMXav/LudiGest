@@ -75,10 +75,12 @@ export async function POST(req: NextRequest) {
 
             let details = null;
             let bggIdToUse: string | null = row.bggId ?? null;
+            // Si l'utilisateur a fourni un code-barre, on saute la recherche UPC côté BGG
+            const bggOpts = { skipBarcodeLookup: !!row.barcode };
 
             if (bggIdToUse) {
               // BGG ID fourni directement → récupérer les détails sans chercher
-              details = await getGameDetails(bggIdToUse);
+              details = await getGameDetails(bggIdToUse, bggOpts);
               await new Promise((r) => setTimeout(r, 300));
             } else {
               // Recherche par nom
@@ -86,7 +88,7 @@ export async function POST(req: NextRequest) {
               await new Promise((r) => setTimeout(r, 500));
               if (bggResults.length > 0) {
                 bggIdToUse = bggResults[0].bggId;
-                details = await getGameDetails(bggIdToUse);
+                details = await getGameDetails(bggIdToUse, bggOpts);
                 await new Promise((r) => setTimeout(r, 500));
               }
             }
@@ -94,7 +96,7 @@ export async function POST(req: NextRequest) {
             // Traduction du résumé si nécessaire
             const summaryFr = details?.summary ? await translateToFrench(details.summary) : null;
 
-            // Le code barre du fichier prime sur celui de BGG
+            // Le code barre du fichier est propriétaire : il prime systématiquement sur BGG
             const barcode = row.barcode ?? details?.barcode ?? null;
 
             // Si force-create ou bggId déjà utilisé dans une autre bibliothèque, on ne le stocke pas

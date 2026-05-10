@@ -191,11 +191,11 @@ async function lookupBarcodeFromUPC(gameName: string): Promise<string | null> {
   }
 }
 
-export async function getGameDetails(bggId: string): Promise<BggGameDetails | null> {
+export async function getGameDetails(bggId: string, opts?: { skipBarcodeLookup?: boolean }): Promise<BggGameDetails | null> {
   // Try geekdo JSON API first (more reliable, no Cloudflare block)
   const details = await getGameDetailsFromGeekdo(bggId);
   if (details) {
-    if (!details.barcode) {
+    if (!details.barcode && !opts?.skipBarcodeLookup) {
       details.barcode = await lookupBarcodeFromUPC(details.name);
     }
     return details;
@@ -203,7 +203,7 @@ export async function getGameDetails(bggId: string): Promise<BggGameDetails | nu
 
   // Fallback: XML API v2
   const xmlDetails = await getGameDetailsFromXml(bggId);
-  if (xmlDetails && !xmlDetails.barcode) {
+  if (xmlDetails && !xmlDetails.barcode && !opts?.skipBarcodeLookup) {
     xmlDetails.barcode = await lookupBarcodeFromUPC(xmlDetails.name);
   }
   return xmlDetails;

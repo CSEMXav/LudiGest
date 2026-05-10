@@ -70,22 +70,13 @@ export default async function AdminDashboard() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-end justify-between mb-6">
-        <div>
-          <h1 className="font-display text-4xl font-bold tracking-tight leading-none" style={{ color: "var(--p-ink)" }}>
-            Tableau de bord
-          </h1>
-          <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
-            Vue globale · {LOCATIONS.length} ludothèques
-          </p>
-        </div>
-        <a
-          href="/admin/sessions"
-          className="px-4 py-2.5 rounded-full text-sm font-bold text-white"
-          style={{ background: "var(--p-ink)" }}
-        >
-          + Nouvelle session
-        </a>
+      <div className="mb-6">
+        <h1 className="font-display text-4xl font-bold tracking-tight leading-none" style={{ color: "var(--p-ink)" }}>
+          Tableau de bord
+        </h1>
+        <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
+          Vue globale · {LOCATIONS.length} ludothèques
+        </p>
       </div>
 
       {/* Global stats */}
