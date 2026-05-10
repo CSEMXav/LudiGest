@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
             await prisma.game.create({
               data: {
-                name:       details?.name      ?? row.name,
+                name:       row.name,
                 type:       details?.type      ?? "Jeu de société",
                 category:   row.category,
                 location,

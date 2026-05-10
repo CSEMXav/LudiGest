@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Vérifie si un jeu avec le même nom existe déjà dans cette bibliothèque
-    const existsByName = await prisma.game.findFirst({ where: { name: { equals: bggDetails?.name ?? name }, location: user.location } });
+    const existsByName = await prisma.game.findFirst({ where: { name: { equals: name }, location: user.location } });
     if (existsByName) {
       return NextResponse.json(
         { error: `Un jeu avec ce nom existe déjà dans cette bibliothèque (${existsByName.name}).`, duplicate: { id: existsByName.id, name: existsByName.name }, canForce: true },
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
   const game = await prisma.game.create({
     data: {
-      name: bggDetails?.name ?? name,
+      name,
       type: bggDetails?.type ?? "Jeu de société",
       category,
       summary: bggDetails?.summary ?? null,
