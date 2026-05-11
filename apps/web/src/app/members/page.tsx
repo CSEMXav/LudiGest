@@ -82,8 +82,10 @@ export default function MembersPage() {
                         style={{ background: "var(--p-rule)", color: "var(--p-ink3)" }}>non visible</span>
                     )}
                   </div>
-                  <span className="text-xs font-mono" style={{ color: "var(--p-ink3)" }}>
-                    {m.totalLoans} emprunt{m.totalLoans > 1 ? "s" : ""}
+                  <span className="text-xs font-mono text-right" style={{ color: "var(--p-ink3)" }}>
+                    {m.totalLoans === 0
+                      ? "Pas encore d'emprunts"
+                      : <>{m.activeLoans} en cours&nbsp;·&nbsp;{m.totalLoans} au total</>}
                   </span>
                 </div>
               );

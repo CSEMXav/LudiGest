@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       name: true,
       visibleInMembers: true,
       _count: { select: { loans: true } },
+      loans: { where: { returnedAt: null }, select: { id: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
       id: u.id,
       nickname: u.nickname ?? u.email,
       totalLoans: u._count.loans,
+      activeLoans: u.loans.length,
       ...(isAdmin && { visibleInMembers: u.visibleInMembers }),
     }))
   );
