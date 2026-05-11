@@ -27,13 +27,25 @@ type SortDir = "asc" | "desc";
 function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
   const hasReminders = reminders.length > 0;
   const [visible, setVisible] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, below: false, maxH: 300 });
   const btnRef = useRef<HTMLButtonElement>(null);
 
   function show() {
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
-    setPos({ top: rect.top + window.scrollY - 8, left: rect.left + rect.width / 2 });
+    // Estimate tooltip height: ~20px header + 36px per reminder, min 60px
+    const estimatedH = hasReminders ? Math.min(20 + reminders.length * 36, 320) : 60;
+    const spaceAbove = rect.top - 16;
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    const below = spaceAbove < estimatedH && spaceBelow > spaceAbove;
+    // Clamp left so the tooltip doesn't overflow left/right edges
+    const left = Math.min(Math.max(rect.left + rect.width / 2, 112), window.innerWidth - 112);
+    setPos({
+      top: below ? rect.bottom + 6 : rect.top - 8,
+      left,
+      below,
+      maxH: below ? Math.max(spaceBelow, 80) : Math.max(spaceAbove, 80),
+    });
     setVisible(true);
   }
 
@@ -51,8 +63,13 @@ function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
       </button>
       {visible && (
         <div
-          className="fixed z-50 w-56 bg-gray-900 text-white rounded-lg shadow-xl text-xs p-3 pointer-events-none"
-          style={{ top: pos.top, left: pos.left, transform: "translate(-50%, -100%)" }}
+          className="fixed z-50 w-56 bg-gray-900 text-white rounded-lg shadow-xl text-xs p-3 pointer-events-none overflow-y-auto"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            transform: `translate(-50%, ${pos.below ? "0" : "-100%"})`,
+            maxHeight: pos.maxH,
+          }}
         >
           {hasReminders ? (
             <>
@@ -75,7 +92,7 @@ function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
           ) : (
             <p className="text-gray-400">Aucun email de rappel envoyé pour cet emprunt.</p>
           )}
-          <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+          <div className={`absolute ${pos.below ? "top-[-4px]" : "bottom-[-4px]"} left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45`} />
         </div>
       )}
     </div>
