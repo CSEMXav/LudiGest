@@ -120,6 +120,7 @@ export interface MemberDTO {
   id: string;
   nickname: string;
   totalLoans: number;
+  activeLoans: number;
   visibleInMembers?: boolean;
 }
 

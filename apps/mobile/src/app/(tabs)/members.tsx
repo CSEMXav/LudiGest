@@ -125,8 +125,14 @@ export default function MembersScreen() {
                 </View>
 
                 <View style={st.loansWrap}>
-                  <Text style={st.loansNum}>{m.totalLoans}</Text>
-                  <Text style={st.loansLabel}> emprunt{m.totalLoans > 1 ? "s" : ""}</Text>
+                  {m.totalLoans === 0 ? (
+                    <Text style={st.loansNone}>Pas encore d&apos;emprunts</Text>
+                  ) : (
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={st.loansActive}>{m.activeLoans} en cours</Text>
+                      <Text style={st.loansTotal}>{m.totalLoans} au total</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             );
@@ -148,9 +154,10 @@ const st = StyleSheet.create({
   youPill:     { marginLeft: 6 },
   youPillText: { fontSize: 10, fontWeight: "700", color: "#d24a1f" },
   topLabel:    { fontSize: 10, fontWeight: "700", color: "#e8a82f", marginTop: 1 },
-  loansWrap:   { flexDirection: "row", alignItems: "baseline" },
-  loansNum:    { fontSize: 16, fontWeight: "700", color: "#1e1610", fontVariant: ["tabular-nums"] },
-  loansLabel:  { fontSize: 11, color: "#9a8b7c", fontWeight: "600" },
+  loansWrap:    { alignItems: "flex-end" },
+  loansActive:  { fontSize: 13, fontWeight: "700", color: "#1e1610", fontVariant: ["tabular-nums"] },
+  loansTotal:   { fontSize: 10, color: "#9a8b7c", fontWeight: "500" },
+  loansNone:    { fontSize: 10, color: "#9a8b7c", fontStyle: "italic" },
 
   empty:       { alignItems: "center", marginTop: 80 },
   emptyEmoji:  { fontSize: 48, marginBottom: 12 },
