@@ -44,8 +44,21 @@ export async function runSendReminders(): Promise<ReminderResult> {
 
   for (const loan of upcomingLoans) {
     try {
-      const existing = await prisma.loanReminder.findFirst({ where: { loanId: loan.id, type: "reminder" } });
-      if (existing) { skipped++; details.push(`SKIP rappel ${loan.user.name} / ${loan.game.name} (déjà envoyé)`); continue; }
+      // Skip uniquement si un rappel automatique (type "reminder") a déjà été envoyé
+      // dans la même fenêtre (= les 48h précédant l'échéance), pour ne pas envoyer deux fois le même jour
+      const existing = await prisma.loanReminder.findFirst({
+        where: { loanId: loan.id, type: "reminder" },
+        orderBy: { sentAt: "desc" },
+      });
+      if (existing) {
+        // Vérifie que le rappel a bien été envoyé dans la fenêtre actuelle (pas d'un cycle précédent)
+        const hoursSinceReminder = (now.getTime() - existing.sentAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceReminder < 22) {
+          skipped++;
+          details.push(`SKIP rappel ${loan.user.name} / ${loan.game.name} (déjà envoyé il y a ${hoursSinceReminder.toFixed(1)}h)`);
+          continue;
+        }
+      }
     } catch { /* table absente — envoyer quand même */ }
 
     const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -98,14 +111,16 @@ export async function runSendReminders(): Promise<ReminderResult> {
 
     try {
       const lastOverdue = await prisma.loanReminder.findFirst({
-        where: { loanId: loan.id, type: "overdue" },
+        where: { loanId: loan.id, type: { in: ["overdue", "overdue_manual"] } },
         orderBy: { sentAt: "desc" },
       });
       if (lastOverdue) {
-        const daysSinceLast = (now.getTime() - lastOverdue.sentAt.getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceLast < overdueFrequencyDays) {
+        // Utilise les heures avec une tolérance de 2h pour éviter les décalages du cron
+        const hoursSinceLast = (now.getTime() - lastOverdue.sentAt.getTime()) / (1000 * 60 * 60);
+        const thresholdHours = overdueFrequencyDays * 24 - 2;
+        if (hoursSinceLast < thresholdHours) {
           shouldSkip = true;
-          skipReason = `dernier envoi il y a ${daysSinceLast.toFixed(1)}j < ${overdueFrequencyDays}j`;
+          skipReason = `dernier envoi il y a ${(hoursSinceLast).toFixed(1)}h < ${thresholdHours}h (seuil ${overdueFrequencyDays}j)`;
         }
       }
     } catch { /* table absente — envoyer */ }
@@ -151,7 +166,10 @@ export async function runSendReminders(): Promise<ReminderResult> {
     }
   }
 
-  console.log(`[reminders] sent=${sent} reminders=${remindersCount} overdue=${overdueCount} skipped=${skipped} window=${reminderWindowStart.toISOString()}→${reminderWindowEnd.toISOString()}`);
+  console.log(`[reminders] config: reminderDaysBefore=${reminderDaysBefore} overdueFrequencyDays=${overdueFrequencyDays}`);
+  console.log(`[reminders] upcoming window: ${reminderWindowStart.toISOString()} → ${reminderWindowEnd.toISOString()} (${upcomingLoans.length} prêt(s) trouvé(s))`);
+  console.log(`[reminders] overdue: ${overdueLoans.length} prêt(s) en retard`);
+  console.log(`[reminders] sent=${sent} reminders=${remindersCount} overdue=${overdueCount} skipped=${skipped}`);
   details.forEach((d) => console.log(`[reminders] ${d}`));
 
   return { sent, remindersCount, overdueCount, skipped, details };
