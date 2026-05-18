@@ -1,43 +1,69 @@
 import { prisma } from "@/lib/prisma";
 import { sendReminderEmail, sendOverdueEmail } from "@/lib/email";
 
-/** Envoie une push notification Expo et retourne un message de log. */
-async function sendPush(params: {
+interface PushJob {
   userId: string;
   pushToken: string;
   title: string;
   body: string;
   data: Record<string, string>;
-}): Promise<string> {
+  label: string; // pour les logs
+}
+
+/**
+ * Envoie toutes les push notifications en un seul appel batch Expo.
+ * Expo recommande de grouper les messages plutôt que d'envoyer en rafale
+ * pour le même token (risque de throttling/drop).
+ */
+async function flushPushBatch(jobs: PushJob[], details: string[]): Promise<void> {
+  if (jobs.length === 0) return;
+
   try {
     const res = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: params.pushToken,
-        title: params.title,
-        body: params.body,
-        sound: "default",
-        channelId: "default",
-        data: params.data,
-      }),
+      body: JSON.stringify(
+        jobs.map((j) => ({
+          to: j.pushToken,
+          title: j.title,
+          body: j.body,
+          sound: "default",
+          channelId: "default",
+          data: j.data,
+        }))
+      ),
     });
+
     const json = await res.json();
-    const ticket = json?.data;
-    if (ticket?.status === "error") {
-      const errCode = ticket.details?.error ?? "unknown";
-      console.error(`[push] Erreur Expo pour userId=${params.userId}: ${ticket.message} (${errCode})`);
-      if (errCode === "DeviceNotRegistered") {
-        // Token invalide (réinstallation app, changement de device) → on le supprime
-        await prisma.user.update({ where: { id: params.userId }, data: { pushToken: null } }).catch(() => null);
-        return `PUSH_TOKEN_INVALIDE (supprimé)`;
+    // L'API batch retourne { data: [ ticket, ticket, ... ] }
+    const tickets: Array<{ status: string; id?: string; message?: string; details?: { error?: string } }> =
+      Array.isArray(json?.data) ? json.data : [json?.data];
+
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      const ticket = tickets[i];
+      if (!ticket) {
+        details.push(`  └─ ${job.label} : PUSH_NO_TICKET`);
+        continue;
       }
-      return `PUSH_ERREUR: ${ticket.message}`;
+      if (ticket.status === "error") {
+        const errCode = ticket.details?.error ?? "unknown";
+        console.error(`[push] Erreur Expo pour userId=${job.userId} (${job.label}): ${ticket.message} (${errCode})`);
+        if (errCode === "DeviceNotRegistered") {
+          await prisma.user.update({ where: { id: job.userId }, data: { pushToken: null } }).catch(() => null);
+          details.push(`  └─ ${job.label} : PUSH_TOKEN_INVALIDE (supprimé)`);
+        } else {
+          details.push(`  └─ ${job.label} : PUSH_ERREUR ${errCode}`);
+        }
+      } else {
+        details.push(`  └─ ${job.label} : PUSH OK`);
+      }
     }
-    return `PUSH OK (ticket ${ticket?.id ?? "?"})`;
   } catch (e) {
-    console.error(`[push] fetch error pour userId=${params.userId}:`, e);
-    return `PUSH_EXCEPTION: ${e instanceof Error ? e.message : String(e)}`;
+    console.error("[push] batch fetch error:", e);
+    for (const job of jobs) {
+      details.push(`  └─ ${job.label} : PUSH_EXCEPTION`);
+    }
   }
 }
 
@@ -63,6 +89,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
   let skipped = 0;
   let sent = 0;
   const details: string[] = [];
+  const pushJobs: PushJob[] = []; // accumulés puis envoyés en un seul batch à la fin
 
   // ── 1. Upcoming reminders ──────────────────────────────────────────────────
   // Comparaison par jour calendaire UTC pour éviter les décalages horaires
@@ -119,14 +146,14 @@ export async function runSendReminders(): Promise<ReminderResult> {
     } catch { /* ignore */ }
 
     if (loan.user.pushToken) {
-      const pushLog = await sendPush({
+      pushJobs.push({
         userId: loan.user.id,
         pushToken: loan.user.pushToken,
         title: "⏰ Rappel d'emprunt",
         body: `Pensez à rendre "${loan.game.name}" avant le ${dateStr}`,
         data: { type: "loan_reminder", loanId: loan.id },
+        label: `${loan.user.name} / ${loan.game.name}`,
       });
-      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : ${pushLog}`);
     } else {
       details.push(`  └─ ${loan.user.name} / ${loan.game.name} : PUSH_SKIP (pas de token)`);
     }
@@ -185,17 +212,23 @@ export async function runSendReminders(): Promise<ReminderResult> {
     } catch { /* ignore */ }
 
     if (loan.user.pushToken) {
-      const pushLog = await sendPush({
+      pushJobs.push({
         userId: loan.user.id,
         pushToken: loan.user.pushToken,
         title: "⚠️ Emprunt en retard",
         body: `"${loan.game.name}" aurait dû être rendu le ${dateStr}`,
         data: { type: "loan_reminder", loanId: loan.id },
+        label: `${loan.user.name} / ${loan.game.name}`,
       });
-      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : ${pushLog}`);
     } else {
       details.push(`  └─ ${loan.user.name} / ${loan.game.name} : PUSH_SKIP (pas de token)`);
     }
+  }
+
+  // ── 3. Envoi batch de toutes les push notifications ────────────────────────
+  if (pushJobs.length > 0) {
+    details.push(`Push notifications (${pushJobs.length} en batch) :`);
+    await flushPushBatch(pushJobs, details);
   }
 
   console.log(`[reminders] config: reminderDaysBefore=${reminderDaysBefore} overdueFrequencyDays=${overdueFrequencyDays}`);
