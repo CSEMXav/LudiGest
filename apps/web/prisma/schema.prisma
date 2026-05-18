@@ -34,6 +34,7 @@ model User {
   createdSessions        GameSession[]              @relation("CreatedSessions")
   privateInvitations     PrivateSessionInvitation[]
   gameWaitlists          GameWaitlist[]
+  sessionReminderLogs    SessionReminderLog[]
 }
 
 model EmailVerification {
@@ -125,6 +126,8 @@ model EmailConfig {
   sessionInviteBody       String   @default("Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED")
   sessionReminderSubject  String   @default("⏰ Rappel session : \"{{sessionName}}\" c'est bientôt !")
   sessionReminderBody     String   @default("Bonjour {{userName}},\n\nRappel : vous êtes inscrit(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nLudothèque BRED")
+  sessionReminderDays1 Int @default(7)
+  sessionReminderDays2 Int @default(1)
   manualOverdueSubject String   @default("⚠ Retard (rappel admin) : veuillez rendre \"{{gameName}}\"")
   manualOverdueBody    String   @default("Bonjour {{userName}},\n\nCe rappel vous est envoyé par l'administrateur de la ludothèque.\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter dès que possible.\n\nLudothèque BRED")
   waitlistSubject      String   @default("💡 Quelqu'un attend \"{{gameName}}\" — pensez à le rendre !")
@@ -162,6 +165,7 @@ model GameSession {
   registrations  GameSessionRegistration[]
   notifications  UserNotification[]
   invitations    PrivateSessionInvitation[]
+  reminderLogs   SessionReminderLog[]
 }
 
 model GameSessionRegistration {
@@ -236,5 +240,20 @@ model GameWaitlist {
 
   @@unique([gameId, userId])
   @@index([gameId])
+  @@index([userId])
+}
+
+model SessionReminderLog {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  daysBefore Int
+  sentAt    DateTime @default(now())
+
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId, daysBefore])
+  @@index([sessionId])
   @@index([userId])
 }

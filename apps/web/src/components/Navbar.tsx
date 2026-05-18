@@ -189,6 +189,14 @@ export function Navbar() {
                   >
                     Mon compte
                   </Link>
+                  <Link
+                    href="/comment-ca-marche"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-3 text-sm transition-colors"
+                    style={{ color: "var(--p-ink2)", borderTop: "1px solid var(--p-rule)" }}
+                  >
+                    ❓ Comment ça marche
+                  </Link>
                   <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
                     className="w-full text-left px-4 py-3 text-sm font-medium transition-colors"
@@ -274,6 +282,10 @@ export function Navbar() {
                 Administration
               </Link>
             )}
+            <Link href="/comment-ca-marche" className="block px-4 py-2.5 rounded-xl text-sm font-medium"
+              style={{ color: "var(--p-ink2)" }}>
+              ❓ Comment ça marche
+            </Link>
           </nav>
           <div className="px-4 py-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
             <p className="text-xs font-semibold mb-2" style={{ color: "var(--p-ink3)" }}>Ma ludothèque</p>

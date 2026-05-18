@@ -18,6 +18,8 @@ const DEFAULTS = {
   manualOverdueBody: "Bonjour {{userName}},\n\nCe rappel vous est envoyé par l'administrateur de la ludothèque.\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter dès que possible.\n\nLudothèque BRED",
   waitlistSubject: '💡 Quelqu\'un attend "{{gameName}}" — pensez à le rendre !',
   waitlistBody: "Bonjour {{userName}},\n\nUn(e) collègue attend de pouvoir emprunter le jeu que vous avez actuellement :\n\n{{gameName}}\n\nSi vous avez fini de jouer, pensez à le ramener à la ludothèque !\n\nVoir le jeu : {{gameUrl}}\n\nLudothèque BRED",
+  sessionReminderDays1: 7,
+  sessionReminderDays2: 1,
 };
 
 export async function GET() {
@@ -41,7 +43,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "sessionReminderSubject", "sessionReminderBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody"];
+  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "sessionReminderSubject", "sessionReminderBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody", "sessionReminderDays1", "sessionReminderDays2"];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) data[key] = body[key];

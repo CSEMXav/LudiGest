@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, Switch, StyleSheet,
-  Alert, ActivityIndicator, ScrollView, RefreshControl,
+  Alert, ActivityIndicator, ScrollView, RefreshControl, Linking,
 } from "react-native";
 import Svg, { Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
@@ -64,6 +64,8 @@ function timeAgo(iso: string) {
   if (d === 1) return "Hier";
   return `Il y a ${d} j`;
 }
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -327,6 +329,14 @@ export default function AccountScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Comment ça marche */}
+        <TouchableOpacity
+          style={[s.menuItem, { borderTopWidth: 1, borderTopColor: P.rule }]}
+          onPress={() => Linking.openURL(`${BASE_URL}/comment-ca-marche`)}
+        >
+          <Text style={s.menuItemText}>❓ Comment ça marche ?</Text>
+        </TouchableOpacity>
+
         {/* Déconnexion */}
         <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
           <Text style={s.logoutText}>Se déconnecter</Text>
@@ -369,6 +379,9 @@ const s = StyleSheet.create({
 
   logoutBtn:     { borderWidth: 1.5, borderColor: "#fca5a5", borderRadius: 14, padding: 16, alignItems: "center" },
   logoutText:    { color: "#dc2626", fontSize: 15, fontWeight: "600" },
+
+  menuItem:      { paddingVertical: 14, paddingHorizontal: 20, backgroundColor: P.card },
+  menuItemText:  { fontSize: 14, color: P.ink2 },
 });
 
 const nt = StyleSheet.create({

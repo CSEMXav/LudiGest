@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendReminderEmail, sendOverdueEmail } from "@/lib/email";
+import { sendReminderEmail, sendOverdueEmail, sendConfiguredSessionReminderEmail } from "@/lib/email";
 
 interface PushJob {
   userId: string;
@@ -225,7 +225,90 @@ export async function runSendReminders(): Promise<ReminderResult> {
     }
   }
 
-  // ── 3. Envoi batch de toutes les push notifications ────────────────────────
+  // ── 3 (avant push batch) - Session reminders automatiques ────────────
+  const sessionConfig = config; // déjà chargé
+  const days1 = sessionConfig?.sessionReminderDays1 ?? 7;
+  const days2 = sessionConfig?.sessionReminderDays2 ?? 1;
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://ludigest.vercel.app";
+
+  for (const daysBeforeVal of [days1, days2]) {
+    const targetDate = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysBeforeVal
+    ));
+    const windowEnd = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    const upcomingSessions = await prisma.gameSession.findMany({
+      where: {
+        isPrivate: false,
+        date: { gte: targetDate, lte: windowEnd },
+      },
+      include: {
+        registrations: {
+          include: { user: { select: { id: true, name: true, email: true, pushToken: true } } },
+        },
+      },
+    }).catch(() => []);
+
+    for (const gs of upcomingSessions) {
+      const dateStr = gs.date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+      const sessionUrl = `${baseUrl}/sessions`;
+
+      for (const reg of gs.registrations) {
+        try {
+          // Vérifie si ce rappel a déjà été envoyé
+          const alreadySent = await prisma.sessionReminderLog.findUnique({
+            where: { sessionId_userId_daysBefore: { sessionId: gs.id, userId: reg.userId, daysBefore: daysBeforeVal } },
+          }).catch(() => null);
+          if (alreadySent) continue;
+
+          // Email
+          await sendConfiguredSessionReminderEmail(reg.user.email, {
+            userName: reg.user.name,
+            sessionName: gs.name,
+            sessionDate: dateStr,
+            sessionTime: gs.startTime,
+            sessionLocation: gs.location,
+            sessionUrl,
+          });
+
+          // Notification in-app
+          await prisma.userNotification.create({
+            data: {
+              userId: reg.userId,
+              type: "SESSION_REMINDER",
+              title: `⏰ Rappel session : ${gs.name}`,
+              message: `${dateStr} à ${gs.startTime} — ${gs.location}`,
+              sessionId: gs.id,
+            },
+          }).catch(() => null);
+
+          // Log anti-doublon
+          await prisma.sessionReminderLog.create({
+            data: { sessionId: gs.id, userId: reg.userId, daysBefore: daysBeforeVal },
+          }).catch(() => null);
+
+          // Push (accumulé dans pushJobs)
+          if (reg.user.pushToken) {
+            pushJobs.push({
+              userId: reg.user.id,
+              pushToken: reg.user.pushToken,
+              title: `⏰ Rappel : ${gs.name}`,
+              body: `${gs.name} — ${dateStr} à ${gs.startTime}`,
+              data: { type: "session_reminder", sessionId: gs.id },
+              label: `${reg.user.name} / session ${gs.name} (J-${daysBeforeVal})`,
+            });
+          }
+
+          sent++;
+          details.push(`SESSION_RAPPEL J-${daysBeforeVal} → ${reg.user.email} (${gs.name})`);
+        } catch (err) {
+          details.push(`SESSION_RAPPEL ERREUR J-${daysBeforeVal} ${reg.user.email}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    }
+  }
+
+  // ── 4. Envoi batch de toutes les push notifications ────────────────────────
   if (pushJobs.length > 0) {
     details.push(`Push notifications (${pushJobs.length} en batch) :`);
     await flushPushBatch(pushJobs, details);

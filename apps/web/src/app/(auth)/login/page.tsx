@@ -57,7 +57,7 @@ function LoginForm() {
           <div className="text-5xl mb-3">🎲</div>
           <h1 className="text-2xl font-bold text-gray-900">LudiGest</h1>
           <p className="text-gray-500 text-sm mt-1">Ludothèque BRED</p>
-          <p className="text-gray-400 text-xs mt-1">v0.85</p>
+          <p className="text-gray-400 text-xs mt-1">v0.86</p>
         </div>
 
         {resetSuccess && (
@@ -137,8 +137,8 @@ function LoginForm() {
           </Link>
         </p>
         <p className="text-center text-xs text-gray-400 mt-3">
-          <Link href="/comment-ca-marche" className="hover:text-[#C8102E] hover:underline transition-colors">
-            Comment ça marche ?
+          <Link href="/comment-ca-marche" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors" style={{ color: "#6b7280" }}>
+            ❓ Comment ça marche ?
           </Link>
         </p>
       </div>

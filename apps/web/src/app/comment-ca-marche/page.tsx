@@ -105,13 +105,13 @@ export default async function CommentCaMarchePage() {
           <ul style={{ paddingLeft: 22, margin: 0, color: "#78350f", fontSize: 15, lineHeight: 2.2 }}>
             <li><strong style={{ color: "#C8102E" }}>Quand j'emprunte un jeu,</strong> j'utilise l'application LudiGest pour enregistrer mon emprunt — ainsi tout le monde sait quels jeux sont disponibles en temps réel.</li>
             <li><strong style={{ color: "#C8102E" }}>Quand je rends un jeu,</strong> je le marque comme rendu dans l'application, je le range dans l'étagère de la couleur correspondante (gommette sur la boîte), et je m'assure que le jeu est complet et bien rangé dans sa boîte.</li>
+            <li style={{ listStyleType: "none", paddingLeft: 0, color: "#92400e", fontStyle: "italic", fontSize: 14 }}>
+              ℹ️ En cas de problème (pièces manquantes ou détériorées, perte du jeu...) utilisez le bouton <strong>&ldquo;Signaler un problème&rdquo;</strong> sur la fiche du jeu.
+            </li>
             <li>J'emprunte <strong style={{ textDecoration: "underline" }}>5 jeux maximum</strong> en même temps.</li>
             <li>J'emprunte les jeux pour <strong style={{ textDecoration: "underline" }}>4 semaines maximum</strong> — prolongeable 2 fois d'une semaine.</li>
             <li>Je rends les jeux empruntés complets et je les range dans l'armoire correspondante en fonction de sa couleur (gommette).</li>
           </ul>
-          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 16, marginBottom: 0 }}>
-            En cas de problème (pièces manquantes ou détériorées, perte du jeu...) utilisez le bouton <strong>"Signaler un problème"</strong> sur la fiche du jeu.
-          </p>
         </div>
 
         {/* Steps */}

@@ -17,6 +17,8 @@ interface EmailConfig {
   manualOverdueBody: string;
   waitlistSubject: string;
   waitlistBody: string;
+  sessionReminderDays1: number;
+  sessionReminderDays2: number;
 }
 
 interface EmailLog {
@@ -199,6 +201,26 @@ export default function EmailSettingsPage() {
                     🕛 Rappels automatiques à <strong style={{ color: "var(--p-ink)" }}>12h00 UTC</strong> (14h heure France en été)
                   </div>
                 </div>
+                <div className="sm:col-span-2">
+                  <Field label="Rappels automatiques sessions" hint="Nombre de jours avant la session pour envoyer les rappels aux inscrits">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={1} max={30} value={config.sessionReminderDays1}
+                          onChange={(e) => set("sessionReminderDays1", parseInt(e.target.value) || 1)}
+                          className="w-20 rounded-xl px-3 py-2 text-sm focus:outline-none text-center"
+                          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                        <span className="text-sm" style={{ color: "var(--p-ink3)" }}>jours (rappel 1)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={1} max={30} value={config.sessionReminderDays2}
+                          onChange={(e) => set("sessionReminderDays2", parseInt(e.target.value) || 1)}
+                          className="w-20 rounded-xl px-3 py-2 text-sm focus:outline-none text-center"
+                          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                        <span className="text-sm" style={{ color: "var(--p-ink3)" }}>jours (rappel 2)</span>
+                      </div>
+                    </div>
+                  </Field>
+                </div>
               </div>
             </Collapsible>
 
@@ -345,9 +367,14 @@ export default function EmailSettingsPage() {
                       <div key={log.id} className="flex items-center gap-3 py-2.5" style={{ borderTop: i > 0 ? "1px solid var(--p-rule)" : "none" }}>
                         <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ background: LOG_TINTS[log.typeKey] ?? "var(--p-ink3)" }} />
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold truncate" style={{ color: "var(--p-ink)" }}>{log.detail || log.typeLabel}</div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="text-xs font-semibold truncate" style={{ color: "var(--p-ink)" }}>{log.detail || log.typeLabel}</div>
+                            {log.userName && log.typeKey !== "SESSION_INVITE" && (
+                              <span className="text-xs flex-shrink-0" style={{ color: "var(--p-ink3)" }}>→ {log.userName}</span>
+                            )}
+                          </div>
                           <div className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>
-                            {new Date(log.sentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            {new Date(log.sentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                             {" "}·{" "}
                             <span className={`px-1.5 py-0.5 rounded-full text-xs ${TYPE_COLORS[log.typeKey] ?? "bg-gray-100 text-gray-600"}`}>{log.typeLabel}</span>
                           </div>
