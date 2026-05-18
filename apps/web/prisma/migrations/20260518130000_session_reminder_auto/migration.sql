@@ -14,5 +14,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS "SessionReminderLog_sessionId_userId_daysBefor
 CREATE INDEX IF NOT EXISTS "SessionReminderLog_sessionId_idx" ON "SessionReminderLog"("sessionId");
 CREATE INDEX IF NOT EXISTS "SessionReminderLog_userId_idx" ON "SessionReminderLog"("userId");
 
-ALTER TABLE "SessionReminderLog" ADD CONSTRAINT "SessionReminderLog_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "GameSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "SessionReminderLog" ADD CONSTRAINT "SessionReminderLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "SessionReminderLog" ADD CONSTRAINT "SessionReminderLog_sessionId_fkey"
+    FOREIGN KEY ("sessionId") REFERENCES "GameSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "SessionReminderLog" ADD CONSTRAINT "SessionReminderLog_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
