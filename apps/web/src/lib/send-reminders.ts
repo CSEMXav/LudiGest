@@ -1,6 +1,46 @@
 import { prisma } from "@/lib/prisma";
 import { sendReminderEmail, sendOverdueEmail } from "@/lib/email";
 
+/** Envoie une push notification Expo et retourne un message de log. */
+async function sendPush(params: {
+  userId: string;
+  pushToken: string;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+}): Promise<string> {
+  try {
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: params.pushToken,
+        title: params.title,
+        body: params.body,
+        sound: "default",
+        channelId: "default",
+        data: params.data,
+      }),
+    });
+    const json = await res.json();
+    const ticket = json?.data;
+    if (ticket?.status === "error") {
+      const errCode = ticket.details?.error ?? "unknown";
+      console.error(`[push] Erreur Expo pour userId=${params.userId}: ${ticket.message} (${errCode})`);
+      if (errCode === "DeviceNotRegistered") {
+        // Token invalide (réinstallation app, changement de device) → on le supprime
+        await prisma.user.update({ where: { id: params.userId }, data: { pushToken: null } }).catch(() => null);
+        return `PUSH_TOKEN_INVALIDE (supprimé)`;
+      }
+      return `PUSH_ERREUR: ${ticket.message}`;
+    }
+    return `PUSH OK (ticket ${ticket?.id ?? "?"})`;
+  } catch (e) {
+    console.error(`[push] fetch error pour userId=${params.userId}:`, e);
+    return `PUSH_EXCEPTION: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
 export interface ReminderResult {
   sent: number;
   remindersCount: number;
@@ -79,20 +119,16 @@ export async function runSendReminders(): Promise<ReminderResult> {
     } catch { /* ignore */ }
 
     if (loan.user.pushToken) {
-      try {
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: loan.user.pushToken,
-            title: "⏰ Rappel d'emprunt",
-            body: `Pensez à rendre "${loan.game.name}" avant le ${dateStr}`,
-            sound: "default",
-            channelId: "default",
-            data: { type: "loan_reminder", loanId: loan.id },
-          }),
-        });
-      } catch { /* push failure non-bloquant */ }
+      const pushLog = await sendPush({
+        userId: loan.user.id,
+        pushToken: loan.user.pushToken,
+        title: "⏰ Rappel d'emprunt",
+        body: `Pensez à rendre "${loan.game.name}" avant le ${dateStr}`,
+        data: { type: "loan_reminder", loanId: loan.id },
+      });
+      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : ${pushLog}`);
+    } else {
+      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : PUSH_SKIP (pas de token)`);
     }
   }
 
@@ -149,20 +185,16 @@ export async function runSendReminders(): Promise<ReminderResult> {
     } catch { /* ignore */ }
 
     if (loan.user.pushToken) {
-      try {
-        await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: loan.user.pushToken,
-            title: "⚠️ Emprunt en retard",
-            body: `"${loan.game.name}" aurait dû être rendu le ${dateStr}`,
-            sound: "default",
-            channelId: "default",
-            data: { type: "loan_reminder", loanId: loan.id },
-          }),
-        });
-      } catch { /* push failure non-bloquant */ }
+      const pushLog = await sendPush({
+        userId: loan.user.id,
+        pushToken: loan.user.pushToken,
+        title: "⚠️ Emprunt en retard",
+        body: `"${loan.game.name}" aurait dû être rendu le ${dateStr}`,
+        data: { type: "loan_reminder", loanId: loan.id },
+      });
+      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : ${pushLog}`);
+    } else {
+      details.push(`  └─ ${loan.user.name} / ${loan.game.name} : PUSH_SKIP (pas de token)`);
     }
   }
 
