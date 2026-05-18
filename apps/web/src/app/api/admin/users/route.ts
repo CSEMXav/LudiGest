@@ -41,7 +41,9 @@ export async function GET(req: NextRequest) {
       totalLoans: u._count.loans,
       activeLoans: u.loans.filter((l) => !l.returnedAt).length,
       lateReturns: u.loans.filter(
-        (l) => l.returnedAt && new Date(l.returnedAt) > new Date(l.dueAt)
+        (l) => l.returnedAt
+          ? new Date(l.returnedAt) > new Date(l.dueAt)
+          : new Date(l.dueAt) < new Date()
       ).length,
     }))
   );

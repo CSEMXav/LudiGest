@@ -12,6 +12,8 @@ const DEFAULTS = {
   overdueBody: "Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED",
   sessionInviteSubject: '🎲 Invitation session : "{{sessionName}}" — le {{sessionDate}}',
   sessionInviteBody: "Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED",
+  sessionReminderSubject: '⏰ Rappel session : "{{sessionName}}" c\'est bientôt !',
+  sessionReminderBody: "Bonjour {{userName}},\n\nRappel : vous êtes inscrit(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nLudothèque BRED",
   manualOverdueSubject: '⚠ Retard (rappel admin) : veuillez rendre "{{gameName}}"',
   manualOverdueBody: "Bonjour {{userName}},\n\nCe rappel vous est envoyé par l'administrateur de la ludothèque.\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter dès que possible.\n\nLudothèque BRED",
   waitlistSubject: '💡 Quelqu\'un attend "{{gameName}}" — pensez à le rendre !',
@@ -39,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody"];
+  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "sessionReminderSubject", "sessionReminderBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody"];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) data[key] = body[key];

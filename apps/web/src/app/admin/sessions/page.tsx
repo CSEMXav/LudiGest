@@ -161,6 +161,7 @@ export default function AdminSessionsPage() {
   const [viewRegs, setViewRegs] = useState<AdminSession | null>(null);
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [privateExpanded, setPrivateExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   async function load() {
     try {
@@ -217,6 +218,10 @@ export default function AdminSessionsPage() {
     </div>
   );
 
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const upcoming = sessions.filter((s) => new Date(s.date) >= today);
+  const past = sessions.filter((s) => new Date(s.date) < today);
+
   return (
     <div>
       {/* Header */}
@@ -226,7 +231,7 @@ export default function AdminSessionsPage() {
             Sessions ludiques
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--p-ink2)" }}>
-            {sessions.length} session{sessions.length !== 1 ? "s" : ""} à venir
+            {upcoming.length} session{upcoming.length !== 1 ? "s" : ""} à venir
           </p>
         </div>
         <button
@@ -238,17 +243,17 @@ export default function AdminSessionsPage() {
         </button>
       </div>
 
-      {sessions.length === 0 ? (
+      {upcoming.length === 0 ? (
         <div className="rounded-2xl p-12 text-center" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
           <div className="text-4xl mb-3">🎲</div>
-          <p style={{ color: "var(--p-ink3)" }}>Aucune session créée pour l&apos;instant.</p>
+          <p style={{ color: "var(--p-ink3)" }}>Aucune session à venir pour l&apos;instant.</p>
           <button onClick={() => { setEditing(null); setShowForm(true); }} className="mt-4 text-sm font-semibold hover:underline" style={{ color: "var(--p-primary)" }}>
             Créer la première session
           </button>
         </div>
       ) : (
         <div className="space-y-4">
-          {sessions.map((s, idx) => {
+          {upcoming.map((s, idx) => {
             const tint = TINTS[idx % TINTS.length];
             const fillPct = s.maxParticipants ? Math.round((s.registrationCount / s.maxParticipants) * 100) : null;
             return (
@@ -307,8 +312,52 @@ export default function AdminSessionsPage() {
         </div>
       )}
 
+      {/* Historique des sessions */}
+      <div className="mt-6">
+        <button
+          onClick={() => setHistoryExpanded((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-colors"
+          style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm">📂</span>
+            <span className="font-display font-bold text-base" style={{ color: "var(--p-ink)" }}>Historique des sessions</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--p-bg-alt)", color: "var(--p-ink2)" }}>{past.length}</span>
+          </div>
+          <span className="text-sm" style={{ color: "var(--p-ink3)" }}>{historyExpanded ? "▲" : "▼"}</span>
+        </button>
+
+        {historyExpanded && (
+          <div className="mt-3 space-y-3">
+            {past.length === 0 ? (
+              <p className="text-center text-sm py-6" style={{ color: "var(--p-ink3)" }}>Aucune session passée.</p>
+            ) : (
+              past.map((s) => (
+                <div key={s.id} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
+                    <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
+                      👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
+                    <span>📅 {formatDate(s.date)}</span>
+                    <span>🕐 {s.startTime}</span>
+                    <span>📍 {s.location}</span>
+                  </div>
+                  <div className="flex gap-2 mt-3 pt-3 justify-end" style={{ borderTop: "1px solid var(--p-rule)" }}>
+                    <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                    <button onClick={() => deleteSession(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-primary)" }}>🗑 Supprimer</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Sessions privées */}
-      <div className="mt-8">
+      <div className="mt-6">
         <button
           onClick={() => setPrivateExpanded((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-colors"

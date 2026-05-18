@@ -1,0 +1,2 @@
+ALTER TABLE "EmailConfig" ADD COLUMN IF NOT EXISTS "sessionReminderSubject" TEXT NOT NULL DEFAULT '⏰ Rappel session : "{{sessionName}}" c''est bientôt !';
+ALTER TABLE "EmailConfig" ADD COLUMN IF NOT EXISTS "sessionReminderBody" TEXT NOT NULL DEFAULT 'Bonjour {{userName}},\n\nRappel : vous êtes inscrit(e) à la session ludique "{{sessionName}}".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nLudothèque BRED';

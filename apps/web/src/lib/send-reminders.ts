@@ -129,7 +129,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
     } catch { /* table absente — envoyer quand même */ }
 
     const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-    await sendReminderEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt);
+    await sendReminderEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
     sent++; remindersCount++;
     details.push(`RAPPEL envoyé → ${loan.user.email} (${loan.game.name}, échéance ${dateStr})`);
 
@@ -195,7 +195,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
     }
 
     const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-    await sendOverdueEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt);
+    await sendOverdueEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
     sent++; overdueCount++;
     details.push(`RETARD envoyé → ${loan.user.email} (${loan.game.name}, dû le ${dateStr})`);
 

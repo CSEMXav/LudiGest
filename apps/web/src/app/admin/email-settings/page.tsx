@@ -11,6 +11,8 @@ interface EmailConfig {
   overdueBody: string;
   sessionInviteSubject: string;
   sessionInviteBody: string;
+  sessionReminderSubject: string;
+  sessionReminderBody: string;
   manualOverdueSubject: string;
   manualOverdueBody: string;
   waitlistSubject: string;
@@ -30,6 +32,7 @@ interface EmailLog {
 
 const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}";
 const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
+const SESSION_REMINDER_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{sessionUrl}}, {{siteUrl}}";
 
 const LOG_TINTS: Record<string, string> = {
   reminder:        "var(--p-ocre)",
@@ -242,6 +245,21 @@ export default function EmailSettingsPage() {
               </div>
             </Collapsible>
 
+            <Collapsible title="Rappel de session (aux inscrits)" icon="⏰">
+              <div className="space-y-3 mt-2">
+                <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé aux inscrits avant une session.</p>
+                <Field label="Objet" hint={SESSION_REMINDER_VARS_HINT}>
+                  <input type="text" value={config.sessionReminderSubject ?? ""} onChange={(e) => set("sessionReminderSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.sessionReminderBody ?? ""} onChange={(e) => set("sessionReminderBody", e.target.value)} rows={4}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+
             <Collapsible title="Retard manuel (admin)" icon="🔔">
               <div className="space-y-3 mt-2">
                 <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé quand un admin clique sur le bouton &quot;Retard&quot; d&apos;un emprunt.</p>
@@ -291,6 +309,8 @@ export default function EmailSettingsPage() {
                 ["{{registerUrl}}", "Lien d'inscription"],
                 ["{{inviterName}}", "Nom de l'invitant (sessions privées)"],
                 ["{{gameUrl}}", "Lien vers la fiche du jeu"],
+                ["{{siteUrl}}", "Lien vers le site LudiGest"],
+                ["{{sessionUrl}}", "Lien vers la session"],
               ].map(([v, d]) => (
                 <li key={v} className="flex items-center gap-2 text-xs">
                   <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: "var(--p-bg)", color: "var(--p-primary)" }}>{v}</code>

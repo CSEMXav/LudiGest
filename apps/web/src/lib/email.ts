@@ -3,15 +3,26 @@ import { prisma } from "@/lib/prisma";
 
 const FROM = process.env.RESEND_FROM ?? "LudiGest <onboarding@resend.dev>";
 
+function getSiteUrl() {
+  return process.env.NEXTAUTH_URL ?? "https://ludigest.vercel.app";
+}
+
 function applyTemplate(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce((t, [k, v]) => t.replaceAll(`{{${k}}}`, v), template);
 }
 
-function templateToHtml(body: string): string {
+function templateToHtml(body: string, ctaUrl?: string, ctaLabel?: string): string {
+  const siteUrl = getSiteUrl();
+  const ctaBlock = ctaUrl
+    ? `<a href="${ctaUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">${ctaLabel ?? "Ouvrir LudiGest"}</a>`
+    : "";
   return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
     <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
     <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
     ${body.split("\n").map((l) => l.trim() ? `<p style="margin:4px 0">${l}</p>` : "<br>").join("")}
+    ${ctaBlock}
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+    <p style="color:#9ca3af;font-size:12px">🎲 <a href="${siteUrl}" style="color:#9ca3af">LudiGest — Ludothèque BRED</a></p>
   </div>`;
 }
 
@@ -50,8 +61,9 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   });
 }
 
-export async function sendReminderEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {
+export async function sendReminderEmail(to: string, name: string, gameName: string, dueAt: Date, gameId?: string): Promise<void> {
   const dateStr = dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const gameUrl = gameId ? `${getSiteUrl()}/games/${gameId}` : getSiteUrl();
 
   const resend = getResend();
   if (!resend) {
@@ -69,6 +81,9 @@ export async function sendReminderEmail(to: string, name: string, gameName: stri
         <p>Bonjour <strong>${name}</strong>,</p>
         <p>Votre emprunt du jeu <strong>"${gameName}"</strong> arrive à échéance le <strong>${dateStr}</strong>.</p>
         <p>Pensez à le rendre à la ludothèque. Vous pouvez aussi le prolonger depuis l'application si vous en avez encore besoin.</p>
+        <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Voir mon emprunt
+        </a>
         <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
       </div>
     `,
@@ -177,11 +192,12 @@ export async function sendConfiguredSessionInviteEmail(
   const defaultSubject = `🎲 Invitation session : "${vars.sessionName}" — le ${vars.sessionDate}`;
   const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
 
+  const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.sessionInviteSubject
-    ? applyTemplate(config.sessionInviteSubject, vars as Record<string, string>)
+    ? applyTemplate(config.sessionInviteSubject, allVars)
     : defaultSubject;
   const bodyText = config?.sessionInviteBody
-    ? applyTemplate(config.sessionInviteBody, vars as Record<string, string>)
+    ? applyTemplate(config.sessionInviteBody, allVars)
     : defaultBody;
 
   const resend = getResend();
@@ -190,7 +206,7 @@ export async function sendConfiguredSessionInviteEmail(
     return;
   }
 
-  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, vars.registerUrl, "Je m'inscris") });
 }
 
 export async function sendGameReportEmail(to: string, adminName: string, reporterName: string, gameName: string, gameUrl: string, reportMessage: string): Promise<void> {
@@ -221,8 +237,9 @@ export async function sendGameReportEmail(to: string, adminName: string, reporte
   });
 }
 
-export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date): Promise<void> {
+export async function sendOverdueEmail(to: string, name: string, gameName: string, dueAt: Date, gameId?: string): Promise<void> {
   const dateStr = dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const gameUrl = gameId ? `${getSiteUrl()}/games/${gameId}` : getSiteUrl();
   const resend = getResend();
   if (!resend) {
     console.log(`\n📧 [DEV] Retard pour ${to} : emprunt de "${gameName}" dû le ${dateStr}\n`);
@@ -238,6 +255,9 @@ export async function sendOverdueEmail(to: string, name: string, gameName: strin
         <p>Bonjour <strong>${name}</strong>,</p>
         <p>Le jeu <strong>"${gameName}"</strong> aurait dû être rendu le <strong>${dateStr}</strong>.</p>
         <p>Merci de le rapporter à la ludothèque dès que possible.</p>
+        <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
+          Voir le jeu
+        </a>
         <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
       </div>
     `,
@@ -303,11 +323,12 @@ export async function sendGameWantedEmail(to: string, borrowerName: string, game
 
 export async function sendConfiguredManualOverdueEmail(to: string, vars: { userName: string; gameName: string; dueAt: string }): Promise<void> {
   const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.manualOverdueSubject
-    ? applyTemplate(config.manualOverdueSubject, vars as Record<string, string>)
+    ? applyTemplate(config.manualOverdueSubject, allVars)
     : `⚠ Retard (rappel admin) : veuillez rendre "${vars.gameName}"`;
   const bodyText = config?.manualOverdueBody
-    ? applyTemplate(config.manualOverdueBody, vars as Record<string, string>)
+    ? applyTemplate(config.manualOverdueBody, allVars)
     : `Bonjour ${vars.userName},\n\nCe rappel vous est envoyé par l'administrateur.\n\nLe jeu "${vars.gameName}" aurait dû être rendu le ${vars.dueAt}.\n\nLudothèque BRED`;
 
   const resend = getResend();
@@ -317,16 +338,38 @@ export async function sendConfiguredManualOverdueEmail(to: string, vars: { userN
 
 export async function sendConfiguredWaitlistEmail(to: string, vars: { userName: string; gameName: string; gameUrl: string }): Promise<void> {
   const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.waitlistSubject
-    ? applyTemplate(config.waitlistSubject, vars as Record<string, string>)
+    ? applyTemplate(config.waitlistSubject, allVars)
     : `💡 Quelqu'un attend "${vars.gameName}" — pensez à le rendre !`;
   const bodyText = config?.waitlistBody
-    ? applyTemplate(config.waitlistBody, vars as Record<string, string>)
+    ? applyTemplate(config.waitlistBody, allVars)
     : `Bonjour ${vars.userName},\n\nUn(e) collègue attend "${vars.gameName}".\n\nPensez à le ramener à la ludothèque !\n\n${vars.gameUrl}\n\nLudothèque BRED`;
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Waitlist pour ${to} : "${vars.gameName}"\n`); return; }
   await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
+}
+
+export async function sendConfiguredSessionReminderEmail(
+  to: string,
+  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; sessionUrl: string }
+): Promise<void> {
+  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const defaultSubject = `⏰ Rappel session : "${vars.sessionName}" c'est bientôt !`;
+  const defaultBody = `Bonjour ${vars.userName},\n\nRappel : vous êtes inscrit(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}\n\nLudothèque BRED`;
+
+  const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
+  const subject = config?.sessionReminderSubject
+    ? applyTemplate(config.sessionReminderSubject, allVars)
+    : defaultSubject;
+  const bodyText = config?.sessionReminderBody
+    ? applyTemplate(config.sessionReminderBody, allVars)
+    : defaultBody;
+
+  const resend = getResend();
+  if (!resend) { console.log(`[DEV] Rappel session pour ${to}: ${vars.sessionName}`); return; }
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, vars.sessionUrl, "Voir la session") });
 }
 
 export async function sendSessionUpdateEmail(
