@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const DEFAULTS = {
   reminderDaysBefore: 2,
-  overdueFrequencyDays: 3,
+  overdueFrequencyDays: 1,
   reminderSubject: 'Rappel : rendez "{{gameName}}" avant le {{dueAt}}',
   reminderBody: "Bonjour {{userName}},\n\nVotre emprunt du jeu \"{{gameName}}\" arrive à échéance le {{dueAt}}.\nPensez à le rendre à la ludothèque ou à le prolonger depuis l'application.\n\nLudothèque BRED",
   overdueSubject: '⚠ Retard : veuillez rendre "{{gameName}}"',

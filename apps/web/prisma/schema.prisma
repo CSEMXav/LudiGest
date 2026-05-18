@@ -117,7 +117,7 @@ model LoanReminder {
 model EmailConfig {
   id                   String   @id @default("singleton")
   reminderDaysBefore   Int      @default(2)
-  overdueFrequencyDays Int      @default(3)
+  overdueFrequencyDays Int      @default(1)
   reminderSubject      String   @default("Rappel : rendez \"{{gameName}}\" avant le {{dueAt}}")
   reminderBody         String   @default("Bonjour {{userName}},\n\nVotre emprunt du jeu \"{{gameName}}\" arrive à échéance le {{dueAt}}.\nPensez à le rendre à la ludothèque ou à le prolonger depuis l'application.\n\nLudothèque BRED")
   overdueSubject       String   @default("⚠ Retard : veuillez rendre \"{{gameName}}\"")

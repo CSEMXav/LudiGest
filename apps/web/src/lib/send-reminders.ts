@@ -81,7 +81,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
     .catch(() => null);
 
   const reminderDaysBefore = config?.reminderDaysBefore ?? 2;
-  const overdueFrequencyDays = config?.overdueFrequencyDays ?? 3;
+  const overdueFrequencyDays = config?.overdueFrequencyDays ?? 1;
 
   const now = new Date();
   let remindersCount = 0;
