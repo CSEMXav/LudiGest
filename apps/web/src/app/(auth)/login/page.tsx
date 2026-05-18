@@ -57,7 +57,7 @@ function LoginForm() {
           <div className="text-5xl mb-3">🎲</div>
           <h1 className="text-2xl font-bold text-gray-900">LudiGest</h1>
           <p className="text-gray-500 text-sm mt-1">Ludothèque BRED</p>
-          <p className="text-gray-400 text-xs mt-1">v0.86</p>
+          <p className="text-gray-400 text-xs mt-1">v0.87</p>
         </div>
 
         {resetSuccess && (
@@ -136,11 +136,11 @@ function LoginForm() {
             Créer un compte
           </Link>
         </p>
-        <p className="text-center text-xs text-gray-400 mt-3">
-          <Link href="/comment-ca-marche" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors" style={{ color: "#6b7280" }}>
+        <div className="mt-4 text-center">
+          <Link href="/comment-ca-marche" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ color: "#6b7280", border: "1.5px solid #e5e7eb", background: "#fff" }}>
             ❓ Comment ça marche ?
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

@@ -124,6 +124,17 @@ export function Navbar() {
 
         {session && (
           <div className="flex items-center gap-3">
+            {/* Comment ça marche button */}
+            <Link
+              href="/comment-ca-marche"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors"
+              style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "var(--p-bg)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#fff"; }}
+            >
+              ❓ Comment ça marche
+            </Link>
+
             {/* Location pill */}
             {location && (
               <div
@@ -188,14 +199,6 @@ export function Navbar() {
                     style={{ color: "var(--p-ink2)" }}
                   >
                     Mon compte
-                  </Link>
-                  <Link
-                    href="/comment-ca-marche"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-3 text-sm transition-colors"
-                    style={{ color: "var(--p-ink2)", borderTop: "1px solid var(--p-rule)" }}
-                  >
-                    ❓ Comment ça marche
                   </Link>
                   <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
@@ -282,9 +285,9 @@ export function Navbar() {
                 Administration
               </Link>
             )}
-            <Link href="/comment-ca-marche" className="block px-4 py-2.5 rounded-xl text-sm font-medium"
-              style={{ color: "var(--p-ink2)" }}>
-              ❓ Comment ça marche
+            <Link href="/comment-ca-marche" className="block px-4 py-2.5 rounded-xl text-sm font-medium text-center"
+              style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff", marginTop: 4 }}>
+              ❓ Comment ça marche ?
             </Link>
           </nav>
           <div className="px-4 py-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
