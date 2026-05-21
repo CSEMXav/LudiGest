@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GameSessionDTO, GameSessionRegistrationDTO } from "@ludigest/types";
 
 const TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
@@ -17,22 +17,33 @@ function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onC
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
-  async function load() {
-    const res = await fetch(`/api/admin/sessions/${session.id}/registrations`);
-    const data = await res.json();
-    setRegs(Array.isArray(data) ? data : []);
-    setLoading(false);
-  }
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${session.id}/registrations`);
+      const data = await res.json();
+      setRegs(Array.isArray(data) ? data : []);
+    } catch {
+      setMsg("Erreur de chargement.");
+    } finally {
+      setLoading(false);
+    }
+  }, [session.id]);
 
-  useEffect(() => { load(); }, [session.id]);
+  useEffect(() => { load(); }, [load]);
 
   async function remove(id: string) {
-    const res = await fetch(`/api/admin/sessions/${session.id}/registrations`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ registrationId: id }),
-    });
-    if (res.ok) { setMsg("Inscription supprimée."); load(); }
+    try {
+      const res = await fetch(`/api/admin/sessions/${session.id}/registrations`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrationId: id }),
+      });
+      if (res.ok) { setMsg("Inscription supprimée."); load(); }
+      else { setMsg("Erreur lors de la suppression."); }
+    } catch {
+      setMsg("Erreur réseau.");
+    }
   }
 
   return (
@@ -151,6 +162,32 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
 }
 
 type AdminSession = GameSessionDTO & { createdByName?: string | null };
+type ConfirmTarget = { id: string; action: "delete" | "invite" | "remind"; label: string } | null;
+
+function ConfirmDialog({ target, onConfirm, onCancel }: { target: NonNullable<ConfirmTarget>; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div
+      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm mt-2"
+      style={{ background: "var(--p-bg)", border: "1px solid var(--p-rule)" }}
+    >
+      <span className="flex-1 font-medium" style={{ color: "var(--p-ink)" }}>{target.label}</span>
+      <button
+        onClick={onCancel}
+        className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+        style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}
+      >
+        Non
+      </button>
+      <button
+        onClick={onConfirm}
+        className="px-3 py-1 rounded-full text-xs font-bold text-white transition-colors"
+        style={{ background: "var(--p-primary)" }}
+      >
+        Oui
+      </button>
+    </div>
+  );
+}
 
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<AdminSession[]>([]);
@@ -162,6 +199,7 @@ export default function AdminSessionsPage() {
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [privateExpanded, setPrivateExpanded] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget>(null);
 
   async function load() {
     try {
@@ -190,26 +228,48 @@ export default function AdminSessionsPage() {
   }
 
   async function deleteSession(s: AdminSession) {
-    if (!confirm(`Supprimer "${s.name}" ? Cette action est irréversible.`)) return;
-    const res = await fetch(`/api/admin/sessions/${s.id}`, { method: "DELETE" });
-    if (res.ok) load();
+    try {
+      const res = await fetch(`/api/admin/sessions/${s.id}`, { method: "DELETE" });
+      if (res.ok) load();
+      else { flash(s.id, "Erreur lors de la suppression."); }
+    } catch {
+      flash(s.id, "Erreur réseau.");
+    }
   }
 
   async function sendInvite(s: AdminSession) {
-    if (!confirm(`Envoyer une invitation à TOUS les membres actifs pour "${s.name}" ?`)) return;
     flash(s.id, "Envoi en cours…");
-    const res = await fetch(`/api/admin/sessions/${s.id}/invite`, { method: "POST" });
-    if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} email(s), ${d.pushSent} push envoyés`); }
-    else { flash(s.id, "Erreur lors de l'envoi."); }
+    try {
+      const res = await fetch(`/api/admin/sessions/${s.id}/invite`, { method: "POST" });
+      if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} email(s), ${d.pushSent} push envoyés`); }
+      else { flash(s.id, "Erreur lors de l'envoi."); }
+    } catch {
+      flash(s.id, "Erreur réseau.");
+    }
   }
 
   async function sendReminder(s: AdminSession) {
     if (s.registrationCount === 0) { flash(s.id, "Aucun inscrit."); return; }
-    if (!confirm(`Envoyer un rappel aux ${s.registrationCount} inscrit(s) ?`)) return;
     flash(s.id, "Envoi en cours…");
-    const res = await fetch(`/api/admin/sessions/${s.id}/remind`, { method: "POST" });
-    if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} rappel(s) envoyé(s)`); }
-    else { flash(s.id, "Erreur lors de l'envoi."); }
+    try {
+      const res = await fetch(`/api/admin/sessions/${s.id}/remind`, { method: "POST" });
+      if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} rappel(s) envoyé(s)`); }
+      else { flash(s.id, "Erreur lors de l'envoi."); }
+    } catch {
+      flash(s.id, "Erreur réseau.");
+    }
+  }
+
+  function handleConfirmAction() {
+    if (!confirmTarget) return;
+    const { id, action } = confirmTarget;
+    setConfirmTarget(null);
+    const allSessions = [...sessions, ...privateSessions];
+    const s = allSessions.find((x) => x.id === id);
+    if (!s) return;
+    if (action === "delete") deleteSession(s);
+    else if (action === "invite") sendInvite(s);
+    else if (action === "remind") sendReminder(s);
   }
 
   if (loading) return (
@@ -256,6 +316,7 @@ export default function AdminSessionsPage() {
           {upcoming.map((s, idx) => {
             const tint = TINTS[idx % TINTS.length];
             const fillPct = s.maxParticipants ? Math.round((s.registrationCount / s.maxParticipants) * 100) : null;
+            const isConfirming = confirmTarget?.id === s.id;
             return (
               <div key={s.id} className="rounded-2xl" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
                 <div className="flex gap-5 p-5">
@@ -286,25 +347,56 @@ export default function AdminSessionsPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="flex flex-wrap items-center gap-2 px-5 pb-5" style={{ paddingTop: 12, borderTop: "1px solid var(--p-rule)" }}>
-                  {actionMsg[s.id] && <span className="text-xs font-semibold mr-1" style={{ color: "var(--p-vert)" }}>{actionMsg[s.id]}</span>}
+                <div className="px-5 pb-5" style={{ paddingTop: 12, borderTop: "1px solid var(--p-rule)" }}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {actionMsg[s.id] && <span className="text-xs font-semibold mr-1" style={{ color: "var(--p-vert)" }}>{actionMsg[s.id]}</span>}
 
-                  {fillPct !== null && (
-                    <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--p-bg)" }}>
-                        <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tint }} />
+                    {fillPct !== null && (
+                      <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--p-bg)" }}>
+                          <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: tint }} />
+                        </div>
+                        <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--p-ink3)" }}>{fillPct} %</span>
                       </div>
-                      <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--p-ink3)" }}>{fillPct} %</span>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="flex flex-wrap gap-2 ml-auto">
-                    <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>👥 Inscrits</button>
-                    <button onClick={() => { setEditing(s); setShowForm(true); }} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>✏️ Modifier</button>
-                    <button onClick={() => sendInvite(s)} className="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-colors" style={{ background: "var(--p-bleu)" }}>📧 Inviter tous</button>
-                    <button onClick={() => sendReminder(s)} className="px-3 py-1.5 rounded-full text-xs font-bold transition-colors" style={{ background: "var(--p-ocre)", color: "var(--p-ink)" }}>⏰ Rappel</button>
-                    <button onClick={() => deleteSession(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-primary)" }}>🗑</button>
+                    <div className="flex flex-wrap gap-2 ml-auto">
+                      <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                      <button onClick={() => { setEditing(s); setShowForm(true); }} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>✏️ Modifier</button>
+                      <button
+                        onClick={() => { setConfirmTarget({ id: s.id, action: "invite", label: `Envoyer une invitation à TOUS les membres actifs pour "${s.name}" ?` }); }}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold text-white transition-colors"
+                        style={{ background: "var(--p-bleu)" }}
+                      >
+                        📧 Inviter tous
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (s.registrationCount === 0) { flash(s.id, "Aucun inscrit."); return; }
+                          setConfirmTarget({ id: s.id, action: "remind", label: `Envoyer un rappel aux ${s.registrationCount} inscrit(s) ?` });
+                        }}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
+                        style={{ background: "var(--p-ocre)", color: "var(--p-ink)" }}
+                      >
+                        ⏰ Rappel
+                      </button>
+                      <button
+                        onClick={() => { setConfirmTarget({ id: s.id, action: "delete", label: `Supprimer "${s.name}" ? Cette action est irréversible.` }); }}
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+                        style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-primary)" }}
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </div>
+
+                  {isConfirming && confirmTarget && (
+                    <ConfirmDialog
+                      target={confirmTarget}
+                      onConfirm={handleConfirmAction}
+                      onCancel={() => setConfirmTarget(null)}
+                    />
+                  )}
                 </div>
               </div>
             );
@@ -332,25 +424,43 @@ export default function AdminSessionsPage() {
             {past.length === 0 ? (
               <p className="text-center text-sm py-6" style={{ color: "var(--p-ink3)" }}>Aucune session passée.</p>
             ) : (
-              past.map((s) => (
-                <div key={s.id} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
-                    <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
-                      👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
-                    </span>
+              past.map((s) => {
+                const isConfirming = confirmTarget?.id === s.id;
+                return (
+                  <div key={s.id} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
+                      <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
+                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
+                      <span>📅 {formatDate(s.date)}</span>
+                      <span>🕐 {s.startTime}</span>
+                      <span>📍 {s.location}</span>
+                    </div>
+                    <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                        <button
+                          onClick={() => { setConfirmTarget({ id: s.id, action: "delete", label: `Supprimer "${s.name}" ? Cette action est irréversible.` }); }}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                          style={{ border: "1px solid var(--p-rule)", color: "var(--p-primary)" }}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                      {isConfirming && confirmTarget && (
+                        <ConfirmDialog
+                          target={confirmTarget}
+                          onConfirm={handleConfirmAction}
+                          onCancel={() => setConfirmTarget(null)}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
-                    <span>📅 {formatDate(s.date)}</span>
-                    <span>🕐 {s.startTime}</span>
-                    <span>📍 {s.location}</span>
-                  </div>
-                  <div className="flex gap-2 mt-3 pt-3 justify-end" style={{ borderTop: "1px solid var(--p-rule)" }}>
-                    <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
-                    <button onClick={() => deleteSession(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-primary)" }}>🗑 Supprimer</button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -376,29 +486,47 @@ export default function AdminSessionsPage() {
             {privateSessions.length === 0 ? (
               <p className="text-center text-sm py-6" style={{ color: "var(--p-ink3)" }}>Aucune session privée.</p>
             ) : (
-              privateSessions.map((s) => (
-                <div key={s.id} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
-                  <div className="flex items-start justify-between gap-3 mb-1">
-                    <div>
-                      <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
-                      {s.createdByName && <p className="text-xs mt-0.5" style={{ color: "var(--p-bleu)" }}>par {s.createdByName}</p>}
+              privateSessions.map((s) => {
+                const isConfirming = confirmTarget?.id === s.id;
+                return (
+                  <div key={s.id} className="rounded-2xl p-5" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <div>
+                        <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
+                        {s.createdByName && <p className="text-xs mt-0.5" style={{ color: "var(--p-bleu)" }}>par {s.createdByName}</p>}
+                      </div>
+                      <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
+                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                      </span>
                     </div>
-                    <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
-                      👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
-                    </span>
+                    <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
+                      <span>📅 {formatDate(s.date)}</span>
+                      <span>🕐 {s.startTime}</span>
+                      <span>📍 {s.location}</span>
+                    </div>
+                    {s.info && <p className="text-xs mt-2 leading-relaxed" style={{ color: "var(--p-ink2)" }}>{s.info}</p>}
+                    <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                        <button
+                          onClick={() => { setConfirmTarget({ id: s.id, action: "delete", label: `Supprimer "${s.name}" ? Cette action est irréversible.` }); }}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                          style={{ border: "1px solid var(--p-rule)", color: "var(--p-primary)" }}
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+                      {isConfirming && confirmTarget && (
+                        <ConfirmDialog
+                          target={confirmTarget}
+                          onConfirm={handleConfirmAction}
+                          onCancel={() => setConfirmTarget(null)}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
-                    <span>📅 {formatDate(s.date)}</span>
-                    <span>🕐 {s.startTime}</span>
-                    <span>📍 {s.location}</span>
-                  </div>
-                  {s.info && <p className="text-xs mt-2 leading-relaxed" style={{ color: "var(--p-ink2)" }}>{s.info}</p>}
-                  <div className="flex gap-2 mt-3 pt-3 justify-end" style={{ borderTop: "1px solid var(--p-rule)" }}>
-                    <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
-                    <button onClick={() => deleteSession(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-primary)" }}>🗑 Supprimer</button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

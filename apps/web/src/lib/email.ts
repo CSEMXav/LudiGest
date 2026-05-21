@@ -201,9 +201,12 @@ export async function sendSessionReminderEmail(to: string, name: string, session
 
 export async function sendConfiguredSessionInviteEmail(
   to: string,
-  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; registerUrl: string; inviterName?: string }
+  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; registerUrl: string; inviterName?: string },
+  preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
 ): Promise<void> {
-  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const config = preloadedConfig !== undefined
+    ? preloadedConfig
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const defaultSubject = `🎲 Invitation session : "${vars.sessionName}" — le ${vars.sessionDate}`;
   const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
 
@@ -336,8 +339,14 @@ export async function sendGameWantedEmail(to: string, borrowerName: string, game
   });
 }
 
-export async function sendConfiguredManualOverdueEmail(to: string, vars: { userName: string; gameName: string; dueAt: string }): Promise<void> {
-  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+export async function sendConfiguredManualOverdueEmail(
+  to: string,
+  vars: { userName: string; gameName: string; dueAt: string },
+  preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
+): Promise<void> {
+  const config = preloadedConfig !== undefined
+    ? preloadedConfig
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.manualOverdueSubject
     ? applyTemplate(config.manualOverdueSubject, allVars)
@@ -351,8 +360,14 @@ export async function sendConfiguredManualOverdueEmail(to: string, vars: { userN
   await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText) });
 }
 
-export async function sendConfiguredWaitlistEmail(to: string, vars: { userName: string; gameName: string; gameUrl: string }): Promise<void> {
-  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+export async function sendConfiguredWaitlistEmail(
+  to: string,
+  vars: { userName: string; gameName: string; gameUrl: string },
+  preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
+): Promise<void> {
+  const config = preloadedConfig !== undefined
+    ? preloadedConfig
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.waitlistSubject
     ? applyTemplate(config.waitlistSubject, allVars)
@@ -368,9 +383,12 @@ export async function sendConfiguredWaitlistEmail(to: string, vars: { userName: 
 
 export async function sendConfiguredSessionReminderEmail(
   to: string,
-  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; sessionUrl: string }
+  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; sessionUrl: string },
+  preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
 ): Promise<void> {
-  const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const config = preloadedConfig !== undefined
+    ? preloadedConfig
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const defaultSubject = `⏰ Rappel session : "${vars.sessionName}" c'est bientôt !`;
   const defaultBody = `Bonjour ${vars.userName},\n\nRappel : vous êtes inscrit(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}\n\nLudothèque BRED`;
 

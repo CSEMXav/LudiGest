@@ -32,7 +32,7 @@ export async function GET() {
     const config = await prisma.emailConfig.findUnique({ where: { id: "singleton" } });
     return NextResponse.json(config ?? { id: "singleton", ...DEFAULTS });
   } catch {
-    return NextResponse.json({ id: "singleton", ...DEFAULTS });
+    return NextResponse.json({ error: "Base de données indisponible." }, { status: 503 });
   }
 }
 
@@ -47,6 +47,18 @@ export async function PATCH(req: NextRequest) {
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) data[key] = body[key];
+  }
+
+  const numericFields = ["reminderDaysBefore", "overdueFrequencyDays", "sessionReminderDays1", "sessionReminderDays2"];
+  for (const key of numericFields) {
+    if (key in data) {
+      const n = Number(data[key]);
+      if (!Number.isInteger(n) || n < 1 || n > 365) {
+        delete data[key]; // silently drop invalid values
+      } else {
+        data[key] = n;
+      }
+    }
   }
 
   try {

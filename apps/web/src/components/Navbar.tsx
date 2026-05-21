@@ -41,14 +41,20 @@ export function Navbar() {
 
   async function switchLocation(loc: string) {
     setSwitching(true);
-    await fetch("/api/user/location", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ location: loc }),
-    });
-    await update({ location: loc });
-    setSwitching(false);
-    setMenuOpen(false);
+    try {
+      const res = await fetch("/api/user/location", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: loc }),
+      });
+      if (!res.ok) throw new Error("Failed to update location");
+      await update({ location: loc });
+    } catch {
+      // silently ignore — UI stays on old location
+    } finally {
+      setSwitching(false);
+      setMenuOpen(false);
+    }
   }
 
   function isActive(href: string, id: string): boolean {
@@ -56,7 +62,7 @@ export function Navbar() {
     return pathname.startsWith(href);
   }
 
-  const location = (session?.user as { location?: string })?.location ?? "";
+  const location = session?.user?.location ?? "";
   const initials = getInitials(session?.user?.name);
 
   return (

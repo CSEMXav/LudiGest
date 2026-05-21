@@ -109,32 +109,50 @@ export async function runSendReminders(): Promise<ReminderResult> {
     },
   });
 
-  for (const loan of upcomingLoans) {
-    try {
-      // Skip uniquement si un rappel automatique (type "reminder") a déjà été envoyé
-      // dans la même fenêtre (= les 48h précédant l'échéance), pour ne pas envoyer deux fois le même jour
-      const existing = await prisma.loanReminder.findFirst({
-        where: { loanId: loan.id, type: "reminder" },
+  // FIX #1 — précharge tous les loanReminders "reminder" en une seule requête
+  const upcomingLoanIds = upcomingLoans.map((l) => l.id);
+  const upcomingRemindersRaw = upcomingLoanIds.length > 0
+    ? await prisma.loanReminder.findMany({
+        where: { loanId: { in: upcomingLoanIds }, type: "reminder" },
         orderBy: { sentAt: "desc" },
-      });
-      if (existing) {
-        // Vérifie que le rappel a bien été envoyé dans la fenêtre actuelle (pas d'un cycle précédent)
-        const hoursSinceReminder = (now.getTime() - existing.sentAt.getTime()) / (1000 * 60 * 60);
-        if (hoursSinceReminder < 22) {
-          skipped++;
-          details.push(`SKIP rappel ${loan.user.name} / ${loan.game.name} (déjà envoyé il y a ${hoursSinceReminder.toFixed(1)}h)`);
-          continue;
-        }
+      }).catch(() => [] as { loanId: string; sentAt: Date }[])
+    : [];
+  // Map loanId → dernier rappel (les résultats sont triés par sentAt desc, le premier est le plus récent)
+  const upcomingReminderMap = new Map<string, { loanId: string; sentAt: Date }>();
+  for (const r of upcomingRemindersRaw) {
+    if (!upcomingReminderMap.has(r.loanId)) {
+      upcomingReminderMap.set(r.loanId, r);
+    }
+  }
+
+  for (const loan of upcomingLoans) {
+    const existing = upcomingReminderMap.get(loan.id);
+    if (existing) {
+      // Vérifie que le rappel a bien été envoyé dans la fenêtre actuelle (pas d'un cycle précédent)
+      const hoursSinceReminder = (now.getTime() - existing.sentAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceReminder < 22) {
+        skipped++;
+        details.push(`SKIP rappel ${loan.user.name} / ${loan.game.name} (déjà envoyé il y a ${hoursSinceReminder.toFixed(1)}h)`);
+        continue;
       }
-    } catch { /* table absente — envoyer quand même */ }
+    }
 
     const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+    // FIX #4 — crée le loanReminder AVANT l'email pour garantir l'idempotence
+    try {
+      await prisma.loanReminder.create({ data: { loanId: loan.id, type: "reminder" } });
+    } catch (err) {
+      details.push(`SKIP rappel ${loan.user.name} / ${loan.game.name} (échec création loanReminder: ${err instanceof Error ? err.message : String(err)})`);
+      skipped++;
+      continue;
+    }
+
     await sendReminderEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
     sent++; remindersCount++;
     details.push(`RAPPEL envoyé → ${loan.user.email} (${loan.game.name}, échéance ${dateStr})`);
 
     try {
-      await prisma.loanReminder.create({ data: { loanId: loan.id, type: "reminder" } });
       await prisma.userNotification.create({
         data: {
           userId: loan.user.id,
@@ -168,25 +186,36 @@ export async function runSendReminders(): Promise<ReminderResult> {
     },
   });
 
+  // FIX #2 — précharge tous les loanReminders "overdue/overdue_manual" en une seule requête
+  const overdueLoanIds = overdueLoans.map((l) => l.id);
+  const overdueRemindersRaw = overdueLoanIds.length > 0
+    ? await prisma.loanReminder.findMany({
+        where: { loanId: { in: overdueLoanIds }, type: { in: ["overdue", "overdue_manual"] } },
+        orderBy: { sentAt: "desc" },
+      }).catch(() => [] as { loanId: string; sentAt: Date }[])
+    : [];
+  // Map loanId → dernier rappel (le plus récent en premier grâce au tri)
+  const overdueReminderMap = new Map<string, { loanId: string; sentAt: Date }>();
+  for (const r of overdueRemindersRaw) {
+    if (!overdueReminderMap.has(r.loanId)) {
+      overdueReminderMap.set(r.loanId, r);
+    }
+  }
+
   for (const loan of overdueLoans) {
     let shouldSkip = false;
     let skipReason = "";
 
-    try {
-      const lastOverdue = await prisma.loanReminder.findFirst({
-        where: { loanId: loan.id, type: { in: ["overdue", "overdue_manual"] } },
-        orderBy: { sentAt: "desc" },
-      });
-      if (lastOverdue) {
-        // Utilise les heures avec une tolérance de 2h pour éviter les décalages du cron
-        const hoursSinceLast = (now.getTime() - lastOverdue.sentAt.getTime()) / (1000 * 60 * 60);
-        const thresholdHours = overdueFrequencyDays * 24 - 2;
-        if (hoursSinceLast < thresholdHours) {
-          shouldSkip = true;
-          skipReason = `dernier envoi il y a ${(hoursSinceLast).toFixed(1)}h < ${thresholdHours}h (seuil ${overdueFrequencyDays}j)`;
-        }
+    const lastOverdue = overdueReminderMap.get(loan.id);
+    if (lastOverdue) {
+      // Utilise les heures avec une tolérance de 2h pour éviter les décalages du cron
+      const hoursSinceLast = (now.getTime() - lastOverdue.sentAt.getTime()) / (1000 * 60 * 60);
+      const thresholdHours = overdueFrequencyDays * 24 - 2;
+      if (hoursSinceLast < thresholdHours) {
+        shouldSkip = true;
+        skipReason = `dernier envoi il y a ${(hoursSinceLast).toFixed(1)}h < ${thresholdHours}h (seuil ${overdueFrequencyDays}j)`;
       }
-    } catch { /* table absente — envoyer */ }
+    }
 
     if (shouldSkip) {
       skipped++;
@@ -195,12 +224,21 @@ export async function runSendReminders(): Promise<ReminderResult> {
     }
 
     const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+    // FIX #4 — crée le loanReminder AVANT l'email pour garantir l'idempotence
+    try {
+      await prisma.loanReminder.create({ data: { loanId: loan.id, type: "overdue" } });
+    } catch (err) {
+      details.push(`SKIP retard ${loan.user.name} / ${loan.game.name} (échec création loanReminder: ${err instanceof Error ? err.message : String(err)})`);
+      skipped++;
+      continue;
+    }
+
     await sendOverdueEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
     sent++; overdueCount++;
     details.push(`RETARD envoyé → ${loan.user.email} (${loan.game.name}, dû le ${dateStr})`);
 
     try {
-      await prisma.loanReminder.create({ data: { loanId: loan.id, type: "overdue" } });
       await prisma.userNotification.create({
         data: {
           userId: loan.user.id,
@@ -253,15 +291,17 @@ export async function runSendReminders(): Promise<ReminderResult> {
       const dateStr = gs.date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
       const sessionUrl = `${baseUrl}/sessions`;
 
-      for (const reg of gs.registrations) {
-        try {
-          // Vérifie si ce rappel a déjà été envoyé
-          const alreadySent = await prisma.sessionReminderLog.findUnique({
-            where: { sessionId_userId_daysBefore: { sessionId: gs.id, userId: reg.userId, daysBefore: daysBeforeVal } },
-          }).catch(() => null);
-          if (alreadySent) continue;
+      // FIX #3 — précharge tous les SessionReminderLog pour ce sessionId+daysBefore en une seule requête
+      const alreadySentLogs = await prisma.sessionReminderLog.findMany({
+        where: { sessionId: gs.id, daysBefore: daysBeforeVal },
+        select: { userId: true },
+      }).catch(() => [] as { userId: string }[]);
+      const alreadySentUserIds = new Set(alreadySentLogs.map((l) => l.userId));
 
-          // Email
+      for (const reg of gs.registrations) {
+        if (alreadySentUserIds.has(reg.userId)) continue;
+
+        try {
           await sendConfiguredSessionReminderEmail(reg.user.email, {
             userName: reg.user.name,
             sessionName: gs.name,
@@ -269,7 +309,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
             sessionTime: gs.startTime,
             sessionLocation: gs.location,
             sessionUrl,
-          });
+          }, config);
 
           // Notification in-app
           await prisma.userNotification.create({
@@ -309,9 +349,12 @@ export async function runSendReminders(): Promise<ReminderResult> {
   }
 
   // ── 4. Envoi batch de toutes les push notifications ────────────────────────
+  // FIX #6 — envoi par chunks de 100 pour éviter de dépasser la limite Expo
   if (pushJobs.length > 0) {
     details.push(`Push notifications (${pushJobs.length} en batch) :`);
-    await flushPushBatch(pushJobs, details);
+    for (let i = 0; i < pushJobs.length; i += 100) {
+      await flushPushBatch(pushJobs.slice(i, i + 100), details);
+    }
   }
 
   console.log(`[reminders] config: reminderDaysBefore=${reminderDaysBefore} overdueFrequencyDays=${overdueFrequencyDays}`);

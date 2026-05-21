@@ -16,7 +16,10 @@ function LoginForm() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
 
-  const emailNotVerified = error.toLowerCase().includes("confirmer votre email");
+  const emailNotVerified = error === "EMAIL_NOT_VERIFIED" || error.includes("EMAIL_NOT_VERIFIED");
+  const displayedError = emailNotVerified
+    ? "Veuillez confirmer votre email avant de vous connecter."
+    : error;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,13 +44,18 @@ function LoginForm() {
 
   async function resendVerification() {
     setResendLoading(true);
-    await fetch("/api/auth/resend-verification", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    setResendLoading(false);
-    setResendDone(true);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setResendDone(true);
+    } catch {
+      // silently ignore
+    } finally {
+      setResendLoading(false);
+    }
   }
 
   return (
@@ -57,7 +65,7 @@ function LoginForm() {
           <div className="text-5xl mb-3">🎲</div>
           <h1 className="text-2xl font-bold text-gray-900">LudiGest</h1>
           <p className="text-gray-500 text-sm mt-1">Ludothèque BRED</p>
-          <p className="text-gray-400 text-xs mt-1">v0.91</p>
+          <p className="text-gray-400 text-xs mt-1">v0.92</p>
         </div>
 
         {resetSuccess && (
@@ -95,7 +103,7 @@ function LoginForm() {
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-              {error}
+              {displayedError}
               {emailNotVerified && (
                 <div className="mt-2">
                   {resendDone ? (
