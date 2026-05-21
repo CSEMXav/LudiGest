@@ -7,19 +7,34 @@ function getSiteUrl() {
   return process.env.NEXTAUTH_URL ?? "https://ludigest.vercel.app";
 }
 
+/** Échappe les caractères HTML spéciaux pour éviter l'injection dans les emails. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function applyTemplate(template: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce((t, [k, v]) => t.replaceAll(`{{${k}}}`, v), template);
+}
+
+/** Comme applyTemplate mais échappe les valeurs pour un contexte HTML. */
+function applyTemplateHtml(template: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce((t, [k, v]) => t.replaceAll(`{{${k}}}`, escapeHtml(v)), template);
 }
 
 function templateToHtml(body: string, ctaUrl?: string, ctaLabel?: string): string {
   const siteUrl = getSiteUrl();
   const ctaBlock = ctaUrl
-    ? `<a href="${ctaUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">${ctaLabel ?? "Ouvrir LudiGest"}</a>`
+    ? `<a href="${ctaUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">${ctaLabel ? escapeHtml(ctaLabel) : "Ouvrir LudiGest"}</a>`
     : "";
   return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
     <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
     <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-    ${body.split("\n").map((l) => l.trim() ? `<p style="margin:4px 0">${l}</p>` : "<br>").join("")}
+    ${body.split("\n").map((l) => l.trim() ? `<p style="margin:4px 0">${escapeHtml(l)}</p>` : "<br>").join("")}
     ${ctaBlock}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
     <p style="color:#9ca3af;font-size:12px">🎲 <a href="${siteUrl}" style="color:#9ca3af">LudiGest — Ludothèque BRED</a></p>
@@ -50,7 +65,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
         <p>Merci de vous être inscrit(e). Cliquez sur le bouton ci-dessous pour confirmer votre adresse email et activer votre compte :</p>
         <a href="${link}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Confirmer mon inscription
@@ -78,8 +93,8 @@ export async function sendReminderEmail(to: string, name: string, gameName: stri
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E">🎲 LudiGest — Rappel d'emprunt</h1>
-        <p>Bonjour <strong>${name}</strong>,</p>
-        <p>Votre emprunt du jeu <strong>"${gameName}"</strong> arrive à échéance le <strong>${dateStr}</strong>.</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
+        <p>Votre emprunt du jeu <strong>"${escapeHtml(gameName)}"</strong> arrive à échéance le <strong>${dateStr}</strong>.</p>
         <p>Pensez à le rendre à la ludothèque. Vous pouvez aussi le prolonger depuis l'application si vous en avez encore besoin.</p>
         <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Voir mon emprunt
@@ -108,7 +123,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
         <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous :</p>
         <a href="${link}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Réinitialiser mon mot de passe
@@ -136,13 +151,13 @@ export async function sendSessionInviteEmail(to: string, name: string, sessionNa
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Soirée Ludique</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
         <p>Une nouvelle session ludique est disponible !</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${escapeHtml(sessionName)}</p>
           <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
-          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
-          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${escapeHtml(sessionTime)}</p>
+          <p style="margin:0;color:#374151">📍 ${escapeHtml(sessionLocation)}</p>
         </div>
         <a href="${registerUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Je m'inscris
@@ -170,13 +185,13 @@ export async function sendSessionReminderEmail(to: string, name: string, session
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Rappel Session</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
         <p>Rappel : vous êtes inscrit(e) à la session ludique suivante :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${escapeHtml(sessionName)}</p>
           <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
-          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
-          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${escapeHtml(sessionTime)}</p>
+          <p style="margin:0;color:#374151">📍 ${escapeHtml(sessionLocation)}</p>
         </div>
         <p style="color:#9ca3af;font-size:12px">🎲 Ludothèque BRED</p>
       </div>
@@ -197,7 +212,7 @@ export async function sendConfiguredSessionInviteEmail(
     ? applyTemplate(config.sessionInviteSubject, allVars)
     : defaultSubject;
   const bodyText = config?.sessionInviteBody
-    ? applyTemplate(config.sessionInviteBody, allVars)
+    ? applyTemplateHtml(config.sessionInviteBody, allVars)
     : defaultBody;
 
   const resend = getResend();
@@ -223,10 +238,10 @@ export async function sendGameReportEmail(to: string, adminName: string, reporte
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Signalement</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${adminName}</strong>,</p>
-        <p><strong>${reporterName}</strong> a signalé un problème sur le jeu <strong>"${gameName}"</strong> :</p>
+        <p>Bonjour <strong>${escapeHtml(adminName)}</strong>,</p>
+        <p><strong>${escapeHtml(reporterName)}</strong> a signalé un problème sur le jeu <strong>"${escapeHtml(gameName)}"</strong> :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0;color:#374151">${reportMessage}</p>
+          <p style="margin:0;color:#374151">${escapeHtml(reportMessage)}</p>
         </div>
         <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Voir la fiche du jeu
@@ -252,8 +267,8 @@ export async function sendOverdueEmail(to: string, name: string, gameName: strin
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E">🎲 LudiGest — Retard d'emprunt</h1>
-        <p>Bonjour <strong>${name}</strong>,</p>
-        <p>Le jeu <strong>"${gameName}"</strong> aurait dû être rendu le <strong>${dateStr}</strong>.</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
+        <p>Le jeu <strong>"${escapeHtml(gameName)}"</strong> aurait dû être rendu le <strong>${dateStr}</strong>.</p>
         <p>Merci de le rapporter à la ludothèque dès que possible.</p>
         <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Voir le jeu
@@ -278,10 +293,10 @@ export async function sendGameAvailableEmail(to: string, name: string, gameName:
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(name)}</strong>,</p>
         <p>Bonne nouvelle ! Le jeu que vous attendiez est de nouveau disponible :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${gameName}</p>
+          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${escapeHtml(gameName)}</p>
         </div>
         <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Emprunter ce jeu
@@ -306,10 +321,10 @@ export async function sendGameWantedEmail(to: string, borrowerName: string, game
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${borrowerName}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(borrowerName)}</strong>,</p>
         <p>Un(e) collègue attend de pouvoir emprunter le jeu que vous avez actuellement :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${gameName}</p>
+          <p style="margin:0;font-size:18px;font-weight:bold;color:#111">${escapeHtml(gameName)}</p>
         </div>
         <p>Si vous avez fini de jouer, pensez à le ramener à la ludothèque !</p>
         <a href="${gameUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
@@ -328,7 +343,7 @@ export async function sendConfiguredManualOverdueEmail(to: string, vars: { userN
     ? applyTemplate(config.manualOverdueSubject, allVars)
     : `⚠ Retard (rappel admin) : veuillez rendre "${vars.gameName}"`;
   const bodyText = config?.manualOverdueBody
-    ? applyTemplate(config.manualOverdueBody, allVars)
+    ? applyTemplateHtml(config.manualOverdueBody, allVars)
     : `Bonjour ${vars.userName},\n\nCe rappel vous est envoyé par l'administrateur.\n\nLe jeu "${vars.gameName}" aurait dû être rendu le ${vars.dueAt}.\n\nLudothèque BRED`;
 
   const resend = getResend();
@@ -343,7 +358,7 @@ export async function sendConfiguredWaitlistEmail(to: string, vars: { userName: 
     ? applyTemplate(config.waitlistSubject, allVars)
     : `💡 Quelqu'un attend "${vars.gameName}" — pensez à le rendre !`;
   const bodyText = config?.waitlistBody
-    ? applyTemplate(config.waitlistBody, allVars)
+    ? applyTemplateHtml(config.waitlistBody, allVars)
     : `Bonjour ${vars.userName},\n\nUn(e) collègue attend "${vars.gameName}".\n\nPensez à le ramener à la ludothèque !\n\n${vars.gameUrl}\n\nLudothèque BRED`;
 
   const resend = getResend();
@@ -364,7 +379,7 @@ export async function sendConfiguredSessionReminderEmail(
     ? applyTemplate(config.sessionReminderSubject, allVars)
     : defaultSubject;
   const bodyText = config?.sessionReminderBody
-    ? applyTemplate(config.sessionReminderBody, allVars)
+    ? applyTemplateHtml(config.sessionReminderBody, allVars)
     : defaultBody;
 
   const resend = getResend();
@@ -395,13 +410,13 @@ export async function sendSessionUpdateEmail(
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest — Mise à jour de session</h1>
         <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
-        <p>Bonjour <strong>${userName}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
         <p>Les informations de la session à laquelle vous êtes inscrit(e) ont été mises à jour :</p>
         <div style="background:#fff5f5;border-left:4px solid #C8102E;padding:16px;border-radius:8px;margin:16px 0">
-          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${sessionName}</p>
-          <p style="margin:0 0 4px;color:#374151">📅 ${sessionDate}</p>
-          <p style="margin:0 0 4px;color:#374151">🕐 ${sessionTime}</p>
-          <p style="margin:0;color:#374151">📍 ${sessionLocation}</p>
+          <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${escapeHtml(sessionName)}</p>
+          <p style="margin:0 0 4px;color:#374151">📅 ${escapeHtml(sessionDate)}</p>
+          <p style="margin:0 0 4px;color:#374151">🕐 ${escapeHtml(sessionTime)}</p>
+          <p style="margin:0;color:#374151">📍 ${escapeHtml(sessionLocation)}</p>
         </div>
         <p>Pensez à vérifier vos disponibilités pour cette nouvelle date.</p>
         <a href="${sessionsUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
