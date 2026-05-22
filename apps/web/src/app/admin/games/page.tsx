@@ -158,8 +158,20 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
           {/* Image + Code-barre + BGG ID */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">URL image</label>
-            <input value={form.coverUrl} onChange={(e) => set("coverUrl", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 font-mono text-xs" />
+            <div className="flex gap-3 items-start">
+              <input value={form.coverUrl} onChange={(e) => set("coverUrl", e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 font-mono text-xs" />
+              {form.coverUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={form.coverUrl}
+                  alt="Aperçu"
+                  className="w-14 h-14 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.display = "block"; }}
+                />
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

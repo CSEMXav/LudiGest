@@ -51,7 +51,7 @@ model EmailVerification {
 
 model Game {
   id         String   @id @default(cuid())
-  bggId      String?  @unique
+  bggId      String?
   name       String
   type       String
   category   String   @default("famille")

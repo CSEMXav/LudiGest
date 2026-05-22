@@ -99,12 +99,9 @@ export async function POST(req: NextRequest) {
             // Le code barre du fichier est propriétaire : il prime systématiquement sur BGG
             const barcode = row.barcode ?? details?.barcode ?? null;
 
-            // Si force-create ou bggId déjà utilisé dans une autre bibliothèque, on ne le stocke pas
+            // Si force-create, on ne stocke pas le bggId (évite les doublons dans la même bibliothèque)
             if (forceNames.has(row.name)) {
               bggIdToUse = null;
-            } else if (bggIdToUse) {
-              const bggIdTaken = await prisma.game.findUnique({ where: { bggId: bggIdToUse } });
-              if (bggIdTaken) bggIdToUse = null;
             }
 
             await prisma.game.create({

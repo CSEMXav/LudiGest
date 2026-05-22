@@ -72,26 +72,38 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { name, type, status, summary, minAge, coverUrl, barcode, bggId, addedAt,
           category, minPlayers, maxPlayers, duration } = body;
 
-  const game = await prisma.game.update({
-    where: { id: params.id },
-    data: {
-      ...(name !== undefined && { name }),
-      ...(type !== undefined && { type }),
-      ...(status !== undefined && { status }),
-      ...(summary !== undefined && { summary }),
-      ...(minAge !== undefined && { minAge }),
-      ...(coverUrl !== undefined && { coverUrl }),
-      ...(barcode !== undefined && { barcode }),
-      ...(bggId !== undefined && { bggId }),
-      ...(addedAt !== undefined && { addedAt: new Date(addedAt) }),
-      ...(category !== undefined && { category }),
-      ...(minPlayers !== undefined && { minPlayers }),
-      ...(maxPlayers !== undefined && { maxPlayers }),
-      ...(duration !== undefined && { duration }),
-    },
-  });
-
-  return NextResponse.json(game);
+  try {
+    const game = await prisma.game.update({
+      where: { id: params.id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(type !== undefined && { type }),
+        ...(status !== undefined && { status }),
+        ...(summary !== undefined && { summary }),
+        ...(minAge !== undefined && { minAge }),
+        ...(coverUrl !== undefined && { coverUrl }),
+        ...(barcode !== undefined && { barcode }),
+        ...(bggId !== undefined && { bggId }),
+        ...(addedAt !== undefined && { addedAt: new Date(addedAt) }),
+        ...(category !== undefined && { category }),
+        ...(minPlayers !== undefined && { minPlayers }),
+        ...(maxPlayers !== undefined && { maxPlayers }),
+        ...(duration !== undefined && { duration }),
+      },
+    });
+    return NextResponse.json(game);
+  } catch (err: unknown) {
+    // Contrainte d'unicité (ex: barcode déjà utilisé)
+    if (typeof err === "object" && err !== null && "code" in err && (err as { code: string }).code === "P2002") {
+      const meta = (err as { meta?: { target?: string[] } }).meta;
+      const field = meta?.target?.[0] ?? "champ";
+      return NextResponse.json(
+        { error: `La valeur de "${field}" est déjà utilisée par un autre jeu.` },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
