@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       ...(barcodeParam ? { barcode: barcodeParam } : {}),
       ...(user.role !== "ADMIN" ? { status: { not: "SUSPENDED" } } : {}),
       ...(statusFilter ? { status: statusFilter as any } : {}),
-      ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { type: { contains: search, mode: "insensitive" } }] } : {}),
+      ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
       ...(category ? { category } : {}),
       ...(minDuration ? { duration: { gte: minDuration } } : {}),
       ...(maxDuration ? { duration: { lte: maxDuration } } : {}),

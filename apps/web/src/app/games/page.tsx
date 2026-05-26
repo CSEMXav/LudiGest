@@ -16,13 +16,12 @@ const CATEGORIES: { value: GameCategory; label: string; color: string }[] = [
   { value: "expert",   label: "Expert",   color: "#6a8f3c" },
 ];
 
-const DURATION_OPTIONS = [
-  { label: "Toutes",  value: ""    },
-  { label: "≤30min",  value: "30"  },
-  { label: "≤60min",  value: "60"  },
-  { label: "≤90min",  value: "90"  },
-  { label: "≤2h",     value: "120" },
-  { label: "≤3h",     value: "180" },
+const DURATION_OPTIONS: { label: string; value: string; min?: number; max?: number }[] = [
+  { label: "Toutes",     value: ""       },
+  { label: "< 30min",   value: "lt30",   max: 29  },
+  { label: "30–60min",  value: "30to60", min: 30, max: 60 },
+  { label: "1h et +",   value: "gte60",  min: 60  },
+  { label: "2h et +",   value: "gte120", min: 120 },
 ];
 
 const PLAYERS_OPTIONS = [
@@ -138,17 +137,17 @@ export default function GamesPage() {
     if (storedDense) setDense(storedDense === "true");
   }, []);
 
-  const [sortBy,       setSortBy]       = useState("name_asc");
-  const [category,    setCategory]    = useState("");
-  const [minStars,    setMinStars]    = useState("");
-  const [maxDuration, setMaxDuration] = useState("");
-  const [players,     setPlayers]     = useState("");
-  const [fromDate,    setFromDate]    = useState("");
-  const [toDate,      setToDate]      = useState("");
+  const [sortBy,          setSortBy]          = useState("name_asc");
+  const [category,        setCategory]        = useState("");
+  const [minStars,        setMinStars]        = useState("");
+  const [durationFilter,  setDurationFilter]  = useState("");
+  const [players,         setPlayers]         = useState("");
+  const [fromDate,        setFromDate]        = useState("");
+  const [toDate,          setToDate]          = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<GameGroup | null>(null);
 
-  const hasActiveFilters = !!(category || minStars || maxDuration || players || fromDate || toDate);
+  const hasActiveFilters = !!(category || minStars || durationFilter || players || fromDate || toDate);
 
   function toggleView(mode: "grid" | "list") {
     setViewMode(mode);
@@ -160,7 +159,7 @@ export default function GamesPage() {
   }
 
   function resetFilters() {
-    setCategory(""); setMinStars(""); setMaxDuration(""); setPlayers(""); setFromDate(""); setToDate("");
+    setCategory(""); setMinStars(""); setDurationFilter(""); setPlayers(""); setFromDate(""); setToDate("");
   }
 
   const loadGames = useCallback(() => {
@@ -169,7 +168,11 @@ export default function GamesPage() {
     if (status)      params.set("status", status);
     if (category)    params.set("category", category);
     if (minStars)    params.set("minStars", minStars);
-    if (maxDuration) params.set("maxDuration", maxDuration);
+    if (durationFilter) {
+      const opt = DURATION_OPTIONS.find((d) => d.value === durationFilter);
+      if (opt?.min) params.set("minDuration", String(opt.min));
+      if (opt?.max) params.set("maxDuration", String(opt.max));
+    }
     if (players)     params.set("players", players);
     if (fromDate)    params.set("fromDate", fromDate);
     if (toDate)      params.set("toDate", toDate);
@@ -178,7 +181,7 @@ export default function GamesPage() {
     fetch(`/api/games?${params}`)
       .then((r) => r.json())
       .then((data) => { setGames(Array.isArray(data) ? data : []); setLoading(false); });
-  }, [search, status, category, minStars, maxDuration, players, fromDate, toDate, session?.user.location]);
+  }, [search, status, category, minStars, durationFilter, players, fromDate, toDate, session?.user.location]);
 
   useEffect(() => { loadGames(); }, [loadGames]);
 
@@ -434,15 +437,15 @@ export default function GamesPage() {
             {/* Durée */}
             <div>
               <p className="text-[10px] font-bold uppercase mb-2" style={{ letterSpacing: "0.06em", color: "var(--p-ink3)" }}>
-                Durée max
+                Durée
               </p>
               <div className="flex flex-wrap gap-1">
                 {DURATION_OPTIONS.map((d) => (
                   <button
                     key={d.value}
-                    onClick={() => setMaxDuration(maxDuration === d.value ? "" : d.value)}
+                    onClick={() => setDurationFilter(durationFilter === d.value ? "" : d.value)}
                     className="px-3 py-[7px] rounded-lg text-[11px] font-semibold transition-colors"
-                    style={maxDuration === d.value
+                    style={durationFilter === d.value
                       ? { background: "var(--p-primary)", color: "#fff", border: `1px solid var(--p-primary)` }
                       : { border: "1px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}
                   >
