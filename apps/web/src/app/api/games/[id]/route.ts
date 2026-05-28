@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     return NextResponse.json(game);
   } catch (err: unknown) {
-    // Contrainte d'unicité (ex: barcode déjà utilisé)
+    // Contrainte d'unicité Prisma (P2002)
     if (typeof err === "object" && err !== null && "code" in err && (err as { code: string }).code === "P2002") {
       const meta = (err as { meta?: { target?: string[] } }).meta;
       const field = meta?.target?.[0] ?? "champ";

@@ -69,12 +69,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Vérifie si barcode déjà utilisé — dans ce cas on l'écarte sans bloquer
-  let barcode = bggDetails?.barcode ?? null;
-  if (barcode) {
-    const exists = await prisma.game.findFirst({ where: { barcode } });
-    if (exists) barcode = null;
-  }
+  // Le même barcode peut être partagé par plusieurs exemplaires du même jeu
+  const barcode = bggDetails?.barcode ?? null;
 
   const game = await prisma.game.create({
     data: {
