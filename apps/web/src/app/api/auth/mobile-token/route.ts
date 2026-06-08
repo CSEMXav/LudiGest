@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     location: user.location,
   })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setExpirationTime("7d")
     .sign(secret);
 
   return NextResponse.json({

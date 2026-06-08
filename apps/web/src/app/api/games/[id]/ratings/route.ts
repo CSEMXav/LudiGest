@@ -10,7 +10,10 @@ async function getUser(req: NextRequest) {
   return verifyMobileToken(req);
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getUser(req);
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
   const ratings = await prisma.rating.findMany({
     where: { gameId: params.id },
     include: { user: { select: { name: true } } },

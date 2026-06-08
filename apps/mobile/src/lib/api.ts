@@ -20,7 +20,10 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await apiFetch(path);
-  if (!res.ok) throw new Error((await res.json()).error ?? "Erreur réseau");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error((data.error as string) ?? "Erreur réseau");
+  }
   return res.json();
 }
 
@@ -53,6 +56,9 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     method: "PATCH",
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error((await res.json()).error ?? "Erreur réseau");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error((data.error as string) ?? "Erreur réseau");
+  }
   return res.json();
 }
