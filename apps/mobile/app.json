@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ludigest.app"
+      "bundleIdentifier": "fr.bred.ludigest"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#C8102E"
       },
-      "package": "com.ludigest.app",
+      "package": "fr.bred.ludigest",
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
