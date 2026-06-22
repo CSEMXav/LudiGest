@@ -13,7 +13,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!user) return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
   if (!user.suspended) return NextResponse.json({ error: "Seuls les comptes suspendus peuvent être supprimés." }, { status: 400 });
 
-  await prisma.notification.deleteMany({ where: { userId: params.id } });
+  await prisma.userNotification.deleteMany({ where: { userId: params.id } });
   await prisma.rating.deleteMany({ where: { userId: params.id } });
   await prisma.loan.deleteMany({ where: { userId: params.id } });
   await prisma.sessionRegistration.deleteMany({ where: { userId: params.id } });
