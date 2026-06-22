@@ -41,6 +41,17 @@ export default async function CommentCaMarchePage() {
         </a>
       </div>
 
+      {/* Bandeau installation mobile */}
+      <div style={{ background: "#fff0f0", borderBottom: "1px solid #fca5a5", padding: "10px 24px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const }}>
+        <span style={{ fontSize: 16 }}>📱</span>
+        <span style={{ fontSize: 14, color: "#7f1d1d" }}>
+          Pour installer l&apos;application mobile (Android &amp; iPhone), rendez-vous sur{" "}
+          <a href="/download" style={{ color: "#C8102E", fontWeight: 700, textDecoration: "underline" }}>
+            ludigest.fr/download
+          </a>
+        </span>
+      </div>
+
       {/* Hero banner — sunburst with category circles */}
       <div style={{
         background: "conic-gradient(from 180deg at 50% 110%, #FDE68A 0deg, #FCA5A5 45deg, #C4B5FD 90deg, #93C5FD 135deg, #6EE7B7 180deg, #A3E635 225deg, #FDE68A 270deg, #FCA5A5 315deg, #FDE68A 360deg)",
@@ -193,42 +204,6 @@ export default async function CommentCaMarchePage() {
           <p style={{ fontSize: 13, color: "#0369a1", margin: 0 }}>
             Compatible avec tous les smartphones modernes (Chrome, Safari, Firefox).
           </p>
-        </div>
-
-        {/* Application mobile */}
-        <div style={{ backgroundColor: "#fff0f0", border: "2px solid #fca5a5", borderRadius: 16, padding: "24px 28px", marginBottom: 40, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" as const }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#C8102E", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>
-              📱 Application Android disponible
-            </h2>
-            <p style={{ fontSize: 14, color: "#7f1d1d", margin: "0 0 16px", lineHeight: 1.7 }}>
-              Pour scanner les codes-barres et gérer vos emprunts encore plus facilement,
-              téléchargez l&apos;application LudiGest directement sur votre Android.
-            </p>
-            <a href="/download" style={{
-              display: "inline-block",
-              backgroundColor: "#C8102E",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 14,
-              padding: "10px 22px",
-              borderRadius: 10,
-              textDecoration: "none",
-            }}>
-              ⬇ Télécharger l&apos;APK
-            </a>
-          </div>
-          <div style={{ textAlign: "center" as const }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent("https://www.ludigest.fr/download")}`}
-              alt="QR code application LudiGest"
-              width={120}
-              height={120}
-              style={{ borderRadius: 10, border: "1px solid #fca5a5" }}
-            />
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0" }}>Scanner pour télécharger</p>
-          </div>
         </div>
 
         {/* Footer */}
