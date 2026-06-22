@@ -195,6 +195,42 @@ export default async function CommentCaMarchePage() {
           </p>
         </div>
 
+        {/* Application mobile */}
+        <div style={{ backgroundColor: "#fff0f0", border: "2px solid #fca5a5", borderRadius: 16, padding: "24px 28px", marginBottom: 40, display: "flex", alignItems: "center", gap: 28, flexWrap: "wrap" as const }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#C8102E", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>
+              📱 Application Android disponible
+            </h2>
+            <p style={{ fontSize: 14, color: "#7f1d1d", margin: "0 0 16px", lineHeight: 1.7 }}>
+              Pour scanner les codes-barres et gérer vos emprunts encore plus facilement,
+              téléchargez l&apos;application LudiGest directement sur votre Android.
+            </p>
+            <a href="/download" style={{
+              display: "inline-block",
+              backgroundColor: "#C8102E",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+              padding: "10px 22px",
+              borderRadius: 10,
+              textDecoration: "none",
+            }}>
+              ⬇ Télécharger l&apos;APK
+            </a>
+          </div>
+          <div style={{ textAlign: "center" as const }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent("https://www.ludigest.fr/download")}`}
+              alt="QR code application LudiGest"
+              width={120}
+              height={120}
+              style={{ borderRadius: 10, border: "1px solid #fca5a5" }}
+            />
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0" }}>Scanner pour télécharger</p>
+          </div>
+        </div>
+
         {/* Footer */}
         <div style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb", display: "flex", gap: 24, flexWrap: "wrap" as const, alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 13, color: "#9ca3af" }}>© 2026 LudiGest — CSEM BRED Banque Populaire</span>
