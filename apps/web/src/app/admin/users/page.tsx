@@ -122,6 +122,18 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function deleteUser(user: UserAdminDTO) {
+    if (!confirm(`Supprimer définitivement le compte de ${user.name} ? Cette action est irréversible.`)) return;
+    const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setActionMsg((m) => ({ ...m, [user.id]: "Supprimé" }));
+      loadUsers();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error ?? "Erreur lors de la suppression.");
+    }
+  }
+
   async function verifyEmail(user: UserAdminDTO) {
     const res = await fetch(`/api/admin/users/${user.id}`, {
       method: "PATCH",
@@ -309,6 +321,15 @@ export default function AdminUsersPage() {
                     >
                       {u.suspended ? "🔓" : "🔒"}
                     </button>
+                    {u.suspended && (
+                      <button
+                        onClick={() => deleteUser(u)}
+                        title="Supprimer définitivement ce compte"
+                        className="p-2 rounded-lg hover:bg-red-100 text-red-700 transition-colors text-xl leading-none"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -137,7 +137,7 @@ export default async function CommentCaMarchePage() {
             {
               num: 2, color: "#2563eb", bg: "#eff6ff",
               title: "Choisissez un jeu",
-              text: "Parcourez le catalogue dans la section Jeux. Filtrez par catégorie, nombre de joueurs ou durée de partie. Sur mobile ou sur l'application web responsive depuis votre téléphone, scannez directement le code-barres d'une boîte pour accéder à sa fiche.",
+              text: "Commencez par sélectionner votre ludothèque : Joinville ou La Rapée. Le catalogue affiche alors uniquement les jeux disponibles sur votre site. Filtrez par catégorie, nombre de joueurs ou durée de partie. Sur mobile ou sur l'application web responsive depuis votre téléphone, scannez directement le code-barres d'une boîte pour accéder à sa fiche.",
             },
             {
               num: 3, color: "#16a34a", bg: "#f0fdf4",
