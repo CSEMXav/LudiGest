@@ -16,7 +16,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   await prisma.userNotification.deleteMany({ where: { userId: params.id } });
   await prisma.rating.deleteMany({ where: { userId: params.id } });
   await prisma.loan.deleteMany({ where: { userId: params.id } });
-  await prisma.sessionRegistration.deleteMany({ where: { userId: params.id } });
+  await prisma.gameSessionRegistration.deleteMany({ where: { userId: params.id } });
   await prisma.user.delete({ where: { id: params.id } });
 
   return NextResponse.json({ success: true });
