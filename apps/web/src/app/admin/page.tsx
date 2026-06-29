@@ -7,11 +7,12 @@ export default async function AdminDashboard() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [totalGames, availableGames, activeLoans, overdueLoans] = await Promise.all([
+  const [totalGames, availableGames, activeLoans, overdueLoans, totalUsers] = await Promise.all([
     prisma.game.count({ where: { status: { not: "SUSPENDED" } } }),
     prisma.game.count({ where: { status: "AVAILABLE" } }),
     prisma.loan.count({ where: { returnedAt: null } }),
     prisma.loan.count({ where: { returnedAt: null, dueAt: { lt: now } } }),
+    prisma.user.count(),
   ]);
 
   const locationStats = await Promise.all(
@@ -81,7 +82,7 @@ export default async function AdminDashboard() {
 
       {/* Global stats */}
       <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--p-ink3)" }}>Global</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#e8f3dc", border: "1px solid var(--p-rule)" }}>
           <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "var(--p-vert)", color: "#fff" }}>🎲</div>
           <div>
@@ -94,6 +95,13 @@ export default async function AdminDashboard() {
           <div>
             <div className="font-display text-3xl font-bold leading-none" style={{ color: "var(--p-ink)" }}>{activeLoans}</div>
             <div className="text-xs mt-1" style={{ color: "#7d4a0d" }}>Emprunts en cours</div>
+          </div>
+        </div>
+        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#ede9fe", border: "1px solid var(--p-rule)" }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "#7c3aed", color: "#fff" }}>👥</div>
+          <div>
+            <div className="font-display text-3xl font-bold leading-none" style={{ color: "#1e1610" }}>{totalUsers}</div>
+            <div className="text-xs mt-1" style={{ color: "#4c1d95" }}>Inscrits</div>
           </div>
         </div>
         <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: overdueLoans > 0 ? "var(--p-primary-soft)" : "#f5f5f0", border: "1px solid var(--p-rule)" }}>

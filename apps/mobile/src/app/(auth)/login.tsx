@@ -61,7 +61,7 @@ export default function LoginScreen() {
         <Text style={s.emoji}>🎲</Text>
         <Text style={s.title}>LudiGest</Text>
         <Text style={s.subtitle}>Ludothèque BRED</Text>
-        <Text style={s.version}>v1.08</Text>
+        <Text style={s.version}>v1.09</Text>
 
         <TextInput
           style={s.input}

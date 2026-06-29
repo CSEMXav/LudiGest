@@ -18,7 +18,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-type SortKey = "name" | "location" | "totalLoans" | "activeLoans" | "lateReturns" | "status";
+type SortKey = "name" | "location" | "totalLoans" | "activeLoans" | "lateReturns" | "status" | "createdAt";
 type SortDir = "asc" | "desc";
 
 function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => void }) {
@@ -174,6 +174,7 @@ export default function AdminUsersPage() {
       else if (sortKey === "totalLoans") { va = a.totalLoans; vb = b.totalLoans; }
       else if (sortKey === "activeLoans") { va = a.activeLoans; vb = b.activeLoans; }
       else if (sortKey === "lateReturns") { va = a.lateReturns; vb = b.lateReturns; }
+      else if (sortKey === "createdAt") { va = a.createdAt; vb = b.createdAt; }
       else { va = a.suspended ? 1 : 0; vb = b.suspended ? 1 : 0; }
 
       if (typeof va === "number" && typeof vb === "number") {
@@ -198,7 +199,10 @@ export default function AdminUsersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Utilisateurs inscrits</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Utilisateurs inscrits</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{users.length} compte{users.length > 1 ? "s" : ""} au total</p>
+        </div>
         <button
           onClick={exportExcel}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
@@ -227,7 +231,9 @@ export default function AdminUsersPage() {
               <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("location")}>
                 Ludothèque <SortIcon k="location" />
               </th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Inscription</th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("createdAt")}>
+                Inscription <SortIcon k="createdAt" />
+              </th>
               <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("totalLoans")}>
                 Emprunts <SortIcon k="totalLoans" />
               </th>
