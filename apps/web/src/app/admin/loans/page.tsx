@@ -11,6 +11,7 @@ interface ReminderLog {
 interface AdminLoanDTO extends LoanDTO {
   wasLate: boolean;
   reminders: ReminderLog[];
+  gameLocation?: string;
 }
 
 function formatDate(iso: string) {
@@ -110,6 +111,7 @@ export default function AdminLoansPage() {
   const [loading, setLoading] = useState(true);
   const [activeOnly, setActiveOnly] = useState(true);
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("borrowedAt");
@@ -194,6 +196,9 @@ export default function AdminLoansPage() {
     if (overdueOnly) {
       result = result.filter((l) => l.wasLate);
     }
+    if (locationFilter !== "all") {
+      result = result.filter((l) => l.gameLocation === locationFilter);
+    }
     return [...result].sort((a, b) => {
       let va: string, vb: string;
       if (sortKey === "userName") { va = a.userName ?? ""; vb = b.userName ?? ""; }
@@ -217,6 +222,17 @@ export default function AdminLoansPage() {
             <input type="checkbox" checked={overdueOnly} onChange={(e) => setOverdueOnly(e.target.checked)} className="rounded" />
             En retard uniquement
           </label>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+            {(["all", "Joinville", "La Rapée"] as const).map((loc) => (
+              <button
+                key={loc}
+                onClick={() => setLocationFilter(loc)}
+                className={`px-3 py-1.5 transition-colors ${locationFilter === loc ? "bg-[#C8102E] text-white font-medium" : "text-gray-600 hover:bg-gray-50"}`}
+              >
+                {loc === "all" ? "Toutes" : `📍 ${loc}`}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -262,6 +278,7 @@ export default function AdminLoansPage() {
                   Utilisateur <SortIcon k="userName" />
                 </th>
                 <th className="px-4 py-3 text-left">Jeu</th>
+                <th className="px-4 py-3 text-left">Ludothèque</th>
                 <th className="px-4 py-3 text-left cursor-pointer select-none" onClick={() => toggleSort("borrowedAt")}>
                   Emprunté <SortIcon k="borrowedAt" />
                 </th>
@@ -287,6 +304,7 @@ export default function AdminLoansPage() {
                       <div className="text-gray-400 text-xs">{l.userEmail}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{l.gameName}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">📍 {l.gameLocation ?? "—"}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(l.borrowedAt)}</td>
                     <td className={`px-4 py-3 text-xs font-medium ${isCurrentlyOverdue ? "text-red-600" : "text-gray-700"}`}>
                       {formatDate(l.dueAt)}

@@ -22,8 +22,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (loan.returnedAt) {
     return NextResponse.json({ error: "Ce jeu a déjà été rendu." }, { status: 409 });
   }
-  if (loan.extendedCount >= 3) {
-    return NextResponse.json({ error: "Vous avez atteint le maximum de 3 prolongations." }, { status: 409 });
+  if (loan.extendedCount >= 2) {
+    return NextResponse.json({ error: "Vous avez atteint le maximum de 2 prolongations." }, { status: 409 });
   }
 
   const newDueAt = new Date(loan.dueAt.getTime() + 7 * 24 * 60 * 60 * 1000);

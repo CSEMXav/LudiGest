@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         user: { select: { name: true, email: true } },
-        game: { select: { name: true, coverUrl: true } },
+        game: { select: { name: true, coverUrl: true, location: true } },
         reminders: { select: { type: true, sentAt: true }, orderBy: { sentAt: "asc" } },
       },
       orderBy: { borrowedAt: "desc" },
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         user: { select: { name: true, email: true } },
-        game: { select: { name: true, coverUrl: true } },
+        game: { select: { name: true, coverUrl: true, location: true } },
       },
       orderBy: { borrowedAt: "desc" },
     });
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       gameId: l.gameId,
       gameName: l.game.name,
       gameCoverUrl: l.game.coverUrl,
+      gameLocation: l.game.location,
       borrowedAt: l.borrowedAt.toISOString(),
       dueAt: l.dueAt.toISOString(),
       returnedAt: l.returnedAt?.toISOString() ?? null,
