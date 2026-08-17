@@ -29,12 +29,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { role, suspended, emailVerified } = body;
+  const { role, suspended, emailVerified, matricule, nickname } = body;
 
   const data: Record<string, unknown> = {};
   if (role !== undefined) data.role = role;
   if (suspended !== undefined) data.suspended = suspended;
   if (emailVerified !== undefined) data.emailVerified = emailVerified;
+  if (matricule !== undefined) {
+    if (!/^\d{5}$/.test(matricule)) return NextResponse.json({ error: "Le matricule doit contenir exactement 5 chiffres." }, { status: 400 });
+    const existing = await prisma.user.findFirst({ where: { matricule, NOT: { id: params.id } } });
+    if (existing) return NextResponse.json({ error: "Ce matricule est déjà utilisé par un autre compte." }, { status: 409 });
+    data.matricule = matricule;
+  }
+  if (nickname !== undefined) data.nickname = nickname.trim() || null;
 
   const user = await prisma.user.update({ where: { id: params.id }, data });
 

@@ -79,10 +79,70 @@ function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => 
   );
 }
 
+function EditUserModal({ user, onClose, onSaved }: { user: UserAdminDTO; onClose: () => void; onSaved: () => void }) {
+  const [matricule, setMatricule] = useState(user.matricule ?? "");
+  const [nickname, setNickname] = useState(user.nickname ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    if (!/^\d{5}$/.test(matricule)) { setError("Le matricule doit contenir exactement 5 chiffres."); return; }
+    setSaving(true); setError("");
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matricule, nickname }),
+    });
+    setSaving(false);
+    if (res.ok) { onSaved(); onClose(); }
+    else { const d = await res.json().catch(() => ({})); setError(d.error ?? "Erreur."); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-900">Modifier {user.name}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span></label>
+            <input
+              type="text" value={matricule} inputMode="numeric" maxLength={5}
+              onChange={(e) => setMatricule(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              placeholder="12345"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Surnom</label>
+            <input
+              type="text" value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="Surnom affiché dans la liste des membres"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-3 pt-1">
+            <button onClick={onClose} className="flex-1 py-2 text-sm font-medium rounded-xl border border-gray-300 text-gray-600">Annuler</button>
+            <button onClick={save} disabled={saving}
+              className="flex-1 py-2 text-sm font-medium rounded-xl text-white bg-[#C8102E] disabled:opacity-50">
+              {saving ? "Enregistrement…" : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserAdminDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserAdminDTO | null>(null);
+  const [editUser, setEditUser] = useState<UserAdminDTO | null>(null);
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -304,6 +364,13 @@ export default function AdminUsersPage() {
                     {actionMsg[u.id] && (
                       <span className="text-xs text-green-600 mr-1">{actionMsg[u.id]}</span>
                     )}
+                    <button
+                      onClick={() => setEditUser(u)}
+                      title="Modifier matricule / surnom"
+                      className="p-2 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors text-xl leading-none"
+                    >
+                      ✏️
+                    </button>
                     {!u.emailVerified && (
                       <button
                         onClick={() => verifyEmail(u)}
@@ -350,6 +417,9 @@ export default function AdminUsersPage() {
 
       {selectedUser && (
         <UserLoansModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+      )}
+      {editUser && (
+        <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={loadUsers} />
       )}
     </div>
   );

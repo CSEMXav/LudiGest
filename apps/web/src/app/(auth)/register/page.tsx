@@ -15,8 +15,16 @@ export default function RegisterPage() {
 
   function set(field: string, value: string | boolean) { setForm((f) => ({ ...f, [field]: value })); }
 
+  function validate(): string | null {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "L'adresse email n'est pas valide.";
+    if (!/^\d{5}$/.test(form.matricule)) return "Le matricule doit contenir exactement 5 chiffres.";
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const err = validate();
+    if (err) { setError(err); return; }
     setLoading(true);
     setError("");
     const payload = {
@@ -111,8 +119,9 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Matricule <span className="text-red-500">*</span> <span className="font-normal text-gray-400">(uniquement les 5 chiffres)</span></label>
-            <input type="text" value={form.matricule} onChange={(e) => set("matricule", e.target.value)}
-              placeholder="12345" required pattern="\d{5}" maxLength={5}
+            <input type="text" value={form.matricule}
+              onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("matricule", v.slice(0, 5)); }}
+              placeholder="12345" required inputMode="numeric" maxLength={5}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm" />
           </div>
           <div>

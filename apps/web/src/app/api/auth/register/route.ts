@@ -11,6 +11,12 @@ export async function POST(req: NextRequest) {
   if (!email || !firstName || !lastName || !matricule || !password || !location) {
     return NextResponse.json({ error: "Tous les champs sont requis." }, { status: 400 });
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "L'adresse email n'est pas valide." }, { status: 400 });
+  }
+  if (!/^\d{5}$/.test(matricule)) {
+    return NextResponse.json({ error: "Le matricule doit contenir exactement 5 chiffres." }, { status: 400 });
+  }
   if (password.length < 8) {
     return NextResponse.json({ error: "Le mot de passe doit contenir au moins 8 caractères." }, { status: 400 });
   }
