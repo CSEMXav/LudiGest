@@ -63,8 +63,50 @@ function RegisterForm({ tint, submitting, onCancel, onConfirm }: {
 }
 
 export default function SessionsPage() {
-  const { data: authSession } = useSession();
+  const { data: authSession, status } = useSession();
   const userId = (authSession?.user as { id?: string })?.id;
+
+  if (status === "unauthenticated") {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-lg mx-auto px-4 py-20 text-center">
+          <div className="text-5xl mb-6">🎲</div>
+          <h1 className="text-2xl font-bold mb-3" style={{ color: "var(--p-ink)", fontFamily: "var(--font-display, system-ui)" }}>
+            Sessions LudiBRED
+          </h1>
+          <p className="text-base mb-2" style={{ color: "var(--p-ink2)" }}>
+            Pour consulter les sessions et vous inscrire, vous devez avoir un compte sur l&apos;application LudiGest.
+          </p>
+          <p className="text-sm mb-8" style={{ color: "var(--p-ink3)" }}>
+            L&apos;inscription est réservée aux collaborateurs BRED avec une adresse <strong>@bred.fr</strong>.
+          </p>
+          <a
+            href="/download"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-base transition-opacity hover:opacity-90"
+            style={{ background: "var(--p-primary)" }}
+          >
+            📱 Créer mon compte
+          </a>
+          <p className="text-xs mt-4" style={{ color: "var(--p-ink3)" }}>
+            Vous avez déjà un compte ?{" "}
+            <a href="/login" className="underline" style={{ color: "var(--p-primary)" }}>Se connecter</a>
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  if (status === "loading") {
+    return (
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center py-32">
+          <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--p-primary)", borderTopColor: "transparent" }} />
+        </div>
+      </>
+    );
+  }
 
   const [sessions, setSessions] = useState<GameSessionDTO[]>([]);
   const [loading, setLoading] = useState(true);
