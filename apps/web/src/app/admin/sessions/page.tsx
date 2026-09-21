@@ -9,6 +9,26 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
 
+function exportUrl(sessionId: string) {
+  return `/api/admin/sessions/${sessionId}/registrations/export`;
+}
+
+function ExportButton({ session, className, style }: { session: GameSessionDTO; className?: string; style?: React.CSSProperties }) {
+  const disabled = session.registrationCount === 0;
+  return (
+    <a
+      href={disabled ? undefined : exportUrl(session.id)}
+      download
+      aria-disabled={disabled}
+      title={disabled ? "Aucun inscrit à exporter" : "Exporter la liste des inscrits (CSV)"}
+      className={`${className ?? ""} ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+      style={style}
+    >
+      📥 Export
+    </a>
+  );
+}
+
 type SessionForm = { name: string; date: string; location: string; startTime: string; imageUrl: string; info: string };
 const emptyForm: SessionForm = { name: "", date: "", location: "", startTime: "", imageUrl: "", info: "" };
 
@@ -54,7 +74,10 @@ function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onC
             <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>Inscrits — {session.name}</h2>
             <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>{session.registrationCount} inscrit(s)</p>
           </div>
-          <button onClick={onClose} className="text-xl" style={{ color: "var(--p-ink3)" }}>✕</button>
+          <div className="flex items-center gap-3">
+            <ExportButton session={session} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }} />
+            <button onClick={onClose} className="text-xl" style={{ color: "var(--p-ink3)" }}>✕</button>
+          </div>
         </div>
         <div className="overflow-y-auto flex-1 p-5">
           {msg && <p className="text-sm mb-3" style={{ color: "var(--p-vert)" }}>✓ {msg}</p>}
@@ -362,6 +385,7 @@ export default function AdminSessionsPage() {
 
                     <div className="flex flex-wrap gap-2 ml-auto">
                       <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                      <ExportButton session={s} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }} />
                       <button onClick={() => { setEditing(s); setShowForm(true); }} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>✏️ Modifier</button>
                       <button
                         onClick={() => { setConfirmTarget({ id: s.id, action: "invite", label: `Envoyer une invitation à TOUS les membres actifs pour "${s.name}" ?` }); }}
@@ -442,6 +466,7 @@ export default function AdminSessionsPage() {
                     <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
                       <div className="flex gap-2 justify-end">
                         <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                        <ExportButton session={s} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }} />
                         <button
                           onClick={() => { setConfirmTarget({ id: s.id, action: "delete", label: `Supprimer "${s.name}" ? Cette action est irréversible.` }); }}
                           className="px-3 py-1.5 rounded-full text-xs font-semibold"
@@ -508,6 +533,7 @@ export default function AdminSessionsPage() {
                     <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
                       <div className="flex gap-2 justify-end">
                         <button onClick={() => setViewRegs(s)} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>👥 Inscrits</button>
+                        <ExportButton session={s} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }} />
                         <button
                           onClick={() => { setConfirmTarget({ id: s.id, action: "delete", label: `Supprimer "${s.name}" ? Cette action est irréversible.` }); }}
                           className="px-3 py-1.5 rounded-full text-xs font-semibold"
