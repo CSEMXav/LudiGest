@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { searchBGG, getGameDetails } from "@/lib/bgg";
+import { ensureFrenchSummary, translateToFrench } from "@/lib/translate";
 
 async function getUser(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -72,12 +73,18 @@ export async function POST(req: NextRequest) {
   // Le même barcode peut être partagé par plusieurs exemplaires du même jeu
   const barcode = bggDetails?.barcode ?? null;
 
+  // BGG renvoie des descriptions en anglais : on traduit en français (résumé + type)
+  const [summaryFr, typeFr] = await Promise.all([
+    ensureFrenchSummary(bggDetails?.summary),
+    bggDetails?.type ? translateToFrench(bggDetails.type) : Promise.resolve(null),
+  ]);
+
   const game = await prisma.game.create({
     data: {
       name,
-      type: bggDetails?.type ?? "Jeu de société",
+      type: typeFr || bggDetails?.type || "Jeu de société",
       category,
-      summary: bggDetails?.summary ?? null,
+      summary: summaryFr,
       minAge: bggDetails?.minAge ?? null,
       minPlayers: bggDetails?.minPlayers ?? null,
       maxPlayers: bggDetails?.maxPlayers ?? null,

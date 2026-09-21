@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseGameExcel } from "@/lib/excel";
 import { searchBGG, getGameDetails } from "@/lib/bgg";
-import { translateToFrench } from "@/lib/translate";
+import { ensureFrenchSummary } from "@/lib/translate";
 
 function sseChunk(data: object): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
             }
 
             // Traduction du résumé si nécessaire
-            const summaryFr = details?.summary ? await translateToFrench(details.summary) : null;
+            const summaryFr = await ensureFrenchSummary(details?.summary);
 
             // Le code barre du fichier est propriétaire : il prime systématiquement sur BGG
             const barcode = row.barcode ?? details?.barcode ?? null;

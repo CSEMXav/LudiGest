@@ -52,6 +52,27 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [translating, setTranslating] = useState(false);
+
+  async function translateSummary() {
+    if (!form.summary.trim()) return;
+    setTranslating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/games/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: form.summary }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.text) set("summary", d.text);
+      else setError(d.error ?? "Traduction impossible.");
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setTranslating(false);
+    }
+  }
 
   function set(field: keyof EditState, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -150,7 +171,18 @@ function EditModal({ game, onClose, onSaved }: { game: GameDTO; onClose: () => v
 
           {/* Résumé */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Résumé</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-500">Résumé</label>
+              <button
+                type="button"
+                onClick={translateSummary}
+                disabled={translating || !form.summary.trim()}
+                className="text-xs font-medium px-2 py-0.5 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                title="Traduire le résumé en français"
+              >
+                {translating ? "Traduction…" : "🇫🇷 Traduire en français"}
+              </button>
+            </div>
             <textarea value={form.summary} onChange={(e) => set("summary", e.target.value)} rows={5}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 resize-none" />
           </div>
@@ -558,6 +590,8 @@ export default function AdminGamesPage() {
   const [editingGame, setEditingGame] = useState<GameDTO | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showNewGamesEmail, setShowNewGamesEmail] = useState(false);
+  const [bulkTranslating, setBulkTranslating] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
   const [duplicatesOnly, setDuplicatesOnly] = useState(false);
 
   const currentLocation = session?.user.location;
@@ -624,6 +658,39 @@ export default function AdminGamesPage() {
     if (res.ok) loadGames();
   }
 
+  async function translateAllSummaries() {
+    setBulkMsg("");
+    setBulkTranslating(true);
+    try {
+      const check = await fetch("/api/admin/games/translate-summaries");
+      const info = await check.json().catch(() => ({}));
+      if (!check.ok) { setBulkMsg(info.error ?? "Erreur."); return; }
+      if (!info.count) { setBulkMsg("✓ Tous les résumés sont déjà en français."); return; }
+      if (!confirm(`${info.count} résumé(s) semblent en anglais. Les traduire en français maintenant ?`)) return;
+      let done = 0, failed = 0, remaining = info.count;
+      while (remaining > 0) {
+        const res = await fetch("/api/admin/games/translate-summaries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 10 }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { setBulkMsg(d.error ?? "Erreur pendant la traduction."); break; }
+        done += d.translated?.length ?? 0;
+        failed += d.failed?.length ?? 0;
+        remaining = d.remaining ?? 0;
+        setBulkMsg(`Traduction… ${done} fait(s)${remaining ? `, ${remaining} restant(s)` : ""}`);
+        if ((d.translated?.length ?? 0) === 0 && (d.failed?.length ?? 0) === 0) break;
+      }
+      setBulkMsg(`✓ ${done} résumé(s) traduit(s)${failed ? `, ${failed} échec(s)` : ""}`);
+      loadGames();
+    } catch {
+      setBulkMsg("Erreur réseau.");
+    } finally {
+      setBulkTranslating(false);
+    }
+  }
+
   const duplicateNames = new Set(
     Object.entries(
       games.reduce<Record<string, number>>((acc, g) => {
@@ -646,7 +713,16 @@ export default function AdminGamesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des jeux</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {bulkMsg && <span className="text-xs text-gray-600 mr-1">{bulkMsg}</span>}
+          <button
+            onClick={translateAllSummaries}
+            disabled={bulkTranslating}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Détecter les résumés en anglais et les traduire en français"
+          >
+            {bulkTranslating ? "Traduction…" : "🇫🇷 Traduire les résumés"}
+          </button>
           <button
             onClick={() => setShowNewGamesEmail(true)}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
