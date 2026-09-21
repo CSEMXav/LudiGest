@@ -491,7 +491,7 @@ function gameCardHtml(g: NewGameCard): string {
       <p style="margin:0 0 6px"><span style="display:inline-block;background:#fff5f5;color:#C8102E;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:999px">${escapeHtml(category)}</span></p>
       ${meta.length ? `<p style="margin:0 0 6px;font-size:12px;color:#6b7280">${meta.map(escapeHtml).join(" · ")}</p>` : ""}
       ${summary ? `<p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.4">${escapeHtml(summary)}</p>` : ""}
-      <a href="${url}" style="font-size:12px;font-weight:bold;color:#C8102E;text-decoration:none">Voir la fiche et emprunter →</a>
+      <a href="${url}" style="font-size:12px;font-weight:bold;color:#C8102E;text-decoration:none">Voir la fiche →</a>
     </td>
   </tr>
 </table>`;
