@@ -1,0 +1,2 @@
+ALTER TABLE "EmailConfig" ADD COLUMN IF NOT EXISTS "newGamesSubject" TEXT NOT NULL DEFAULT '🎲 Nouveaux jeux à la ludothèque !';
+ALTER TABLE "EmailConfig" ADD COLUMN IF NOT EXISTS "newGamesBody" TEXT NOT NULL DEFAULT E'Bonjour {{userName}},\n\nDe nouveaux jeux viennent d''arriver à la ludothèque et sont disponibles à l''emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque BRED';

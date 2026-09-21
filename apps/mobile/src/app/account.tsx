@@ -54,6 +54,7 @@ function NotifIcon({ type }: { type: string }) {
   if (type === "SESSION_INVITE") return <Text style={nt.icon}>🎉</Text>;
   if (type === "SESSION_REMINDER") return <Text style={nt.icon}>📅</Text>;
   if (type === "GAME_REPORT") return <Text style={nt.icon}>🚨</Text>;
+  if (type === "NEW_GAMES") return <Text style={nt.icon}>🆕</Text>;
   return <Text style={nt.icon}>🔔</Text>;
 }
 

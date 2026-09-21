@@ -20,6 +20,8 @@ const DEFAULTS = {
   waitlistBody: "Bonjour {{userName}},\n\nUn(e) collègue attend de pouvoir emprunter le jeu que vous avez actuellement :\n\n{{gameName}}\n\nSi vous avez fini de jouer, pensez à le ramener à la ludothèque !\n\nVoir le jeu : {{gameUrl}}\n\nLudothèque BRED",
   sessionReminderDays1: 7,
   sessionReminderDays2: 1,
+  newGamesSubject: "🎲 Nouveaux jeux à la ludothèque !",
+  newGamesBody: "Bonjour {{userName}},\n\nDe nouveaux jeux viennent d'arriver à la ludothèque et sont disponibles à l'emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque BRED",
 };
 
 export async function GET() {
@@ -43,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "sessionReminderSubject", "sessionReminderBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody", "sessionReminderDays1", "sessionReminderDays2"];
+  const allowed = ["reminderDaysBefore", "overdueFrequencyDays", "sendHour", "reminderSubject", "reminderBody", "overdueSubject", "overdueBody", "sessionInviteSubject", "sessionInviteBody", "sessionReminderSubject", "sessionReminderBody", "manualOverdueSubject", "manualOverdueBody", "waitlistSubject", "waitlistBody", "sessionReminderDays1", "sessionReminderDays2", "newGamesSubject", "newGamesBody"];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) data[key] = body[key];

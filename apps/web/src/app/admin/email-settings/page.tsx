@@ -19,6 +19,8 @@ interface EmailConfig {
   waitlistBody: string;
   sessionReminderDays1: number;
   sessionReminderDays2: number;
+  newGamesSubject: string;
+  newGamesBody: string;
 }
 
 interface EmailLog {
@@ -34,6 +36,7 @@ interface EmailLog {
 
 const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}";
 const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
+const NEW_GAMES_VARS_HINT = "Variables : {{userName}}, {{gamesList}}, {{gamesCount}}, {{siteUrl}}";
 const SESSION_REMINDER_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{sessionUrl}}, {{siteUrl}}";
 
 const LOG_TINTS: Record<string, string> = {
@@ -42,6 +45,7 @@ const LOG_TINTS: Record<string, string> = {
   SESSION_INVITE:  "var(--p-bleu)",
   SESSION_REMINDER:"var(--p-ocre)",
   GAME_REPORT:     "var(--p-primary)",
+  NEW_GAMES:       "var(--p-vert)",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -50,6 +54,7 @@ const TYPE_COLORS: Record<string, string> = {
   SESSION_INVITE: "bg-blue-50 text-blue-700",
   SESSION_REMINDER: "bg-orange-50 text-orange-700",
   GAME_REPORT: "bg-red-100 text-red-800",
+  NEW_GAMES: "bg-green-50 text-green-700",
 };
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -297,6 +302,21 @@ export default function EmailSettingsPage() {
               </div>
             </Collapsible>
 
+            <Collapsible title="Nouveaux jeux (annonce)" icon="🆕">
+              <div className="space-y-3 mt-2">
+                <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé depuis la liste des jeux (bouton &quot;Nouveaux jeux&quot;). La variable <code>{"{{gamesList}}"}</code> est remplacée par les fiches des jeux sélectionnés (image, joueurs, durée, âge, résumé). Si elle est absente, les fiches sont ajoutées à la fin du message.</p>
+                <Field label="Objet" hint={NEW_GAMES_VARS_HINT}>
+                  <input type="text" value={config.newGamesSubject ?? ""} onChange={(e) => set("newGamesSubject", e.target.value)}
+                    className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+                <Field label="Corps du message">
+                  <textarea value={config.newGamesBody ?? ""} onChange={(e) => set("newGamesBody", e.target.value)} rows={6}
+                    className={`${inputCls} resize-y min-h-[80px] font-mono text-xs leading-relaxed`}
+                    style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                </Field>
+              </div>
+            </Collapsible>
+
             <Collapsible title="Quelqu'un attend votre jeu" icon="💡">
               <div className="space-y-3 mt-2">
                 <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Envoyé à l&apos;emprunteur quand quelqu&apos;un clique sur &quot;M&apos;avertir quand disponible&quot;.</p>
@@ -333,6 +353,8 @@ export default function EmailSettingsPage() {
                 ["{{gameUrl}}", "Lien vers la fiche du jeu"],
                 ["{{siteUrl}}", "Lien vers le site LudiGest"],
                 ["{{sessionUrl}}", "Lien vers la session"],
+                ["{{gamesList}}", "Fiches des nouveaux jeux (annonce)"],
+                ["{{gamesCount}}", "Nombre de nouveaux jeux (annonce)"],
               ].map(([v, d]) => (
                 <li key={v} className="flex items-center gap-2 text-xs">
                   <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: "var(--p-bg)", color: "var(--p-primary)" }}>{v}</code>
@@ -369,7 +391,7 @@ export default function EmailSettingsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="text-xs font-semibold truncate" style={{ color: "var(--p-ink)" }}>{log.detail || log.typeLabel}</div>
-                            {log.userName && log.typeKey !== "SESSION_INVITE" && (
+                            {log.userName && log.typeKey !== "SESSION_INVITE" && log.typeKey !== "NEW_GAMES" && (
                               <span className="text-xs flex-shrink-0" style={{ color: "var(--p-ink3)" }}>→ {log.userName}</span>
                             )}
                           </div>

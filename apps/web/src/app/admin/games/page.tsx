@@ -367,6 +367,184 @@ const SORTS: { value: string; label: string }[] = [
   { value: "recent", label: "Plus récents" },
 ];
 
+
+function NewGamesEmailModal({ location, onClose }: { location?: string; onClose: () => void }) {
+  const [games, setGames] = useState<GameDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState("");
+  const [onlyLocation, setOnlyLocation] = useState(true);
+  const [busy, setBusy] = useState<"" | "preview" | "test" | "send">("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState<{ subject: string; html: string; recipients: number } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/games")
+      .then((r) => r.json())
+      .then((data: GameDTO[]) => {
+        const list = (Array.isArray(data) ? data : []).filter((g) => g.status !== "SUSPENDED");
+        list.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+        setGames(list);
+      })
+      .catch(() => setError("Erreur de chargement des jeux."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const RECENT_DAYS = 30;
+  const recentSince = Date.now() - RECENT_DAYS * 86400000;
+  const isRecent = (g: GameDTO) => new Date(g.addedAt).getTime() >= recentSince;
+
+  function toggle(id: string) {
+    setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    setPreview(null); setMsg("");
+  }
+  function selectRecent() { setSelected(new Set(games.filter(isRecent).map((g) => g.id))); setPreview(null); }
+  function clearSelection() { setSelected(new Set()); setPreview(null); }
+
+  async function call(mode: "preview" | "test" | "send") {
+    if (selected.size === 0) { setError("Sélectionnez au moins un jeu."); return; }
+    setBusy(mode); setError(""); setMsg("");
+    try {
+      const res = await fetch("/api/admin/games/announce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameIds: Array.from(selected), mode, onlyLocation }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error ?? "Erreur lors de l'envoi."); return; }
+      if (mode === "preview") setPreview(d);
+      else if (mode === "test") setMsg("✓ Email de test envoyé à " + d.sentTo);
+      else setMsg("✓ Annonce envoyée : " + d.emailsSent + " email(s), " + d.pushSent + " push (" + d.recipients + " membre(s))");
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setBusy(""); setConfirming(false);
+    }
+  }
+
+  const visible = filter.trim()
+    ? games.filter((g) => g.name.toLowerCase().includes(filter.trim().toLowerCase()))
+    : games;
+  const selectedCount = selected.size;
+  const recipientsLabel = preview
+    ? preview.recipients + " membre(s)"
+    : "tous les membres actifs" + (onlyLocation && location ? " de " + location : "");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-xl" style={{ border: "1px solid var(--p-rule)" }}>
+        <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--p-rule)" }}>
+          <div>
+            <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>📧 Annoncer les nouveaux jeux</h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>
+              Sélectionnez les jeux à présenter dans l&apos;email (triés par date d&apos;entrée). Le texte se paramètre dans <a href="/admin/email-settings" className="underline">Paramètres email</a>.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-xl" style={{ color: "var(--p-ink3)" }}>✕</button>
+        </div>
+
+        {preview ? (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center gap-3 px-5 py-3 text-sm" style={{ borderBottom: "1px solid var(--p-rule)", background: "var(--p-bg)" }}>
+              <button onClick={() => setPreview(null)} className="px-3 py-1 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}>← Retour à la sélection</button>
+              <span className="truncate" style={{ color: "var(--p-ink)" }}><strong>Objet :</strong> {preview.subject}</span>
+            </div>
+            <iframe title="Aperçu de l'email" srcDoc={preview.html} className="flex-1 w-full" style={{ minHeight: 420, border: "none", background: "#fff" }} />
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-wrap items-center gap-2 px-5 py-3" style={{ borderBottom: "1px solid var(--p-rule)" }}>
+              <input
+                type="search"
+                placeholder="Filtrer par nom…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="flex-1 min-w-[160px] rounded-xl px-3 py-2 text-sm focus:outline-none"
+                style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
+              />
+              <button onClick={selectRecent} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>
+                🆕 {RECENT_DAYS} derniers jours ({games.filter(isRecent).length})
+              </button>
+              <button onClick={clearSelection} className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>Tout désélectionner</button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-5 py-3">
+              {loading ? (
+                <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "var(--p-bg)" }} />)}</div>
+              ) : visible.length === 0 ? (
+                <p className="text-center py-8 text-sm" style={{ color: "var(--p-ink3)" }}>Aucun jeu.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {visible.map((g) => {
+                    const checked = selected.has(g.id);
+                    const meta = [
+                      g.minPlayers && g.maxPlayers ? g.minPlayers + "–" + g.maxPlayers + " j." : null,
+                      g.duration ? g.duration + " min" : null,
+                      g.minAge ? g.minAge + "+" : null,
+                    ].filter(Boolean).join(" · ");
+                    return (
+                      <label key={g.id} className="flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer text-sm" style={{ background: checked ? "var(--p-primary-soft)" : "var(--p-bg)", border: checked ? "1px solid var(--p-primary)" : "1px solid transparent" }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggle(g.id)} className="w-4 h-4 accent-[#C8102E]" />
+                        {g.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={g.coverUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-lg" style={{ background: "#fff" }}>🎲</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate" style={{ color: "var(--p-ink)" }}>{g.name}</p>
+                          <p className="text-xs" style={{ color: "var(--p-ink3)" }}>Entré le {formatDate(g.addedAt)}{meta ? " · " + meta : ""}</p>
+                        </div>
+                        {isRecent(g) && <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "#e3f0d8", color: "#3b5a1f" }}>Nouveau</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="p-5 space-y-3" style={{ borderTop: "1px solid var(--p-rule)" }}>
+          {error && <p className="text-sm" style={{ color: "var(--p-primary)" }}>{error}</p>}
+          {msg && <p className="text-sm font-semibold" style={{ color: "var(--p-vert)" }}>{msg}</p>}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold" style={{ color: "var(--p-ink)" }}>{selectedCount} jeu{selectedCount > 1 ? "x" : ""} sélectionné{selectedCount > 1 ? "s" : ""}</span>
+            {location && (
+              <label className="flex items-center gap-2 text-xs" style={{ color: "var(--p-ink2)" }}>
+                <input type="checkbox" checked={onlyLocation} onChange={(e) => { setOnlyLocation(e.target.checked); setPreview(null); }} className="w-4 h-4 accent-[#C8102E]" />
+                Uniquement les membres de {location}
+              </label>
+            )}
+            <div className="flex flex-wrap gap-2 ml-auto">
+              <button onClick={() => call("preview")} disabled={!!busy || selectedCount === 0} className="px-3 py-1.5 rounded-full text-xs font-semibold disabled:opacity-50" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>
+                {busy === "preview" ? "…" : "👁 Aperçu"}
+              </button>
+              <button onClick={() => call("test")} disabled={!!busy || selectedCount === 0} className="px-3 py-1.5 rounded-full text-xs font-semibold disabled:opacity-50" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }}>
+                {busy === "test" ? "Envoi…" : "✉️ M'envoyer un test"}
+              </button>
+              <button onClick={() => setConfirming(true)} disabled={!!busy || selectedCount === 0} className="px-4 py-1.5 rounded-full text-xs font-bold text-white disabled:opacity-50" style={{ background: "var(--p-bleu)" }}>
+                {busy === "send" ? "Envoi en cours…" : "📧 Envoyer à tous"}
+              </button>
+            </div>
+          </div>
+          {confirming && (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm" style={{ background: "var(--p-bg)", border: "1px solid var(--p-rule)" }}>
+              <span className="flex-1 font-medium" style={{ color: "var(--p-ink)" }}>
+                Envoyer l&apos;annonce de {selectedCount} jeu{selectedCount > 1 ? "x" : ""} à {recipientsLabel} ?
+              </span>
+              <button onClick={() => setConfirming(false)} className="px-3 py-1 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>Non</button>
+              <button onClick={() => call("send")} className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: "var(--p-primary)" }}>Oui, envoyer</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminGamesPage() {
   const { data: session } = useSession();
   const [games, setGames]       = useState<GameDTO[]>([]);
@@ -379,6 +557,7 @@ export default function AdminGamesPage() {
   const [enriching, setEnriching] = useState<Record<string, boolean>>({});
   const [editingGame, setEditingGame] = useState<GameDTO | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showNewGamesEmail, setShowNewGamesEmail] = useState(false);
   const [duplicatesOnly, setDuplicatesOnly] = useState(false);
 
   const currentLocation = session?.user.location;
@@ -468,6 +647,13 @@ export default function AdminGamesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des jeux</h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowNewGamesEmail(true)}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            title="Envoyer un email présentant les nouveaux jeux"
+          >
+            📧 Nouveaux jeux
+          </button>
           <button
             onClick={() => setShowQuickAdd(true)}
             className="px-4 py-2 border border-[#C8102E] text-[#C8102E] rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
@@ -698,6 +884,10 @@ export default function AdminGamesPage() {
           onClose={() => setEditingGame(null)}
           onSaved={() => { setEditingGame(null); loadGames(); }}
         />
+      )}
+
+      {showNewGamesEmail && (
+        <NewGamesEmailModal location={currentLocation} onClose={() => setShowNewGamesEmail(false)} />
       )}
 
       {showQuickAdd && (

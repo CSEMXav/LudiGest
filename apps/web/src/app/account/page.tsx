@@ -35,6 +35,7 @@ function NotifBadge({ type }: { type: string }) {
   if (type === "SESSION_INVITE")   return <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#dee9f3", color: "var(--p-bleu)" }}>Invitation</span>;
   if (type === "SESSION_REMINDER") return <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#fcebd2", color: "#7d4a0d" }}>Rappel session</span>;
   if (type === "GAME_REPORT")      return <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--p-primary-soft)", color: "#7c2410" }}>Signalement</span>;
+  if (type === "NEW_GAMES")        return <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#e3f0d8", color: "#3b5a1f" }}>Nouveaux jeux</span>;
   return <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#fef3c7", color: "#7d4a0d" }}>Rappel emprunt</span>;
 }
 

@@ -445,3 +445,105 @@ export async function sendSessionUpdateEmail(
     `,
   });
 }
+
+/* ------------------------------------------------------------------ */
+/*  Annonce "Nouveaux jeux" (admin → tous les membres)                 */
+/* ------------------------------------------------------------------ */
+
+export interface NewGameCard {
+  id: string;
+  name: string;
+  category: string;
+  summary: string | null;
+  minAge: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  duration: number | null;
+  coverUrl: string | null;
+}
+
+const NEW_GAMES_DEFAULT_SUBJECT = "🎲 Nouveaux jeux à la ludothèque !";
+const NEW_GAMES_DEFAULT_BODY = "Bonjour {{userName}},\n\nDe nouveaux jeux viennent d'arriver à la ludothèque et sont disponibles à l'emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque BRED";
+
+const GAME_CATEGORY_LABELS: Record<string, string> = {
+  escape: "Escape", famille: "Famille", ambiance: "Ambiance", enfant: "Enfant", "initié": "Initié", expert: "Expert",
+};
+
+function gameCardHtml(g: NewGameCard): string {
+  const url = `${getSiteUrl()}/games/${g.id}`;
+  const meta: string[] = [];
+  if (g.minPlayers && g.maxPlayers) meta.push(`👥 ${g.minPlayers === g.maxPlayers ? g.minPlayers : `${g.minPlayers}–${g.maxPlayers}`} joueurs`);
+  else if (g.minPlayers) meta.push(`👥 ${g.minPlayers}+ joueurs`);
+  else if (g.maxPlayers) meta.push(`👥 jusqu'à ${g.maxPlayers} joueurs`);
+  if (g.duration) meta.push(`⏱ ${g.duration} min`);
+  if (g.minAge) meta.push(`🎂 ${g.minAge} ans et +`);
+  const rawSummary = (g.summary ?? "").trim();
+  const summary = rawSummary.length > 240 ? rawSummary.slice(0, 237).trimEnd() + "…" : rawSummary;
+  const category = GAME_CATEGORY_LABELS[g.category] ?? g.category;
+  const cover = g.coverUrl
+    ? `<img src="${escapeHtml(g.coverUrl)}" alt="" width="88" height="88" style="width:88px;height:88px;object-fit:cover;border-radius:10px;display:block;border:1px solid #eee">`
+    : `<div style="width:88px;height:88px;border-radius:10px;background:#fff5f5;text-align:center;line-height:88px;font-size:36px">🎲</div>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff">
+  <tr>
+    <td width="88" valign="top" style="padding:12px">${cover}</td>
+    <td valign="top" style="padding:12px 12px 12px 0;font-family:sans-serif">
+      <p style="margin:0 0 4px;font-size:16px;font-weight:bold;color:#111"><a href="${url}" style="color:#111;text-decoration:none">${escapeHtml(g.name)}</a></p>
+      <p style="margin:0 0 6px"><span style="display:inline-block;background:#fff5f5;color:#C8102E;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:999px">${escapeHtml(category)}</span></p>
+      ${meta.length ? `<p style="margin:0 0 6px;font-size:12px;color:#6b7280">${meta.map(escapeHtml).join(" · ")}</p>` : ""}
+      ${summary ? `<p style="margin:0 0 8px;font-size:13px;color:#374151;line-height:1.4">${escapeHtml(summary)}</p>` : ""}
+      <a href="${url}" style="font-size:12px;font-weight:bold;color:#C8102E;text-decoration:none">Voir la fiche et emprunter →</a>
+    </td>
+  </tr>
+</table>`;
+}
+
+/** Construit l'objet et le HTML de l'email "Nouveaux jeux" à partir de la config admin. */
+export function renderNewGamesEmail(
+  config: { newGamesSubject?: string | null; newGamesBody?: string | null } | null | undefined,
+  vars: { userName: string },
+  games: NewGameCard[]
+): { subject: string; html: string } {
+  const siteUrl = getSiteUrl();
+  const allVars: Record<string, string> = { userName: vars.userName, gamesCount: String(games.length), siteUrl };
+  const subjectTpl = config?.newGamesSubject?.trim() ? config.newGamesSubject : NEW_GAMES_DEFAULT_SUBJECT;
+  const bodyTpl = config?.newGamesBody?.trim() ? config.newGamesBody : NEW_GAMES_DEFAULT_BODY;
+  const subject = applyTemplate(subjectTpl, allVars);
+
+  const cards = games.map(gameCardHtml).join("");
+  const hasPlaceholder = bodyTpl.includes("{{gamesList}}");
+  const lines = bodyTpl.split("\n").map((line) => {
+    if (line.includes("{{gamesList}}")) return `<div style="margin:16px 0">${cards}</div>`;
+    const text = applyTemplateHtml(line, allVars);
+    return text.trim() ? `<p style="margin:4px 0">${text}</p>` : "<br>";
+  });
+  const body = lines.join("") + (hasPlaceholder ? "" : `<div style="margin:16px 0">${cards}</div>`);
+
+  const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px">
+    <h1 style="color:#C8102E;margin-bottom:4px">🎲 LudiGest</h1>
+    <p style="color:#6b7280;margin-top:0">Ludothèque BRED</p>
+    ${body}
+    <a href="${siteUrl}/games" style="display:inline-block;background:#C8102E;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;margin:8px 0 16px">Voir tous les jeux</a>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+    <p style="color:#9ca3af;font-size:12px">🎲 <a href="${siteUrl}" style="color:#9ca3af">LudiGest — Ludothèque BRED</a></p>
+  </div>`;
+  return { subject, html };
+}
+
+export async function sendNewGamesEmail(
+  to: string,
+  vars: { userName: string },
+  games: NewGameCard[],
+  preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
+): Promise<void> {
+  const config = preloadedConfig !== undefined
+    ? preloadedConfig
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const { subject, html } = renderNewGamesEmail(config, vars, games);
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Nouveaux jeux pour ${to} : ${games.map((g) => g.name).join(", ")}\n`);
+    return;
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+}

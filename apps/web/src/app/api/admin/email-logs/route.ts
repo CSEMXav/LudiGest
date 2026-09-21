@@ -15,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
   SESSION_INVITE: "Invitation session",
   SESSION_REMINDER: "Rappel session",
   GAME_REPORT: "Signalement jeu",
+  NEW_GAMES: "Nouveaux jeux",
 };
 
 export async function GET(req: NextRequest) {

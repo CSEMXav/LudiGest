@@ -128,6 +128,8 @@ model EmailConfig {
   sessionReminderBody     String   @default("Bonjour {{userName}},\n\nRappel : vous êtes inscrit(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nLudothèque BRED")
   sessionReminderDays1 Int @default(7)
   sessionReminderDays2 Int @default(1)
+  newGamesSubject      String   @default("🎲 Nouveaux jeux à la ludothèque !")
+  newGamesBody         String   @default("Bonjour {{userName}},\n\nDe nouveaux jeux viennent d'arriver à la ludothèque et sont disponibles à l'emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque BRED")
   manualOverdueSubject String   @default("⚠ Retard (rappel admin) : veuillez rendre \"{{gameName}}\"")
   manualOverdueBody    String   @default("Bonjour {{userName}},\n\nCe rappel vous est envoyé par l'administrateur de la ludothèque.\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter dès que possible.\n\nLudothèque BRED")
   waitlistSubject      String   @default("💡 Quelqu'un attend \"{{gameName}}\" — pensez à le rendre !")
