@@ -29,34 +29,67 @@ const EMPTY_FORM: CreateSessionForm = {
   name: "", date: "", location: "", startTime: "", imageUrl: "", info: "", maxParticipants: "",
 };
 
-function RegisterForm({ tint, submitting, onCancel, onConfirm }: {
+function GuestForm({ tint, submitting, mode, initialGuestName, onCancel, onConfirm }: {
   tint: string;
   submitting: boolean;
+  mode: "register" | "edit";
+  initialGuestName?: string | null;
   onCancel: () => void;
   onConfirm: (guestName: string) => void;
 }) {
-  const [guestName, setGuestName] = useState("");
+  const [withGuest, setWithGuest] = useState<boolean | null>(mode === "edit" ? !!initialGuestName : null);
+  const [guestName, setGuestName] = useState(initialGuestName ?? "");
+  const canConfirm = withGuest === false || (withGuest === true && guestName.trim().length > 0);
+
+  const choice = (value: boolean, label: string) => {
+    const active = withGuest === value;
+    return (
+      <button
+        type="button"
+        onClick={() => setWithGuest(value)}
+        className="px-5 py-2 text-sm font-semibold rounded-xl transition-colors"
+        style={active
+          ? { background: tint, color: "#fff", border: `1.5px solid ${tint}` }
+          : { background: "#fff", color: "var(--p-ink2)", border: "1.5px solid var(--p-rule)" }}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
-    <div className="space-y-3 w-full">
+    <div className="space-y-3 w-full rounded-xl p-4" style={{ background: "var(--p-bg)", border: "1px solid var(--p-rule)" }}>
       <div>
-        <label className="block text-xs font-medium mb-1" style={{ color: "var(--p-ink2)" }}>Accompagnant(e) ? (optionnel)</label>
-        <input
-          type="text"
-          value={guestName}
-          onChange={(e) => setGuestName(e.target.value)}
-          placeholder="Prénom Nom"
-          autoFocus
-          className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
-          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }}
-        />
+        <p className="text-sm font-medium mb-2" style={{ color: "var(--p-ink)" }}>
+          {mode === "edit" ? "Serez-vous accompagné(e) d'une autre personne ?" : "Viendrez-vous accompagné(e) d'une autre personne ?"}
+        </p>
+        <div className="flex gap-2">
+          {choice(true, "Oui")}
+          {choice(false, "Non")}
+        </div>
       </div>
+      {withGuest === true && (
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--p-ink2)" }}>Nom de l&apos;accompagnant(e)</label>
+          <input
+            type="text"
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            placeholder="Prénom Nom"
+            autoFocus
+            maxLength={100}
+            className="w-full rounded-lg px-3 py-2 text-sm focus:outline-none"
+            style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)", background: "#fff" }}
+          />
+        </div>
+      )}
       <div className="flex gap-2">
         <button onClick={onCancel}
           className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
-          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}>Annuler</button>
-        <button onClick={() => onConfirm(guestName)} disabled={submitting}
+          style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)", background: "#fff" }}>Annuler</button>
+        <button onClick={() => onConfirm(withGuest ? guestName : "")} disabled={submitting || !canConfirm}
           className="px-4 py-2 text-sm font-medium rounded-xl text-white transition-colors disabled:opacity-50"
-          style={{ background: tint }}>{submitting ? "…" : "Confirmer"}</button>
+          style={{ background: tint }}>{submitting ? "…" : mode === "edit" ? "Enregistrer" : "Confirmer l'inscription"}</button>
       </div>
     </div>
   );
@@ -69,6 +102,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<GameSessionDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionSession, setActionSession] = useState<GameSessionDTO | null>(null);
+  const [guestEditSession, setGuestEditSession] = useState<GameSessionDTO | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
 
@@ -126,6 +160,19 @@ export default function SessionsPage() {
     setActionSession(null);
     if (res.ok) { flash(s.id, "Inscription enregistrée !", true); load(); }
     else { const d = await res.json(); flash(s.id, d.error ?? "Erreur.", false); }
+  }
+
+  async function updateGuest(s: GameSessionDTO, guestName: string) {
+    setSubmitting(true);
+    const res = await fetch(`/api/sessions/${s.id}/register`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guestName: guestName.trim() || null }),
+    });
+    setSubmitting(false);
+    setGuestEditSession(null);
+    if (res.ok) { flash(s.id, guestName.trim() ? "Accompagnant(e) enregistré(e)." : "Accompagnant(e) retiré(e).", true); load(); }
+    else { const d = await res.json().catch(() => ({})); flash(s.id, d.error ?? "Erreur.", false); }
   }
 
   async function unregister(s: GameSessionDTO) {
@@ -400,14 +447,35 @@ export default function SessionsPage() {
 
             <div className="flex flex-wrap gap-2">
               {registered ? (
-                <button
-                  onClick={() => unregister(s)}
-                  disabled={submitting}
-                  className="px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
-                  style={{ border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
-                >
-                  Se désinscrire
-                </button>
+                guestEditSession?.id === s.id ? (
+                  <GuestForm
+                    mode="edit"
+                    tint={tint}
+                    submitting={submitting}
+                    initialGuestName={s.myRegistration?.guestName}
+                    onCancel={() => setGuestEditSession(null)}
+                    onConfirm={(guestName) => updateGuest(s, guestName)}
+                  />
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setGuestEditSession(s)}
+                      disabled={submitting}
+                      className="px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}
+                    >
+                      {s.myRegistration?.guestName ? "✏️ Modifier l'accompagnant(e)" : "➕ Ajouter un(e) accompagnant(e)"}
+                    </button>
+                    <button
+                      onClick={() => unregister(s)}
+                      disabled={submitting}
+                      className="px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                      style={{ border: "1.5px solid var(--p-primary-soft)", color: "var(--p-primary)" }}
+                    >
+                      Se désinscrire
+                    </button>
+                  </>
+                )
               ) : isFull && !registered ? (
                 <span className="px-4 py-2 text-sm font-medium rounded-xl cursor-not-allowed"
                   style={{ background: "var(--p-rule)", color: "var(--p-ink3)" }}>
@@ -416,7 +484,8 @@ export default function SessionsPage() {
               ) : isPending ? (
                 <>
                   {actionSession?.id === s.id ? (
-                    <RegisterForm
+                    <GuestForm
+                      mode="register"
                       tint={tint}
                       submitting={submitting}
                       onCancel={() => setActionSession(null)}
@@ -443,7 +512,8 @@ export default function SessionsPage() {
                 </>
               ) : !isPrivate || isCreator ? (
                 actionSession?.id === s.id ? (
-                  <RegisterForm
+                  <GuestForm
+                      mode="register"
                     tint={tint}
                     submitting={submitting}
                     onCancel={() => setActionSession(null)}

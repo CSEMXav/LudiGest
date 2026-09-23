@@ -36,7 +36,7 @@ export default function SessionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [registering, setRegistering] = useState<string | null>(null);
-  const [guestInput, setGuestInput] = useState<{ id: string; value: string } | null>(null);
+  const [guestInput, setGuestInput] = useState<{ id: string; value: string; withGuest: boolean | null; mode: "register" | "edit" } | null>(null);
 
   async function load(silent = false) {
     if (!silent) setLoading(true);
@@ -68,6 +68,19 @@ export default function SessionsScreen() {
     setRegistering(null);
   }
 
+  async function updateGuest(session: GameSessionDTO, guestName: string) {
+    setRegistering(session.id);
+    try {
+      const res = await apiFetch(`/api/sessions/${session.id}/register`, {
+        method: "PATCH",
+        body: JSON.stringify({ guestName: guestName.trim() || null }),
+      });
+      if (res.ok) { load(true); setGuestInput(null); }
+      else { const d = await res.json(); Alert.alert("Erreur", d.error ?? "Erreur."); }
+    } catch { Alert.alert("Erreur", "Problème réseau."); }
+    setRegistering(null);
+  }
+
   async function unregister(session: GameSessionDTO) {
     Alert.alert("Se désinscrire", `Vous désinscrire de "${session.name}" ?`, [
       { text: "Annuler", style: "cancel" },
@@ -84,6 +97,59 @@ export default function SessionsScreen() {
         },
       },
     ]);
+  }
+
+  function renderGuestForm(session: GameSessionDTO, tint: string) {
+    if (!guestInput || guestInput.id !== session.id) return null;
+    const isEdit = guestInput.mode === "edit";
+    const canConfirm = guestInput.withGuest === false || (guestInput.withGuest === true && guestInput.value.trim().length > 0);
+    return (
+      <View style={st.guestBox}>
+        <Text style={st.guestQuestion}>
+          {isEdit ? "Serez-vous accompagné·e d'une autre personne ?" : "Viendrez-vous accompagné·e d'une autre personne ?"}
+        </Text>
+        <View style={st.guestChoices}>
+          {[true, false].map((v) => {
+            const active = guestInput.withGuest === v;
+            return (
+              <TouchableOpacity
+                key={String(v)}
+                style={[st.choiceBtn, active && { backgroundColor: tint, borderColor: tint }]}
+                onPress={() => setGuestInput({ ...guestInput, withGuest: v })}
+              >
+                <Text style={[st.choiceText, active && { color: "#fff" }]}>{v ? "Oui" : "Non"}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {guestInput.withGuest === true && (
+          <TextInput
+            style={st.guestInput}
+            placeholder="Nom de l'accompagnant·e"
+            placeholderTextColor={P.ink3}
+            value={guestInput.value}
+            onChangeText={(v) => setGuestInput({ ...guestInput, value: v })}
+            maxLength={100}
+            autoFocus
+          />
+        )}
+        <View style={st.guestActions}>
+          <TouchableOpacity style={st.btnCancel} onPress={() => setGuestInput(null)}>
+            <Text style={st.btnCancelText}>Annuler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[st.btnPrimary, { backgroundColor: tint, flex: 1, marginTop: 0, opacity: canConfirm ? 1 : 0.5 }]}
+            disabled={!canConfirm}
+            onPress={() => {
+              const name = guestInput.withGuest ? guestInput.value : "";
+              if (isEdit) updateGuest(session, name); else register(session, name);
+            }}
+          >
+            <Text style={st.btnPrimaryText}>{isEdit ? "Enregistrer" : "Confirmer l'inscription"}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
 
   const upcoming = sessions.filter((s) => !isPast(s.date));
@@ -151,35 +217,27 @@ export default function SessionsScreen() {
                       {busy ? (
                         <ActivityIndicator style={{ marginTop: 12 }} color={P.primary} />
                       ) : registered ? (
-                        <TouchableOpacity style={[st.btnOutline, { borderColor: P.primary }]} onPress={() => unregister(session)}>
-                          <Text style={[st.btnOutlineText, { color: P.primary }]}>Se désinscrire</Text>
-                        </TouchableOpacity>
-                      ) : isGuestInput ? (
-                        <View style={st.guestBox}>
-                          <TextInput
-                            style={st.guestInput}
-                            placeholder="Accompagnant·e ? (optionnel)"
-                            placeholderTextColor={P.ink3}
-                            value={guestInput.value}
-                            onChangeText={(v) => setGuestInput({ id: session.id, value: v })}
-                            autoFocus
-                          />
-                          <View style={st.guestActions}>
-                            <TouchableOpacity style={st.btnCancel} onPress={() => setGuestInput(null)}>
-                              <Text style={st.btnCancelText}>Annuler</Text>
-                            </TouchableOpacity>
+                        isGuestInput ? renderGuestForm(session, tint) : (
+                          <>
                             <TouchableOpacity
-                              style={[st.btnPrimary, { backgroundColor: tint, flex: 1 }]}
-                              onPress={() => register(session, guestInput.value)}
+                              style={[st.btnOutline, { borderColor: P.rule }]}
+                              onPress={() => setGuestInput({ id: session.id, value: session.myRegistration?.guestName ?? "", withGuest: !!session.myRegistration?.guestName, mode: "edit" })}
                             >
-                              <Text style={st.btnPrimaryText}>Confirmer</Text>
+                              <Text style={[st.btnOutlineText, { color: P.ink2 }]}>
+                                {session.myRegistration?.guestName ? "✏️ Modifier l'accompagnant·e" : "➕ Ajouter un·e accompagnant·e"}
+                              </Text>
                             </TouchableOpacity>
-                          </View>
-                        </View>
+                            <TouchableOpacity style={[st.btnOutline, { borderColor: P.primary, marginTop: 8 }]} onPress={() => unregister(session)}>
+                              <Text style={[st.btnOutlineText, { color: P.primary }]}>Se désinscrire</Text>
+                            </TouchableOpacity>
+                          </>
+                        )
+                      ) : isGuestInput ? (
+                        renderGuestForm(session, tint)
                       ) : (
                         <TouchableOpacity
                           style={[st.btnPrimary, { backgroundColor: tint }]}
-                          onPress={() => setGuestInput({ id: session.id, value: "" })}
+                          onPress={() => setGuestInput({ id: session.id, value: "", withGuest: null, mode: "register" })}
                         >
                           <Text style={st.btnPrimaryText}>S'inscrire</Text>
                         </TouchableOpacity>
@@ -238,6 +296,10 @@ const st = StyleSheet.create({
   guestBox:       { marginTop: 12 },
   guestInput:     { backgroundColor: "#fef9f0", borderWidth: 1, borderColor: "#ece1cd", borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 8, color: "#1e1610" },
   guestActions:   { flexDirection: "row", gap: 8 },
+  guestQuestion:  { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 8 },
+  guestChoices:   { flexDirection: "row", gap: 8, marginBottom: 8 },
+  choiceBtn:      { flex: 1, borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, padding: 10, alignItems: "center", backgroundColor: "#fff" },
+  choiceText:     { fontSize: 13, fontWeight: "700", color: "#5b4d40" },
 
   pastTitle:      { fontSize: 11, fontWeight: "700", color: "#9a8b7c", textTransform: "uppercase", letterSpacing: 1, marginTop: 8, marginBottom: 8, marginLeft: 4 },
   pastCard:       { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: "#ece1cd", opacity: 0.85 },

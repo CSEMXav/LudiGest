@@ -74,3 +74,29 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   return NextResponse.json({ success: true });
 }
+
+/** PATCH { guestName } : ajoute, modifie ou retire l'accompagnant(e) d'une inscription existante. */
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const userId = await getUserId(req);
+  if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const guestName = typeof body.guestName === "string" ? body.guestName.trim().slice(0, 100) : "";
+
+  const existing = await prisma.gameSessionRegistration.findUnique({
+    where: { sessionId_userId: { sessionId: params.id, userId } },
+    include: { session: { select: { date: true } } },
+  });
+  if (!existing) return NextResponse.json({ error: "Vous n'êtes pas inscrit(e) à cette session." }, { status: 404 });
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  if (existing.session.date < today) {
+    return NextResponse.json({ error: "Cette session est passée." }, { status: 400 });
+  }
+
+  const reg = await prisma.gameSessionRegistration.update({
+    where: { id: existing.id },
+    data: { guestName: guestName || null },
+  });
+  return NextResponse.json(reg);
+}
