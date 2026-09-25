@@ -91,6 +91,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         registerUrl,
         inviterName,
         registrationDeadline: gameSession.registrationDeadline ? formatDeadlineFr(gameSession.registrationDeadline) : null,
+        imageUrl: gameSession.imageUrl,
       });
     } catch (err) { console.error("Email error:", err); }
 

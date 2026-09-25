@@ -309,6 +309,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
             sessionTime: gs.startTime,
             sessionLocation: gs.location,
             sessionUrl,
+            imageUrl: gs.imageUrl,
           }, config);
 
           // Notification in-app

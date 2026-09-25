@@ -101,7 +101,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           updated.startTime,
           updated.location,
           sessionsUrl,
-          updated.registrationDeadline ? formatDeadlineFr(updated.registrationDeadline) : null
+          updated.registrationDeadline ? formatDeadlineFr(updated.registrationDeadline) : null,
+          updated.imageUrl
         );
       } catch (err) {
         console.error(`[PATCH /api/sessions/${params.id}] Email error for ${user.email}:`, err);

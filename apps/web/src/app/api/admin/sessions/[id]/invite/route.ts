@@ -45,7 +45,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         gameSession.location,
         gameSession.startTime,
         registerUrl,
-        deadlineStr
+        deadlineStr,
+        gameSession.imageUrl
       );
       emailsSent++;
     } catch (err) {

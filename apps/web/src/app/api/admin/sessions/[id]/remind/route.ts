@@ -39,7 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         gameSession.name,
         gameSession.date,
         gameSession.location,
-        gameSession.startTime
+        gameSession.startTime,
+        gameSession.imageUrl
       );
       emailsSent++;
     } catch (err) {
