@@ -95,7 +95,7 @@ function renderTextBody(text: string): string {
       continue;
     }
     flushInfo();
-    const isSignature = /^ludothèque bred$/i.test(raw);
+    const isSignature = /^ludothèque (csem|bred)$/i.test(raw);
     const style = isSignature
       ? `margin:18px 0 0;font-size:14px;color:${BRAND.ink3};font-style:italic`
       : `margin:0 0 12px;font-size:15px;line-height:1.55;color:${BRAND.ink2}`;
@@ -126,15 +126,15 @@ ${preheader}
     <tr><td style="background:${BRAND.teal};padding:16px 24px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle"><img src="${logoUrl()}" alt="LudiGest" width="44" height="44" style="display:block;border-radius:12px;border:0"></td>
-        <td style="vertical-align:middle;padding-left:12px"><div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.3px">LudiGest</div><div style="font-size:12px;color:rgba(255,255,255,0.8)">Ludothèque BRED</div></td>
+        <td style="vertical-align:middle;padding-left:12px"><div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.3px">LudiGest</div><div style="font-size:12px;color:rgba(255,255,255,0.8)">Ludothèque CSEM</div></td>
       </tr></table>
     </td></tr>
     ${hero}
     <tr><td style="padding:26px 28px 10px">${title}${o.bodyHtml}</td></tr>
     ${cta ? `<tr><td style="padding:0 28px 22px">${cta}</td></tr>` : ""}
     <tr><td style="padding:16px 28px 20px;border-top:1px solid ${BRAND.rule};font-size:12px;line-height:1.5;color:${BRAND.ink3}">
-      🎲 <a href="${siteUrl}" style="color:${BRAND.ink3};font-weight:bold;text-decoration:none">LudiGest — Ludothèque BRED</a><br>
-      ${escapeHtml(o.footerNote ?? "Vous recevez cet email car vous êtes membre de la ludothèque BRED.")}
+      🎲 <a href="${siteUrl}" style="color:${BRAND.ink3};font-weight:bold;text-decoration:none">LudiGest — Ludothèque CSEM</a><br>
+      ${escapeHtml(o.footerNote ?? "Vous recevez cet email car vous êtes membre de la ludothèque CSEM.")}
     </td></tr>
   </table>
 </td></tr></table>
@@ -183,7 +183,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   await resend.emails.send({
     from: FROM,
     to,
-    subject: "Confirmez votre inscription à la ludothèque BRED",
+    subject: "Confirmez votre inscription à la ludothèque CSEM",
     html: emailLayout({
       title: "Bienvenue à la ludothèque !",
       bodyHtml: p(`Bonjour <strong>${escapeHtml(name)}</strong>,`) + p("Merci de vous être inscrit(e). Cliquez sur le bouton ci-dessous pour confirmer votre adresse email et activer votre compte :"),
@@ -356,7 +356,7 @@ export async function sendConfiguredManualOverdueEmail(
     : `⚠ Retard (rappel admin) : veuillez rendre "${vars.gameName}"`;
   const bodyText = config?.manualOverdueBody
     ? applyTemplate(config.manualOverdueBody, allVars)
-    : `Bonjour ${vars.userName},\n\nCe rappel vous est envoyé par l'administrateur.\n\nJeu : ${vars.gameName}\nÀ rendre avant le : ${vars.dueAt}\n\nLudothèque BRED`;
+    : `Bonjour ${vars.userName},\n\nCe rappel vous est envoyé par l'administrateur.\n\nJeu : ${vars.gameName}\nÀ rendre avant le : ${vars.dueAt}\n\nLudothèque CSEM`;
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Retard manuel pour ${to} : "${vars.gameName}"\n`); return; }
@@ -377,7 +377,7 @@ export async function sendConfiguredWaitlistEmail(
     : `💡 Quelqu'un attend "${vars.gameName}" — pensez à le rendre !`;
   const bodyText = config?.waitlistBody
     ? applyTemplate(config.waitlistBody, allVars)
-    : `Bonjour ${vars.userName},\n\nUn(e) collègue attend le jeu suivant :\n\nJeu : ${vars.gameName}\n\nPensez à le ramener à la ludothèque !\n\nLudothèque BRED`;
+    : `Bonjour ${vars.userName},\n\nUn(e) collègue attend le jeu suivant :\n\nJeu : ${vars.gameName}\n\nPensez à le ramener à la ludothèque !\n\nLudothèque CSEM`;
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Waitlist pour ${to} : "${vars.gameName}"\n`); return; }
@@ -486,7 +486,7 @@ export async function sendConfiguredSessionInviteEmail(
     : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const deadlineLine = vars.registrationDeadline ? `Inscriptions jusqu'au : ${vars.registrationDeadline}` : "";
   const defaultSubject = `🎲 Invitation session : "${vars.sessionName}" — le ${vars.sessionDate}`;
-  const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${deadlineLine ? `\n${deadlineLine}` : ""}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
+  const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${deadlineLine ? `\n${deadlineLine}` : ""}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque CSEM`;
 
   const allVars = { ...vars, inviterName: vars.inviterName ?? "", registrationDeadline: vars.registrationDeadline ?? "", imageUrl: "", siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.sessionInviteSubject
@@ -525,7 +525,7 @@ export async function sendConfiguredSessionReminderEmail(
     ? preloadedConfig
     : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
   const defaultSubject = `⏰ Rappel session : "${vars.sessionName}" c'est bientôt !`;
-  const defaultBody = `Bonjour ${vars.userName},\n\nRappel : vous êtes inscrit(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}\n\nLudothèque BRED`;
+  const defaultBody = `Bonjour ${vars.userName},\n\nRappel : vous êtes inscrit(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}\n\nLudothèque CSEM`;
 
   const allVars = { ...vars, imageUrl: "", siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.sessionReminderSubject
@@ -564,7 +564,7 @@ export interface NewGameCard {
 }
 
 const NEW_GAMES_DEFAULT_SUBJECT = "🎲 Nouveaux jeux à la ludothèque !";
-const NEW_GAMES_DEFAULT_BODY = "Bonjour {{userName}},\n\nDe nouveaux jeux viennent d'arriver à la ludothèque et sont disponibles à l'emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque BRED";
+const NEW_GAMES_DEFAULT_BODY = "Bonjour {{userName}},\n\nDe nouveaux jeux viennent d'arriver à la ludothèque et sont disponibles à l'emprunt dès maintenant :\n\n{{gamesList}}\n\nÀ très vite à la ludothèque !\n\nLudothèque CSEM";
 
 const GAME_CATEGORY_LABELS: Record<string, string> = {
   escape: "Escape", famille: "Famille", ambiance: "Ambiance", enfant: "Enfant", "initié": "Initié", expert: "Expert",

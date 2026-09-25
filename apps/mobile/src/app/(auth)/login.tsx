@@ -60,8 +60,8 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
         <Text style={s.emoji}>🎲</Text>
         <Text style={s.title}>LudiGest</Text>
-        <Text style={s.subtitle}>Ludothèque BRED</Text>
-        <Text style={s.version}>v1.19</Text>
+        <Text style={s.subtitle}>Ludothèque CSEM</Text>
+        <Text style={s.version}>v1.20</Text>
 
         <TextInput
           style={s.input}

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LudiGest — Ludothèque BRED",
+    name: "LudiGest — Ludothèque CSEM",
     short_name: "LudiGest",
-    description: "Gérez les emprunts de la ludothèque BRED",
+    description: "Gérez les emprunts de la ludothèque CSEM",
     start_url: "/games",
     display: "standalone",
     background_color: "#ffffff",

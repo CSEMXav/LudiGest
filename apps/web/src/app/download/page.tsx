@@ -85,7 +85,7 @@ export default function DownloadPage() {
             <span className="text-white text-3xl font-bold">L</span>
           </div>
           <h1 className="text-2xl font-bold text-[#1e1610]">Installer LudiGest</h1>
-          <p className="text-sm text-gray-400">Ludothèque BRED — Android &amp; iPhone</p>
+          <p className="text-sm text-gray-400">Ludothèque CSEM — Android &amp; iPhone</p>
         </div>
 
         {/* ── ANDROID ── */}

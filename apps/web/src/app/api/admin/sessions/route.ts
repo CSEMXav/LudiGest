@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "asc" },
       include: {
         _count: { select: { registrations: true } },
+        registrations: { select: { guestName: true } },
         createdBy: { select: { name: true, nickname: true } },
       },
     });
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         info: s.info,
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
+        guestCount: s.registrations.filter((r) => !!r.guestName).length,
         registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: false as const,
         createdByUserId: null,
@@ -57,6 +59,7 @@ export async function GET(req: NextRequest) {
         info: s.info,
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
+        guestCount: s.registrations.filter((r) => !!r.guestName).length,
         registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: true as const,
         createdByUserId: s.createdByUserId,

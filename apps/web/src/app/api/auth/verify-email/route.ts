@@ -38,6 +38,6 @@ function html(title: string, message: string, success: boolean, color?: string) 
   <div style="font-size:48px;margin-bottom:12px">${icon}</div>
   <h1 style="color:${c};font-size:22px;margin:0 0 12px">${title}</h1>
   <p style="color:#6b7280;margin:0 0 24px">${message}</p>
-  <p style="color:#9ca3af;font-size:13px">🎲 Ludothèque BRED</p>
+  <p style="color:#9ca3af;font-size:13px">🎲 Ludothèque CSEM</p>
 </div></body></html>`;
 }

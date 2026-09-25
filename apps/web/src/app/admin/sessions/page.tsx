@@ -53,6 +53,8 @@ const emptyForm: SessionForm = { name: "", date: "", location: "", startTime: ""
 
 function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onClose: () => void }) {
   const [regs, setRegs] = useState<GameSessionRegistrationDTO[]>([]);
+  const guestCount = regs.filter((r) => !!r.guestName).length;
+  const totalPeople = regs.length + guestCount;
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -91,7 +93,15 @@ function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onC
         <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid var(--p-rule)" }}>
           <div>
             <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>Inscrits — {session.name}</h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>{session.registrationCount} inscrit(s)</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>
+              {loading ? `${session.registrationCount} inscrit(s)` : (
+                <>
+                  <strong style={{ color: "var(--p-ink)" }}>{regs.length}</strong> inscrit{regs.length > 1 ? "s" : ""}
+                  {" · "}<strong style={{ color: guestCount > 0 ? "var(--p-primary)" : "var(--p-ink)" }}>{guestCount}</strong> accompagnant{guestCount > 1 ? "s" : ""}
+                  {" · "}<strong style={{ color: "var(--p-ink)" }}>{totalPeople}</strong> personne{totalPeople > 1 ? "s" : ""} au total
+                </>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <ExportButton session={session} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors" style={{ border: "1px solid var(--p-rule)", background: "#fff", color: "var(--p-ink2)" }} />
@@ -107,10 +117,18 @@ function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onC
           ) : (
             <div className="space-y-2">
               {regs.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 rounded-xl p-3 text-sm" style={{ background: "var(--p-bg)" }}>
-                  <div className="flex-1">
-                    <p className="font-medium" style={{ color: "var(--p-ink)" }}>{r.userNickname ?? r.userName}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>{r.userEmail}{r.guestName && ` · Avec : ${r.guestName}`}</p>
+                <div key={r.id} className="flex items-center gap-3 rounded-xl p-3 text-sm" style={r.guestName ? { background: "var(--p-primary-soft)", border: "1.5px solid var(--p-primary)" } : { background: "var(--p-bg)", border: "1.5px solid transparent" }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium" style={{ color: "var(--p-ink)" }}>{r.userName}</p>
+                      {r.guestName && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "var(--p-primary)" }}>👥 +1 · 2 personnes</span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>{r.userEmail}</p>
+                    {r.guestName && (
+                      <p className="text-xs mt-1 font-semibold" style={{ color: "var(--p-primary)" }}>Accompagné(e) de : {r.guestName}</p>
+                    )}
                   </div>
                   <button onClick={() => remove(r.id)} title="Retirer" className="p-1.5 rounded-lg text-sm transition-colors hover:opacity-70" style={{ color: "var(--p-primary)" }}>✕</button>
                 </div>
@@ -227,7 +245,7 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
   );
 }
 
-type AdminSession = GameSessionDTO & { createdByName?: string | null };
+type AdminSession = GameSessionDTO & { createdByName?: string | null; guestCount?: number };
 type ConfirmTarget = { id: string; action: "delete" | "invite" | "remind"; label: string } | null;
 
 function ConfirmDialog({ target, onConfirm, onCancel }: { target: NonNullable<ConfirmTarget>; onConfirm: () => void; onCancel: () => void }) {
@@ -400,7 +418,7 @@ export default function AdminSessionsPage() {
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <h2 className="font-display text-xl font-bold leading-tight" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
                       <span className="flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: "var(--p-bg-alt)" }}>
-                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""} inscrit·e·s
+                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""} inscrit·e·s{s.guestCount ? ` · +${s.guestCount} accomp. = ${s.registrationCount + s.guestCount}` : ""}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-4 text-xs" style={{ color: "var(--p-ink2)" }}>
@@ -503,7 +521,7 @@ export default function AdminSessionsPage() {
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <h2 className="font-semibold" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
                       <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
-                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}{s.guestCount ? ` · +${s.guestCount} accomp.` : ""}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>
@@ -569,7 +587,7 @@ export default function AdminSessionsPage() {
                         {s.createdByName && <p className="text-xs mt-0.5" style={{ color: "var(--p-bleu)" }}>par {s.createdByName}</p>}
                       </div>
                       <span className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full" style={{ background: "var(--p-bg)", color: "var(--p-ink2)" }}>
-                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}
+                        👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""}{s.guestCount ? ` · +${s.guestCount} accomp.` : ""}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "var(--p-ink3)" }}>

@@ -78,7 +78,7 @@ export default function ConfidentialitePage() {
         <p>
           Vos données personnelles ne sont ni vendues, ni louées, ni partagées avec des tiers
           à des fins commerciales. L'accès aux données est strictement limité aux administrateurs
-          de la ludothèque BRED.
+          de la ludothèque CSEM.
         </p>
       </Section>
 

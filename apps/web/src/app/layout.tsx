@@ -16,8 +16,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "LudiGest — Ludothèque BRED",
-  description: "Gérez les emprunts de la ludothèque BRED",
+  title: "LudiGest — Ludothèque CSEM",
+  description: "Gérez les emprunts de la ludothèque CSEM",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
