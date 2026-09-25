@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSessionInviteEmail } from "@/lib/email";
+import { formatDeadlineFr } from "@/lib/session-utils";
 
 async function requireAdmin(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -30,8 +31,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let pushSent = 0;
 
   const dateStr = gameSession.date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const deadlineStr = gameSession.registrationDeadline ? formatDeadlineFr(gameSession.registrationDeadline) : null;
   const notifTitle = `🎲 Nouvelle session ludique : ${gameSession.name}`;
-  const notifMessage = `${dateStr} à ${gameSession.startTime} — ${gameSession.location}`;
+  const notifMessage = `${dateStr} à ${gameSession.startTime} — ${gameSession.location}${deadlineStr ? ` · Inscriptions jusqu'au ${deadlineStr}` : ""}`;
 
   const emailPromises = users.map(async (user) => {
     try {
@@ -42,7 +44,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         gameSession.date,
         gameSession.location,
         gameSession.startTime,
-        registerUrl
+        registerUrl,
+        deadlineStr
       );
       emailsSent++;
     } catch (err) {
@@ -72,7 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const messages = pushTokens.map((token) => ({
         to: token,
         title: "🎲 Nouvelle session ludique !",
-        body: `${gameSession.name} — ${dateStr} à ${gameSession.startTime}`,
+        body: `${gameSession.name} — ${dateStr} à ${gameSession.startTime}${deadlineStr ? ` · Inscriptions jusqu'au ${deadlineStr}` : ""}`,
         data: { type: "session_invite", sessionId: gameSession.id },
       }));
 

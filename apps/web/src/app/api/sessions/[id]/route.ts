@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
 import { sendSessionUpdateEmail } from "@/lib/email";
+import { parseDeadlineInput, sessionStartUtc, formatDeadlineFr } from "@/lib/session-utils";
 
 async function getAuthInfo(req: NextRequest): Promise<{ userId: string; role: "USER" | "ADMIN" } | null> {
   const mobilePayload = await verifyMobileToken(req);
@@ -35,10 +36,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json().catch(() => ({}));
-  const { name, date, location, startTime, imageUrl, info, maxParticipants } = body;
+  const { name, date, location, startTime, imageUrl, info, maxParticipants, registrationDeadline } = body;
+
+  const deadline = parseDeadlineInput(registrationDeadline);
+  if (!deadline.ok) return NextResponse.json({ error: deadline.error }, { status: 400 });
+  {
+    const nextDate = date !== undefined ? new Date(date) : gameSession.date;
+    const nextStart = startTime !== undefined ? startTime : gameSession.startTime;
+    const nextDeadline = deadline.value === undefined ? gameSession.registrationDeadline : deadline.value;
+    if (nextDeadline && nextDeadline.getTime() > sessionStartUtc({ date: nextDate, startTime: nextStart }).getTime()) {
+      return NextResponse.json({ error: "La fin des inscriptions doit être avant le début de la session." }, { status: 400 });
+    }
+  }
 
   // Build update data with only provided fields
   const updateData: Record<string, unknown> = {};
+  if (deadline.value !== undefined) updateData.registrationDeadline = deadline.value;
   if (name !== undefined) updateData.name = name;
   if (date !== undefined) updateData.date = new Date(date);
   if (location !== undefined) updateData.location = location;
@@ -87,7 +100,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           newDateStr,
           updated.startTime,
           updated.location,
-          sessionsUrl
+          sessionsUrl,
+          updated.registrationDeadline ? formatDeadlineFr(updated.registrationDeadline) : null
         );
       } catch (err) {
         console.error(`[PATCH /api/sessions/${params.id}] Email error for ${user.email}:`, err);
@@ -153,6 +167,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       isPrivate: updated.isPrivate,
       createdByUserId: updated.createdByUserId,
       maxParticipants: updated.maxParticipants,
+      registrationDeadline: updated.registrationDeadline?.toISOString() ?? null,
       isCreator,
       myInvitation: null,
     });

@@ -35,7 +35,7 @@ interface EmailLog {
 }
 
 const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}";
-const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registerUrl}}, {{inviterName}}";
+const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registrationDeadline}}, {{registerUrl}}, {{inviterName}}";
 const NEW_GAMES_VARS_HINT = "Variables : {{userName}}, {{gamesList}}, {{gamesCount}}, {{siteUrl}}";
 const SESSION_REMINDER_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{sessionUrl}}, {{siteUrl}}";
 
@@ -348,6 +348,7 @@ export default function EmailSettingsPage() {
                 ["{{sessionDate}}", "Date de la session"],
                 ["{{sessionTime}}", "Heure de début"],
                 ["{{sessionLocation}}", "Lieu"],
+                ["{{registrationDeadline}}", "Date et heure de fin des inscriptions"],
                 ["{{registerUrl}}", "Lien d'inscription"],
                 ["{{inviterName}}", "Nom de l'invitant (sessions privées)"],
                 ["{{gameUrl}}", "Lien vers la fiche du jeu"],

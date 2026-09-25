@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
+import { parseDeadlineInput, sessionStartUtc } from "@/lib/session-utils";
 
 async function getUserId(req: NextRequest): Promise<string | null> {
   const mobilePayload = await verifyMobileToken(req);
@@ -50,6 +51,7 @@ export async function GET(req: NextRequest) {
         isPrivate: s.isPrivate,
         createdByUserId: s.createdByUserId,
         maxParticipants: s.maxParticipants,
+        registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isCreator: s.createdByUserId === userId,
         myInvitation: myInv ? { status: myInv.status } : null,
       };
@@ -70,7 +72,7 @@ export async function GET(req: NextRequest) {
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
         myRegistration: s.registrations[0] ? { id: s.registrations[0].id, sessionId: s.id, userId: s.registrations[0].userId, guestName: s.registrations[0].guestName, registeredAt: s.registrations[0].registeredAt.toISOString() } : null,
-        isPrivate: false, createdByUserId: null, maxParticipants: null, isCreator: false, myInvitation: null,
+        isPrivate: false, createdByUserId: null, maxParticipants: null, registrationDeadline: s.registrationDeadline?.toISOString() ?? null, isCreator: false, myInvitation: null,
       })));
     } catch (err2) {
       console.error("GET /api/sessions fallback error:", err2);
@@ -84,10 +86,15 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { name, date, location, startTime, imageUrl, info, maxParticipants } = body;
+  const { name, date, location, startTime, imageUrl, info, maxParticipants, registrationDeadline } = body;
 
   if (!name || !date || !location || !startTime) {
     return NextResponse.json({ error: "Champs obligatoires manquants." }, { status: 400 });
+  }
+  const deadline = parseDeadlineInput(registrationDeadline);
+  if (!deadline.ok) return NextResponse.json({ error: deadline.error }, { status: 400 });
+  if (deadline.value && deadline.value.getTime() > sessionStartUtc({ date: new Date(date), startTime }).getTime()) {
+    return NextResponse.json({ error: "La fin des inscriptions doit être avant le début de la session." }, { status: 400 });
   }
 
   try {
@@ -100,6 +107,7 @@ export async function POST(req: NextRequest) {
       imageUrl: imageUrl || null,
       info: info || null,
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+      registrationDeadline: deadline.value ?? null,
       isPrivate: true,
       createdByUserId: userId,
     },
@@ -119,6 +127,7 @@ export async function POST(req: NextRequest) {
     isPrivate: true,
     createdByUserId: session.createdByUserId,
     maxParticipants: session.maxParticipants,
+    registrationDeadline: session.registrationDeadline?.toISOString() ?? null,
     isCreator: true,
     myInvitation: null,
   }, { status: 201 });

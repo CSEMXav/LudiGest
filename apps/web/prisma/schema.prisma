@@ -161,6 +161,7 @@ model GameSession {
   isPrivate       Boolean  @default(false)
   createdByUserId String?
   maxParticipants Int?
+  registrationDeadline DateTime?
   createdAt       DateTime @default(now())
 
   createdBy      User?                      @relation("CreatedSessions", fields: [createdByUserId], references: [id], onDelete: SetNull)

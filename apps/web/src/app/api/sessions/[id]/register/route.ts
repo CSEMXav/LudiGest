@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
+import { isRegistrationClosed, effectiveDeadline, formatDeadlineFr } from "@/lib/session-utils";
 
 async function getUserId(req: NextRequest): Promise<string | null> {
   const mobilePayload = await verifyMobileToken(req);
@@ -29,6 +30,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { sessionId_userId: { sessionId: params.id, userId } },
     });
     if (!inv) return NextResponse.json({ error: "Vous n'êtes pas invité(e) à cette session." }, { status: 403 });
+  }
+
+  // Date limite d'inscription
+  if (isRegistrationClosed(session)) {
+    return NextResponse.json({ error: `Les inscriptions sont closes depuis le ${formatDeadlineFr(effectiveDeadline(session))}.` }, { status: 403 });
   }
 
   // Check max participants
@@ -85,13 +91,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const existing = await prisma.gameSessionRegistration.findUnique({
     where: { sessionId_userId: { sessionId: params.id, userId } },
-    include: { session: { select: { date: true } } },
+    include: { session: { select: { date: true, startTime: true, registrationDeadline: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Vous n'êtes pas inscrit(e) à cette session." }, { status: 404 });
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   if (existing.session.date < today) {
     return NextResponse.json({ error: "Cette session est passée." }, { status: 400 });
+  }
+  // Après la date limite : on peut retirer un accompagnant, pas en ajouter/changer
+  if (guestName && guestName !== (existing.guestName ?? "") && isRegistrationClosed(existing.session)) {
+    return NextResponse.json({ error: "Les inscriptions sont closes : il n'est plus possible d'ajouter ou de modifier un(e) accompagnant(e)." }, { status: 403 });
   }
 
   const reg = await prisma.gameSessionRegistration.update({

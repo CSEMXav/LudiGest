@@ -9,6 +9,25 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
 
+function isoToLocalParts(iso: string | null | undefined): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+}
+
+function formatDeadline(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function isDeadlinePassed(iso: string | null | undefined) {
+  return !!iso && new Date(iso).getTime() < Date.now();
+}
+
 function exportUrl(sessionId: string) {
   return `/api/admin/sessions/${sessionId}/registrations/export`;
 }
@@ -29,8 +48,8 @@ function ExportButton({ session, className, style }: { session: GameSessionDTO; 
   );
 }
 
-type SessionForm = { name: string; date: string; location: string; startTime: string; imageUrl: string; info: string };
-const emptyForm: SessionForm = { name: "", date: "", location: "", startTime: "", imageUrl: "", info: "" };
+type SessionForm = { name: string; date: string; location: string; startTime: string; imageUrl: string; info: string; deadlineDate: string; deadlineTime: string };
+const emptyForm: SessionForm = { name: "", date: "", location: "", startTime: "", imageUrl: "", info: "", deadlineDate: "", deadlineTime: "" };
 
 function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onClose: () => void }) {
   const [regs, setRegs] = useState<GameSessionRegistrationDTO[]>([]);
@@ -107,22 +126,36 @@ function RegistrationsModal({ session, onClose }: { session: GameSessionDTO; onC
 function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionDTO | null; onSave: () => void; onClose: () => void }) {
   const [form, setForm] = useState<SessionForm>(
     initial
-      ? { name: initial.name, date: initial.date.slice(0, 10), location: initial.location, startTime: initial.startTime, imageUrl: initial.imageUrl ?? "", info: initial.info ?? "" }
+      ? { name: initial.name, date: initial.date.slice(0, 10), location: initial.location, startTime: initial.startTime, imageUrl: initial.imageUrl ?? "", info: initial.info ?? "", ...(() => { const p = isoToLocalParts(initial.registrationDeadline); return { deadlineDate: p.date, deadlineTime: p.time }; })() }
       : emptyForm
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function set(k: keyof SessionForm, v: string) { setForm((f) => ({ ...f, [k]: v })); }
+  function set(k: keyof SessionForm, v: string) {
+    setForm((f) => {
+      const next = { ...f, [k]: v };
+      // Pré-remplit la fin des inscriptions avec la date/heure de la session si vide
+      if (k === "date" && !f.deadlineDate) next.deadlineDate = v;
+      if (k === "startTime" && !f.deadlineTime) next.deadlineTime = v;
+      return next;
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    if (!form.deadlineDate || !form.deadlineTime) { setError("Indiquez la date et l'heure de fin des inscriptions."); return; }
+    const deadline = new Date(`${form.deadlineDate}T${form.deadlineTime}`);
+    const start = new Date(`${form.date}T${form.startTime}`);
+    if (isNaN(deadline.getTime())) { setError("Date de fin des inscriptions invalide."); return; }
+    if (deadline.getTime() > start.getTime()) { setError("La fin des inscriptions doit être avant le début de la session."); return; }
+    setLoading(true);
     const method = initial ? "PATCH" : "POST";
     const url = initial ? `/api/admin/sessions/${initial.id}` : "/api/admin/sessions";
+    const payload = { name: form.name, date: form.date, location: form.location, startTime: form.startTime, imageUrl: form.imageUrl, info: form.info, registrationDeadline: deadline.toISOString() };
     try {
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       setLoading(false);
       if (res.ok) { onSave(); }
       else { const d = await res.json().catch(() => ({})); setError(d.error ?? "Erreur lors de l'enregistrement."); }
@@ -155,6 +188,16 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
               <input type="time" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} required
                 className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
             </div>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "var(--p-bg)", border: "1px solid var(--p-rule)" }}>
+            <label className="block text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--p-ink3)" }}>Fin des inscriptions <span style={{ color: "var(--p-primary)" }}>*</span></label>
+            <div className="grid grid-cols-2 gap-3">
+              <input type="date" value={form.deadlineDate} onChange={(e) => set("deadlineDate", e.target.value)} required max={form.date || undefined}
+                className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)", background: "#fff" }} />
+              <input type="time" value={form.deadlineTime} onChange={(e) => set("deadlineTime", e.target.value)} required
+                className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)", background: "#fff" }} />
+            </div>
+            <p className="text-xs mt-1.5" style={{ color: "var(--p-ink3)" }}>Passé ce moment, plus personne ne peut s&apos;inscrire (modifiable à tout moment ici).</p>
           </div>
           <div>
             <label className="block text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--p-ink3)" }}>Lieu <span style={{ color: "var(--p-primary)" }}>*</span></label>
@@ -365,6 +408,11 @@ export default function AdminSessionsPage() {
                       <span>🕐 {s.startTime}</span>
                       <span>📍 {s.location}</span>
                     </div>
+                    {formatDeadline(s.registrationDeadline) && (
+                      <p className="text-xs mt-1.5 font-semibold" style={{ color: isDeadlinePassed(s.registrationDeadline) ? "var(--p-primary)" : "var(--p-ink2)" }}>
+                        📝 Inscriptions {isDeadlinePassed(s.registrationDeadline) ? "closes depuis le" : "jusqu'au"} {formatDeadline(s.registrationDeadline)}
+                      </p>
+                    )}
                     {s.info && <p className="text-xs mt-2 leading-relaxed" style={{ color: "var(--p-ink2)" }}>{s.info}</p>}
                   </div>
                 </div>

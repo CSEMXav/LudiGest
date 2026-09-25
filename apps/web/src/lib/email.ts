@@ -134,7 +134,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
   });
 }
 
-export async function sendSessionInviteEmail(to: string, name: string, sessionName: string, sessionDate: Date, sessionLocation: string, sessionTime: string, registerUrl: string): Promise<void> {
+export async function sendSessionInviteEmail(to: string, name: string, sessionName: string, sessionDate: Date, sessionLocation: string, sessionTime: string, registerUrl: string, registrationDeadline?: string | null): Promise<void> {
   const dateStr = sessionDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const resend = getResend();
@@ -158,6 +158,7 @@ export async function sendSessionInviteEmail(to: string, name: string, sessionNa
           <p style="margin:0 0 4px;color:#374151">📅 ${dateStr}</p>
           <p style="margin:0 0 4px;color:#374151">🕐 ${escapeHtml(sessionTime)}</p>
           <p style="margin:0;color:#374151">📍 ${escapeHtml(sessionLocation)}</p>
+          ${registrationDeadline ? `<p style="margin:8px 0 0;color:#C8102E;font-weight:bold">📝 Inscriptions jusqu'au ${escapeHtml(registrationDeadline)}</p>` : ""}
         </div>
         <a href="${registerUrl}" style="display:inline-block;background:#C8102E;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:bold;margin:16px 0">
           Je m'inscris
@@ -201,22 +202,27 @@ export async function sendSessionReminderEmail(to: string, name: string, session
 
 export async function sendConfiguredSessionInviteEmail(
   to: string,
-  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; registerUrl: string; inviterName?: string },
+  vars: { userName: string; sessionName: string; sessionDate: string; sessionTime: string; sessionLocation: string; registerUrl: string; inviterName?: string; registrationDeadline?: string | null },
   preloadedConfig?: Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null
 ): Promise<void> {
   const config = preloadedConfig !== undefined
     ? preloadedConfig
     : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+  const deadlineLine = vars.registrationDeadline ? `Inscriptions jusqu'au ${vars.registrationDeadline}` : "";
   const defaultSubject = `🎲 Invitation session : "${vars.sessionName}" — le ${vars.sessionDate}`;
-  const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
+  const defaultBody = `Bonjour ${vars.userName},\n\nVous avez été invité(e) à la session ludique "${vars.sessionName}".\n\nDate : ${vars.sessionDate}\nHeure : ${vars.sessionTime}\nLieu : ${vars.sessionLocation}${deadlineLine ? `\n${deadlineLine}` : ""}${vars.inviterName ? `\n\nInvitation envoyée par : ${vars.inviterName}` : ""}\n\nCliquez ici pour vous inscrire : ${vars.registerUrl}\n\nLudothèque BRED`;
 
-  const allVars = { ...vars, siteUrl: getSiteUrl() } as Record<string, string>;
+  const allVars = { ...vars, inviterName: vars.inviterName ?? "", registrationDeadline: vars.registrationDeadline ?? "", siteUrl: getSiteUrl() } as Record<string, string>;
   const subject = config?.sessionInviteSubject
     ? applyTemplate(config.sessionInviteSubject, allVars)
     : defaultSubject;
-  const bodyText = config?.sessionInviteBody
+  let bodyText = config?.sessionInviteBody
     ? applyTemplateHtml(config.sessionInviteBody, allVars)
     : defaultBody;
+  // Si le modèle admin n'utilise pas la variable, on ajoute quand même la date limite
+  if (config?.sessionInviteBody && deadlineLine && !config.sessionInviteBody.includes("{{registrationDeadline}}")) {
+    bodyText += `\n\n${escapeHtml(deadlineLine)}`;
+  }
 
   const resend = getResend();
   if (!resend) {
@@ -412,7 +418,8 @@ export async function sendSessionUpdateEmail(
   sessionDate: string,
   sessionTime: string,
   sessionLocation: string,
-  sessionsUrl: string
+  sessionsUrl: string,
+  registrationDeadline?: string | null
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
@@ -434,6 +441,7 @@ export async function sendSessionUpdateEmail(
           <p style="margin:0 0 8px;font-size:18px;font-weight:bold;color:#111">${escapeHtml(sessionName)}</p>
           <p style="margin:0 0 4px;color:#374151">📅 ${escapeHtml(sessionDate)}</p>
           <p style="margin:0 0 4px;color:#374151">🕐 ${escapeHtml(sessionTime)}</p>
+          ${registrationDeadline ? `<p style="margin:0 0 4px;color:#374151">📝 Inscriptions jusqu'au ${escapeHtml(registrationDeadline)}</p>` : ""}
           <p style="margin:0;color:#374151">📍 ${escapeHtml(sessionLocation)}</p>
         </div>
         <p>Pensez à vérifier vos disponibilités pour cette nouvelle date.</p>

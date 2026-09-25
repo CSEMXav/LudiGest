@@ -23,11 +23,40 @@ interface CreateSessionForm {
   imageUrl: string;
   info: string;
   maxParticipants: string;
+  deadlineDate: string;
+  deadlineTime: string;
 }
 
 const EMPTY_FORM: CreateSessionForm = {
-  name: "", date: "", location: "", startTime: "", imageUrl: "", info: "", maxParticipants: "",
+  name: "", date: "", location: "", startTime: "", imageUrl: "", info: "", maxParticipants: "", deadlineDate: "", deadlineTime: "",
 };
+
+/** Date limite effective côté client : la limite renseignée, sinon le début de la session. */
+function deadlineOf(s: GameSessionDTO): Date {
+  if (s.registrationDeadline) {
+    const d = new Date(s.registrationDeadline);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date(`${s.date.slice(0, 10)}T${s.startTime || "00:00"}`);
+}
+function isRegistrationClosed(s: GameSessionDTO): boolean {
+  return Date.now() > deadlineOf(s).getTime();
+}
+function formatDeadline(s: GameSessionDTO): string {
+  return deadlineOf(s).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+function isoToLocalParts(iso: string | null | undefined): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+}
+function deadlineFromForm(f: { deadlineDate: string; deadlineTime: string }): string | null {
+  if (!f.deadlineDate) return null;
+  const d = new Date(`${f.deadlineDate}T${f.deadlineTime || "23:59"}`);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 function GuestForm({ tint, submitting, mode, initialGuestName, onCancel, onConfirm }: {
   tint: string;
@@ -209,6 +238,7 @@ export default function SessionsPage() {
     if (createForm.imageUrl) body.imageUrl = createForm.imageUrl;
     if (createForm.info) body.info = createForm.info;
     if (createForm.maxParticipants) body.maxParticipants = parseInt(createForm.maxParticipants);
+    body.registrationDeadline = deadlineFromForm(createForm);
 
     try {
       const res = await fetch("/api/sessions", {
@@ -243,6 +273,7 @@ export default function SessionsPage() {
       imageUrl: s.imageUrl ?? "",
       info: s.info ?? "",
       maxParticipants: s.maxParticipants ? String(s.maxParticipants) : "",
+      ...(() => { const p = isoToLocalParts(s.registrationDeadline); return { deadlineDate: p.date, deadlineTime: p.time }; })(),
     });
   }
 
@@ -258,6 +289,7 @@ export default function SessionsPage() {
       imageUrl: editForm.imageUrl || null,
       info: editForm.info || null,
       maxParticipants: editForm.maxParticipants ? parseInt(editForm.maxParticipants) : null,
+      registrationDeadline: deadlineFromForm(editForm),
     };
     try {
       const res = await fetch(`/api/sessions/${editSession.id}`, {
@@ -373,6 +405,7 @@ export default function SessionsPage() {
     const isPending = isPrivate && !isCreator && myInvStatus === "PENDING";
     const isDeclined = isPrivate && myInvStatus === "DECLINED";
     const isFull = !!(s.maxParticipants && s.registrationCount >= s.maxParticipants);
+    const closed = isRegistrationClosed(s);
     const tint = TINTS[index % TINTS.length];
 
     return (
@@ -436,6 +469,9 @@ export default function SessionsPage() {
               </span>
             </div>
 
+            <p className="text-sm mb-2 font-medium" style={{ color: closed ? "var(--p-primary)" : "var(--p-ink3)" }}>
+              📝 Inscriptions {closed ? "closes depuis le" : "jusqu'au"} {formatDeadline(s)}
+            </p>
             {s.myRegistration?.guestName && (
               <p className="text-sm mb-2" style={{ color: "var(--p-ink3)" }}>Accompagné(e) de : <strong style={{ color: "var(--p-ink2)" }}>{s.myRegistration.guestName}</strong></p>
             )}
@@ -458,14 +494,16 @@ export default function SessionsPage() {
                   />
                 ) : (
                   <>
-                    <button
-                      onClick={() => setGuestEditSession(s)}
-                      disabled={submitting}
-                      className="px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
-                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}
-                    >
-                      {s.myRegistration?.guestName ? "✏️ Modifier l'accompagnant(e)" : "➕ Ajouter un(e) accompagnant(e)"}
-                    </button>
+                    {!closed && (
+                      <button
+                        onClick={() => setGuestEditSession(s)}
+                        disabled={submitting}
+                        className="px-4 py-2 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                        style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink2)" }}
+                      >
+                        {s.myRegistration?.guestName ? "✏️ Modifier l'accompagnant(e)" : "➕ Ajouter un(e) accompagnant(e)"}
+                      </button>
+                    )}
                     <button
                       onClick={() => unregister(s)}
                       disabled={submitting}
@@ -476,6 +514,11 @@ export default function SessionsPage() {
                     </button>
                   </>
                 )
+              ) : closed ? (
+                <span className="px-4 py-2 text-sm font-medium rounded-xl cursor-not-allowed"
+                  style={{ background: "var(--p-rule)", color: "var(--p-ink3)" }}>
+                  Inscriptions closes
+                </span>
               ) : isFull && !registered ? (
                 <span className="px-4 py-2 text-sm font-medium rounded-xl cursor-not-allowed"
                   style={{ background: "var(--p-rule)", color: "var(--p-ink3)" }}>
@@ -648,6 +691,14 @@ export default function SessionsPage() {
                   <input type="number" min={1} value={createForm.maxParticipants} onChange={(e) => setCreateForm({ ...createForm, maxParticipants: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" placeholder="Illimité si vide" />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fin des inscriptions (optionnel)</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="date" value={createForm.deadlineDate} max={createForm.date || undefined} onChange={(e) => setCreateForm({ ...createForm, deadlineDate: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" />
+                    <input type="time" value={createForm.deadlineTime} onChange={(e) => setCreateForm({ ...createForm, deadlineTime: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Si vide, les inscriptions restent ouvertes jusqu&apos;au début de la session.</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (optionnel)</label>
                   <input type="url" value={createForm.imageUrl} onChange={(e) => setCreateForm({ ...createForm, imageUrl: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" placeholder="https://..." />
                 </div>
@@ -706,6 +757,14 @@ export default function SessionsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Places max</label>
                   <input type="number" min={1} value={editForm.maxParticipants} onChange={(e) => setEditForm({ ...editForm, maxParticipants: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" placeholder="Illimité si vide" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fin des inscriptions</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="date" value={editForm.deadlineDate} max={editForm.date || undefined} onChange={(e) => setEditForm({ ...editForm, deadlineDate: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" />
+                    <input type="time" value={editForm.deadlineTime} onChange={(e) => setEditForm({ ...editForm, deadlineTime: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:outline-none" />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Si vide, les inscriptions restent ouvertes jusqu&apos;au début de la session.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>

@@ -11,7 +11,7 @@ const DEFAULTS = {
   overdueSubject: '⚠ Retard : veuillez rendre "{{gameName}}"',
   overdueBody: "Bonjour {{userName}},\n\nLe jeu \"{{gameName}}\" aurait dû être rendu le {{dueAt}}.\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque BRED",
   sessionInviteSubject: '🎲 Invitation session : "{{sessionName}}" — le {{sessionDate}}',
-  sessionInviteBody: "Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED",
+  sessionInviteBody: "Bonjour {{userName}},\n\nVous avez été invité(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\nInscriptions jusqu'au {{registrationDeadline}}\n\nCliquez ici pour vous inscrire : {{registerUrl}}\n\nLudothèque BRED",
   sessionReminderSubject: '⏰ Rappel session : "{{sessionName}}" c\'est bientôt !',
   sessionReminderBody: "Bonjour {{userName}},\n\nRappel : vous êtes inscrit(e) à la session ludique \"{{sessionName}}\".\n\nDate : {{sessionDate}}\nHeure : {{sessionTime}}\nLieu : {{sessionLocation}}\n\nLudothèque BRED",
   manualOverdueSubject: '⚠ Retard (rappel admin) : veuillez rendre "{{gameName}}"',

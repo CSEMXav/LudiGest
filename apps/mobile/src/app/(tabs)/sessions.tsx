@@ -8,6 +8,23 @@ import { PhoneHeader } from "@/components/PhoneHeader";
 import { Pion, type PionKind } from "@/components/Pion";
 import type { GameSessionDTO } from "@ludigest/types";
 
+function deadlineOf(s: GameSessionDTO): Date {
+  if (s.registrationDeadline) {
+    const d = new Date(s.registrationDeadline);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date(`${s.date.slice(0, 10)}T${s.startTime || "00:00"}`);
+}
+function isRegistrationClosed(s: GameSessionDTO): boolean {
+  return Date.now() > deadlineOf(s).getTime();
+}
+function formatDeadline(s: GameSessionDTO): string {
+  const d = deadlineOf(s);
+  const date = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date} à ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const P = {
   bg:          "#fef9f0",
   card:        "#ffffff",
@@ -178,6 +195,7 @@ export default function SessionsScreen() {
             <>
               {upcoming.map((session, idx) => {
                 const registered = !!session.myRegistration;
+                const closed = isRegistrationClosed(session);
                 const isGuestInput = guestInput?.id === session.id;
                 const busy = registering === session.id;
                 const tint = TINTS[idx % TINTS.length];
@@ -209,6 +227,9 @@ export default function SessionsScreen() {
                       <Text style={[st.count, { color: P.bleu }]}>
                         👥 {session.registrationCount} inscrit·e·s
                       </Text>
+                      <Text style={[st.deadline, closed && { color: P.primary }]}>
+                        📝 Inscriptions {closed ? "closes depuis le" : "jusqu'au"} {formatDeadline(session)}
+                      </Text>
                       {session.myRegistration?.guestName ? (
                         <Text style={st.guest}>Avec : {session.myRegistration.guestName}</Text>
                       ) : null}
@@ -219,19 +240,25 @@ export default function SessionsScreen() {
                       ) : registered ? (
                         isGuestInput ? renderGuestForm(session, tint) : (
                           <>
-                            <TouchableOpacity
-                              style={[st.btnOutline, { borderColor: P.rule }]}
-                              onPress={() => setGuestInput({ id: session.id, value: session.myRegistration?.guestName ?? "", withGuest: !!session.myRegistration?.guestName, mode: "edit" })}
-                            >
-                              <Text style={[st.btnOutlineText, { color: P.ink2 }]}>
-                                {session.myRegistration?.guestName ? "✏️ Modifier l'accompagnant·e" : "➕ Ajouter un·e accompagnant·e"}
-                              </Text>
-                            </TouchableOpacity>
+                            {!closed && (
+                              <TouchableOpacity
+                                style={[st.btnOutline, { borderColor: P.rule }]}
+                                onPress={() => setGuestInput({ id: session.id, value: session.myRegistration?.guestName ?? "", withGuest: !!session.myRegistration?.guestName, mode: "edit" })}
+                              >
+                                <Text style={[st.btnOutlineText, { color: P.ink2 }]}>
+                                  {session.myRegistration?.guestName ? "✏️ Modifier l'accompagnant·e" : "➕ Ajouter un·e accompagnant·e"}
+                                </Text>
+                              </TouchableOpacity>
+                            )}
                             <TouchableOpacity style={[st.btnOutline, { borderColor: P.primary, marginTop: 8 }]} onPress={() => unregister(session)}>
                               <Text style={[st.btnOutlineText, { color: P.primary }]}>Se désinscrire</Text>
                             </TouchableOpacity>
                           </>
                         )
+                      ) : closed ? (
+                        <View style={[st.btnOutline, { borderColor: P.rule, backgroundColor: P.bg }]}>
+                          <Text style={[st.btnOutlineText, { color: P.ink3 }]}>Inscriptions closes</Text>
+                        </View>
                       ) : isGuestInput ? (
                         renderGuestForm(session, tint)
                       ) : (
@@ -285,6 +312,7 @@ const st = StyleSheet.create({
   meta:           { fontSize: 12, color: "#5b4d40", marginTop: 2 },
   count:          { fontSize: 12, fontWeight: "700", marginTop: 6 },
   guest:          { fontSize: 11, color: "#9a8b7c", marginTop: 4, fontStyle: "italic" },
+  deadline:       { fontSize: 11, color: "#5b4d40", marginTop: 4, fontWeight: "600" },
   info:           { fontSize: 12, color: "#9a8b7c", marginTop: 6, lineHeight: 18 },
 
   btnPrimary:     { borderRadius: 12, padding: 12, alignItems: "center", marginTop: 12 },

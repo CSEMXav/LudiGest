@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseDeadlineInput, sessionStartUtc } from "@/lib/session-utils";
 
 async function requireAdmin(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
         info: s.info,
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
+        registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: false as const,
         createdByUserId: null,
         createdByName: null as string | null,
@@ -55,6 +57,7 @@ export async function GET(req: NextRequest) {
         info: s.info,
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
+        registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: true as const,
         createdByUserId: s.createdByUserId,
         createdByName: s.createdBy ? (s.createdBy.nickname ?? s.createdBy.name) : null,
@@ -76,14 +79,20 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const { name, date, location, startTime, imageUrl, info } = body;
+  const { name, date, location, startTime, imageUrl, info, registrationDeadline } = body;
   if (!name || !date || !location || !startTime) {
     return NextResponse.json({ error: "Nom, date, lieu et heure sont requis." }, { status: 400 });
+  }
+  const deadline = parseDeadlineInput(registrationDeadline);
+  if (!deadline.ok) return NextResponse.json({ error: deadline.error }, { status: 400 });
+  if (!deadline.value) return NextResponse.json({ error: "La date et l'heure de fin d'inscription sont requises." }, { status: 400 });
+  if (deadline.value.getTime() > sessionStartUtc({ date: new Date(date), startTime }).getTime()) {
+    return NextResponse.json({ error: "La fin des inscriptions doit être avant le début de la session." }, { status: 400 });
   }
 
   try {
     const session = await prisma.gameSession.create({
-      data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null },
+      data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null, registrationDeadline: deadline.value },
     });
 
     return NextResponse.json({
@@ -91,6 +100,7 @@ export async function POST(req: NextRequest) {
       location: session.location, startTime: session.startTime,
       imageUrl: session.imageUrl, info: session.info,
       createdAt: session.createdAt.toISOString(), registrationCount: 0,
+      registrationDeadline: session.registrationDeadline?.toISOString() ?? null,
       isPrivate: false, createdByUserId: null, maxParticipants: null,
       isCreator: false, myInvitation: null, myRegistration: null,
     }, { status: 201 });

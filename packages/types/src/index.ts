@@ -91,6 +91,8 @@ export interface GameSessionDTO {
   isPrivate: boolean;
   createdByUserId?: string | null;
   maxParticipants?: number | null;
+  /** Date limite d'inscription (ISO). Absente/null = jusqu'au début de la session. */
+  registrationDeadline?: string | null;
   isCreator?: boolean;
   myInvitation?: { status: string } | null;
 }
