@@ -342,6 +342,49 @@ export async function sendGameReportEmail(to: string, adminName: string, reporte
   });
 }
 
+type LoanVars = { userName: string; gameName: string; dueAt: string; gameUrl?: string | null };
+type EmailConfigRow = Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null;
+
+async function loadConfig(preloaded: EmailConfigRow | undefined): Promise<EmailConfigRow> {
+  return preloaded !== undefined
+    ? preloaded
+    : await prisma.emailConfig.findUnique({ where: { id: "singleton" } }).catch(() => null);
+}
+
+/** Rappel avant échéance, à partir du modèle "Rappel avant échéance" de la page Paramètres email. */
+export async function sendConfiguredLoanReminderEmail(to: string, vars: LoanVars, preloadedConfig?: EmailConfigRow): Promise<void> {
+  const config = await loadConfig(preloadedConfig);
+  const gameUrl = vars.gameUrl || getSiteUrl();
+  const allVars = { userName: vars.userName, gameName: vars.gameName, dueAt: vars.dueAt, gameUrl, siteUrl: getSiteUrl() };
+  const subject = config?.reminderSubject
+    ? applyTemplate(config.reminderSubject, allVars)
+    : `Rappel : rendez "${vars.gameName}" avant le ${vars.dueAt}`;
+  const bodyText = config?.reminderBody
+    ? applyTemplate(config.reminderBody, allVars)
+    : `Bonjour ${vars.userName},\n\nVotre emprunt arrive bientôt à échéance :\n\nJeu : ${vars.gameName}\nÀ rendre avant le : ${vars.dueAt}\n\nPensez à le rendre à la ludothèque ou à le prolonger depuis l'application.\n\nLudothèque CSEM`;
+
+  const resend = getResend();
+  if (!resend) { console.log(`\n📧 [DEV] Rappel pour ${to} : "${vars.gameName}" à rendre le ${vars.dueAt}\n`); return; }
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir mon emprunt", { title: "Rappel d'emprunt", heroUrl: null }) });
+}
+
+/** Retard après échéance, à partir du modèle "Retard après échéance" de la page Paramètres email. */
+export async function sendConfiguredOverdueEmail(to: string, vars: LoanVars, preloadedConfig?: EmailConfigRow): Promise<void> {
+  const config = await loadConfig(preloadedConfig);
+  const gameUrl = vars.gameUrl || getSiteUrl();
+  const allVars = { userName: vars.userName, gameName: vars.gameName, dueAt: vars.dueAt, gameUrl, siteUrl: getSiteUrl() };
+  const subject = config?.overdueSubject
+    ? applyTemplate(config.overdueSubject, allVars)
+    : `⚠ Retard : veuillez rendre "${vars.gameName}"`;
+  const bodyText = config?.overdueBody
+    ? applyTemplate(config.overdueBody, allVars)
+    : `Bonjour ${vars.userName},\n\nLe jeu ci-dessous aurait déjà dû être rendu :\n\nJeu : ${vars.gameName}\nDate de retour prévue : ${vars.dueAt}\n\nMerci de le rapporter à la ludothèque dès que possible.\n\nLudothèque CSEM`;
+
+  const resend = getResend();
+  if (!resend) { console.log(`\n📧 [DEV] Retard pour ${to} : "${vars.gameName}" dû le ${vars.dueAt}\n`); return; }
+  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir le jeu", { title: "Retard d'emprunt", heroUrl: null }) });
+}
+
 export async function sendConfiguredManualOverdueEmail(
   to: string,
   vars: { userName: string; gameName: string; dueAt: string },

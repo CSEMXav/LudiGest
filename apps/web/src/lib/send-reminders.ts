@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendReminderEmail, sendOverdueEmail, sendConfiguredSessionReminderEmail } from "@/lib/email";
+import { sendConfiguredLoanReminderEmail, sendConfiguredOverdueEmail, sendConfiguredSessionReminderEmail } from "@/lib/email";
 
 interface PushJob {
   userId: string;
@@ -80,6 +80,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
     .findUnique({ where: { id: "singleton" } })
     .catch(() => null);
 
+  const siteUrl = process.env.NEXTAUTH_URL ?? "https://ludigest.vercel.app";
   const reminderDaysBefore = config?.reminderDaysBefore ?? 2;
   const overdueFrequencyDays = config?.overdueFrequencyDays ?? 1;
 
@@ -148,7 +149,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
       continue;
     }
 
-    await sendReminderEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
+    await sendConfiguredLoanReminderEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
     sent++; remindersCount++;
     details.push(`RAPPEL envoyé → ${loan.user.email} (${loan.game.name}, échéance ${dateStr})`);
 
@@ -234,7 +235,7 @@ export async function runSendReminders(): Promise<ReminderResult> {
       continue;
     }
 
-    await sendOverdueEmail(loan.user.email!, loan.user.name!, loan.game.name, loan.dueAt, loan.gameId);
+    await sendConfiguredOverdueEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
     sent++; overdueCount++;
     details.push(`RETARD envoyé → ${loan.user.email} (${loan.game.name}, dû le ${dateStr})`);
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendReminderEmail, sendConfiguredManualOverdueEmail } from "@/lib/email";
+import { sendConfiguredLoanReminderEmail, sendConfiguredManualOverdueEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       dueAt: dateStr,
     });
   } else {
-    await sendReminderEmail(loan.user.email, loan.user.name, loan.game.name, loan.dueAt);
+    await sendConfiguredLoanReminderEmail(loan.user.email, { userName: loan.user.name, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${process.env.NEXTAUTH_URL ?? ""}/games/${loan.gameId}` });
   }
 
   // Always update reminderSentAt on the loan (field exists in base schema, used as fallback)

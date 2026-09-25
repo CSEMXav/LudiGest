@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
-import { sendReminderEmail } from "@/lib/email";
+import { sendConfiguredLoanReminderEmail } from "@/lib/email";
 
 async function getUser(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
       if (msUntilDue > 0 && msUntilDue <= sevenDays) {
         await prisma.loan.update({ where: { id: loan.id }, data: { reminderSentAt: now } });
         if (fullUser) {
-          sendReminderEmail(fullUser.email, fullUser.name, loan.game.name, loan.dueAt).catch(() => {});
+          const dueStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+          sendConfiguredLoanReminderEmail(fullUser.email, { userName: fullUser.name, gameName: loan.game.name, dueAt: dueStr, gameUrl: `${process.env.NEXTAUTH_URL ?? ""}/games/${loan.gameId}` }).catch(() => {});
         }
       }
     }

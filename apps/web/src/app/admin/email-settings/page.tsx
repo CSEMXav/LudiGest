@@ -34,7 +34,7 @@ interface EmailLog {
   loanActive: boolean | null;
 }
 
-const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}";
+const VARS_HINT = "Variables : {{userName}}, {{gameName}}, {{dueAt}}, {{gameUrl}}";
 const SESSION_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{registrationDeadline}}, {{registerUrl}}, {{inviterName}}";
 const NEW_GAMES_VARS_HINT = "Variables : {{userName}}, {{gamesList}}, {{gamesCount}}, {{siteUrl}}";
 const SESSION_REMINDER_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {{sessionDate}}, {{sessionTime}}, {{sessionLocation}}, {{sessionUrl}}, {{siteUrl}}";
