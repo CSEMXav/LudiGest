@@ -169,6 +169,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       createdByUserId: updated.createdByUserId,
       maxParticipants: updated.maxParticipants,
       registrationDeadline: updated.registrationDeadline?.toISOString() ?? null,
+      isLudiBred: updated.isLudiBred,
       isCreator,
       myInvitation: null,
     });

@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
         createdByUserId: s.createdByUserId,
         maxParticipants: s.maxParticipants,
         registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
+        isLudiBred: s.isLudiBred,
         isCreator: s.createdByUserId === userId,
         myInvitation: myInv ? { status: myInv.status } : null,
       };

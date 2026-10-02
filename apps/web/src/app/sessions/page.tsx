@@ -393,7 +393,7 @@ export default function SessionsPage() {
   }
 
   const upcoming = sessions.filter((s) => !isPast(s.date));
-  const past = sessions.filter((s) => isPast(s.date));
+  const past = sessions.filter((s) => isPast(s.date)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const alreadyInvitedIds = new Set(invitations.map((inv) => inv.userId));
 
@@ -406,20 +406,27 @@ export default function SessionsPage() {
     const isDeclined = isPrivate && myInvStatus === "DECLINED";
     const isFull = !!(s.maxParticipants && s.registrationCount >= s.maxParticipants);
     const closed = isRegistrationClosed(s);
-    const tint = TINTS[index % TINTS.length];
+    const ludi = !!s.isLudiBred;
+    const tint = ludi ? "#e8a82f" : TINTS[index % TINTS.length];
 
     return (
-      <div className="rounded-2xl overflow-hidden flex" style={{ background: "var(--p-card)", border: "1.5px solid var(--p-rule)" }}>
+      <div className="rounded-2xl overflow-hidden flex" style={ludi ? { background: "#fffaf0", border: "2.5px solid #e8a82f", boxShadow: "0 6px 22px rgba(232,168,47,0.28)" } : { background: "var(--p-card)", border: "1.5px solid var(--p-rule)" }}>
         {/* Colored left band */}
-        <div className="w-3 flex-shrink-0" style={{ background: tint }} />
+        <div className={ludi ? "w-5 flex-shrink-0" : "w-3 flex-shrink-0"} style={{ background: tint }} />
         <div className="flex-1 min-w-0">
           {s.imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={s.imageUrl} alt={s.name} className="w-full h-40 object-cover" />
           )}
-          <div className="p-5">
+          <div className={ludi ? "p-7" : "p-5"}>
             <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
               <div className="flex items-center gap-2 flex-wrap">
+                {ludi && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
+                    style={{ background: "#e8a82f", color: "#1e1610" }}>
+                    ⭐ Soirée LudiBred
+                  </span>
+                )}
                 {isPrivate && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
                     style={{ background: "#ede9fe", color: "#5b21b6" }}>
@@ -432,7 +439,7 @@ export default function SessionsPage() {
                     ✏️ Ma session
                   </span>
                 )}
-                <h2 className="font-semibold text-lg" style={{ color: "var(--p-ink)", fontFamily: "var(--font-display, system-ui)" }}>{s.name}</h2>
+                <h2 className={ludi ? "font-bold text-2xl" : "font-semibold text-lg"} style={{ color: "var(--p-ink)", fontFamily: "var(--font-display, system-ui)" }}>{s.name}</h2>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {registered && (

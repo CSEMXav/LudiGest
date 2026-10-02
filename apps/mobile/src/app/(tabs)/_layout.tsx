@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { TouchableOpacity, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser } from "@/lib/auth";
 import { Pion } from "@/components/Pion";
 
 export default function TabsLayout() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  // Sur Android (affichage bord à bord), les boutons système (Samsung, Xiaomi…) recouvrent
+  // le bas de l'écran : on ajoute leur hauteur sous la barre d'onglets.
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getStoredUser().then((u) => { if (u?.role === "ADMIN") setIsAdmin(true); });
@@ -21,7 +25,8 @@ export default function TabsLayout() {
           backgroundColor: "#fff",
           borderTopColor: "#ece1cd",
           borderTopWidth: 1,
-          height: 64,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom,
         },
         tabBarLabelStyle: { fontSize: 9, fontWeight: "700" },
         headerStyle: { backgroundColor: "#d24a1f" },

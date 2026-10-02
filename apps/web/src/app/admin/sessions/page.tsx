@@ -149,6 +149,7 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isLudiBred, setIsLudiBred] = useState(!!initial?.isLudiBred);
 
   function set(k: keyof SessionForm, v: string) {
     setForm((f) => {
@@ -171,7 +172,7 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
     setLoading(true);
     const method = initial ? "PATCH" : "POST";
     const url = initial ? `/api/admin/sessions/${initial.id}` : "/api/admin/sessions";
-    const payload = { name: form.name, date: form.date, location: form.location, startTime: form.startTime, imageUrl: form.imageUrl, info: form.info, registrationDeadline: deadline.toISOString() };
+    const payload = { name: form.name, date: form.date, location: form.location, startTime: form.startTime, imageUrl: form.imageUrl, info: form.info, registrationDeadline: deadline.toISOString(), isLudiBred };
     try {
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       setLoading(false);
@@ -207,6 +208,13 @@ function SessionFormModal({ initial, onSave, onClose }: { initial?: GameSessionD
                 className={inputCls} style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
             </div>
           </div>
+          <label className="flex items-center gap-3 rounded-xl p-3 cursor-pointer" style={isLudiBred ? { background: "#fff4d6", border: "1.5px solid var(--p-ocre)" } : { background: "var(--p-bg)", border: "1.5px solid var(--p-rule)" }}>
+            <input type="checkbox" checked={isLudiBred} onChange={(e) => setIsLudiBred(e.target.checked)} className="w-4 h-4 accent-[#e8a82f]" />
+            <span>
+              <span className="block text-sm font-bold" style={{ color: "var(--p-ink)" }}>⭐ Soirée LudiBred</span>
+              <span className="block text-xs" style={{ color: "var(--p-ink3)" }}>Mise en avant dans les listes (couleur dédiée, carte plus grande).</span>
+            </span>
+          </label>
           <div className="rounded-xl p-3" style={{ background: "var(--p-bg)", border: "1px solid var(--p-rule)" }}>
             <label className="block text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--p-ink3)" }}>Fin des inscriptions <span style={{ color: "var(--p-primary)" }}>*</span></label>
             <div className="grid grid-cols-2 gap-3">
@@ -364,7 +372,7 @@ export default function AdminSessionsPage() {
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const upcoming = sessions.filter((s) => new Date(s.date) >= today);
-  const past = sessions.filter((s) => new Date(s.date) < today);
+  const past = sessions.filter((s) => new Date(s.date) < today).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div>
@@ -402,8 +410,11 @@ export default function AdminSessionsPage() {
             const fillPct = s.maxParticipants ? Math.round((s.registrationCount / s.maxParticipants) * 100) : null;
             const isConfirming = confirmTarget?.id === s.id;
             return (
-              <div key={s.id} className="rounded-2xl" style={{ background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
-                <div className="flex gap-5 p-5">
+              <div key={s.id} className="rounded-2xl" style={s.isLudiBred ? { background: "#fffaf0", border: "2.5px solid var(--p-ocre)", boxShadow: "0 4px 18px rgba(232,168,47,0.25)" } : { background: "var(--p-card)", border: "1px solid var(--p-rule)" }}>
+                {s.isLudiBred && (
+                  <div className="px-5 py-1.5 text-xs font-bold uppercase tracking-wide rounded-t-[13px]" style={{ background: "var(--p-ocre)", color: "var(--p-ink)" }}>⭐ Soirée LudiBred</div>
+                )}
+                <div className={s.isLudiBred ? "flex gap-5 p-6" : "flex gap-5 p-5"}>
                   {/* Thumbnail */}
                   {s.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -416,7 +427,7 @@ export default function AdminSessionsPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-2">
-                      <h2 className="font-display text-xl font-bold leading-tight" style={{ color: "var(--p-ink)" }}>{s.name}</h2>
+                      <h2 className={`font-display ${s.isLudiBred ? "text-2xl" : "text-xl"} font-bold leading-tight`} style={{ color: "var(--p-ink)" }}>{s.name}</h2>
                       <span className="flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold text-white" style={{ background: "var(--p-bg-alt)" }}>
                         👥 {s.registrationCount}{s.maxParticipants ? ` / ${s.maxParticipants}` : ""} inscrit·e·s{s.guestCount ? ` · +${s.guestCount} accomp. = ${s.registrationCount + s.guestCount}` : ""}
                       </span>

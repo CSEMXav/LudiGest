@@ -42,6 +42,8 @@ const SESSION_REMINDER_VARS_HINT = "Variables : {{userName}}, {{sessionName}}, {
 const LOG_TINTS: Record<string, string> = {
   reminder:        "var(--p-ocre)",
   overdue:         "var(--p-primary)",
+  overdue_manual:  "var(--p-primary)",
+  SESSION_UPDATE:  "var(--p-bleu)",
   SESSION_INVITE:  "var(--p-bleu)",
   SESSION_REMINDER:"var(--p-ocre)",
   GAME_REPORT:     "var(--p-primary)",
@@ -51,6 +53,8 @@ const LOG_TINTS: Record<string, string> = {
 const TYPE_COLORS: Record<string, string> = {
   reminder: "bg-yellow-50 text-yellow-700",
   overdue: "bg-red-50 text-red-700",
+  overdue_manual: "bg-red-50 text-red-700",
+  SESSION_UPDATE: "bg-blue-50 text-blue-700",
   SESSION_INVITE: "bg-blue-50 text-blue-700",
   SESSION_REMINDER: "bg-orange-50 text-orange-700",
   GAME_REPORT: "bg-red-100 text-red-800",
@@ -99,6 +103,9 @@ export default function EmailSettingsPage() {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
+  const [logsLoaded, setLogsLoaded] = useState(false);
+  const [logDate, setLogDate] = useState("");
+  const [logEmail, setLogEmail] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/email-config")
@@ -127,14 +134,27 @@ export default function EmailSettingsPage() {
     finally { setSaving(false); }
   }
 
-  async function loadLogs() {
-    if (logs.length > 0) { setLogsOpen((v) => !v); return; }
-    setLogsOpen(true);
+  async function fetchLogs(date: string, email: string) {
     setLogsLoading(true);
-    const res = await fetch("/api/admin/email-logs");
-    const data = await res.json();
-    setLogs(Array.isArray(data) ? data : []);
-    setLogsLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (date) params.set("date", date);
+      if (email.trim()) params.set("email", email.trim());
+      const res = await fetch(`/api/admin/email-logs?${params}`);
+      const data = await res.json();
+      setLogs(Array.isArray(data) ? data : []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+      setLogsLoaded(true);
+    }
+  }
+
+  function loadLogs() {
+    if (logsOpen) { setLogsOpen(false); return; }
+    setLogsOpen(true);
+    if (!logsLoaded) fetchLogs(logDate, logEmail);
   }
 
   if (loading) return (
@@ -380,10 +400,41 @@ export default function EmailSettingsPage() {
 
             {logsOpen && (
               <div className="px-5 pb-5 pt-2" style={{ borderTop: "1px solid var(--p-rule)" }}>
+                <form
+                  className="flex flex-wrap items-end gap-2 mt-2 mb-3"
+                  onSubmit={(e) => { e.preventDefault(); fetchLogs(logDate, logEmail); }}
+                >
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "var(--p-ink3)" }}>Date</label>
+                    <input type="date" value={logDate}
+                      onChange={(e) => { setLogDate(e.target.value); fetchLogs(e.target.value, logEmail); }}
+                      className="rounded-xl px-3 py-2 text-xs focus:outline-none"
+                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                  </div>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: "var(--p-ink3)" }}>Email</label>
+                    <input type="search" value={logEmail} placeholder="prenom.nom@…"
+                      onChange={(e) => setLogEmail(e.target.value)}
+                      className="w-full rounded-xl px-3 py-2 text-xs focus:outline-none"
+                      style={{ border: "1.5px solid var(--p-rule)", color: "var(--p-ink)" }} />
+                  </div>
+                  <button type="submit" className="px-3 py-2 rounded-full text-xs font-bold text-white" style={{ background: "var(--p-ink)" }}>Rechercher</button>
+                  {(logDate || logEmail) && (
+                    <button type="button" onClick={() => { setLogDate(""); setLogEmail(""); fetchLogs("", ""); }}
+                      className="px-3 py-2 rounded-full text-xs font-semibold" style={{ border: "1px solid var(--p-rule)", color: "var(--p-ink2)" }}>Effacer</button>
+                  )}
+                </form>
+                <p className="text-xs mb-2" style={{ color: "var(--p-ink3)" }}>
+                  {logDate
+                    ? `Emails du ${new Date(logDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`
+                    : "Emails des 10 derniers jours"}
+                  {logEmail.trim() ? ` · destinataire contenant « ${logEmail.trim()} »` : ""}
+                  {!logsLoading && ` · ${logs.length} résultat${logs.length > 1 ? "s" : ""}`}
+                </p>
                 {logsLoading ? (
                   <div className="space-y-2 mt-2">{[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: "var(--p-bg)" }} />)}</div>
                 ) : logs.length === 0 ? (
-                  <p className="text-sm text-center py-4" style={{ color: "var(--p-ink3)" }}>Aucun email enregistré.</p>
+                  <p className="text-sm text-center py-4" style={{ color: "var(--p-ink3)" }}>Aucun email sur cette période.</p>
                 ) : (
                   <div className="space-y-0">
                     {logs.map((log, i) => (
@@ -392,10 +443,13 @@ export default function EmailSettingsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="text-xs font-semibold truncate" style={{ color: "var(--p-ink)" }}>{log.detail || log.typeLabel}</div>
-                            {log.userName && log.typeKey !== "SESSION_INVITE" && log.typeKey !== "NEW_GAMES" && (
+                            {log.userName && (
                               <span className="text-xs flex-shrink-0" style={{ color: "var(--p-ink3)" }}>→ {log.userName}</span>
                             )}
                           </div>
+                          {log.userEmail && (
+                            <div className="text-xs mt-0.5 truncate font-mono" style={{ color: "var(--p-ink2)" }}>✉ {log.userEmail}</div>
+                          )}
                           <div className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>
                             {new Date(log.sentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                             {" "}·{" "}

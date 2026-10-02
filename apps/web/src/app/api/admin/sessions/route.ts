@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
         guestCount: s.registrations.filter((r) => !!r.guestName).length,
+        isLudiBred: s.isLudiBred,
         registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: false as const,
         createdByUserId: null,
@@ -60,6 +61,7 @@ export async function GET(req: NextRequest) {
         createdAt: s.createdAt.toISOString(),
         registrationCount: s._count.registrations,
         guestCount: s.registrations.filter((r) => !!r.guestName).length,
+        isLudiBred: s.isLudiBred,
         registrationDeadline: s.registrationDeadline?.toISOString() ?? null,
         isPrivate: true as const,
         createdByUserId: s.createdByUserId,
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const { name, date, location, startTime, imageUrl, info, registrationDeadline } = body;
+  const { name, date, location, startTime, imageUrl, info, registrationDeadline, isLudiBred } = body;
   if (!name || !date || !location || !startTime) {
     return NextResponse.json({ error: "Nom, date, lieu et heure sont requis." }, { status: 400 });
   }
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await prisma.gameSession.create({
-      data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null, registrationDeadline: deadline.value },
+      data: { name, date: new Date(date), location, startTime, imageUrl: imageUrl || null, info: info || null, registrationDeadline: deadline.value, isLudiBred: isLudiBred === true },
     });
 
     return NextResponse.json({
@@ -104,6 +106,7 @@ export async function POST(req: NextRequest) {
       imageUrl: session.imageUrl, info: session.info,
       createdAt: session.createdAt.toISOString(), registrationCount: 0,
       registrationDeadline: session.registrationDeadline?.toISOString() ?? null,
+      isLudiBred: session.isLudiBred,
       isPrivate: false, createdByUserId: null, maxParticipants: null,
       isCreator: false, myInvitation: null, myRegistration: null,
     }, { status: 201 });

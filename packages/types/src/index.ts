@@ -93,6 +93,8 @@ export interface GameSessionDTO {
   maxParticipants?: number | null;
   /** Date limite d'inscription (ISO). Absente/null = jusqu'au début de la session. */
   registrationDeadline?: string | null;
+  /** Soirée LudiBred : session mise en avant dans les listes. */
+  isLudiBred?: boolean;
   isCreator?: boolean;
   myInvitation?: { status: string } | null;
 }

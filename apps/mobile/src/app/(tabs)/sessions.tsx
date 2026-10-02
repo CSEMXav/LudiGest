@@ -170,7 +170,7 @@ export default function SessionsScreen() {
   }
 
   const upcoming = sessions.filter((s) => !isPast(s.date));
-  const past = sessions.filter((s) => isPast(s.date));
+  const past = sessions.filter((s) => isPast(s.date)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <View style={{ flex: 1, backgroundColor: P.bg }}>
@@ -198,16 +198,22 @@ export default function SessionsScreen() {
                 const closed = isRegistrationClosed(session);
                 const isGuestInput = guestInput?.id === session.id;
                 const busy = registering === session.id;
-                const tint = TINTS[idx % TINTS.length];
-                const kind = PION_KINDS[idx % PION_KINDS.length];
+                const ludi = !!session.isLudiBred;
+                const tint = ludi ? P.ocre : TINTS[idx % TINTS.length];
+                const kind = ludi ? ("star" as PionKind) : PION_KINDS[idx % PION_KINDS.length];
                 return (
                   <View
                     key={session.id}
-                    style={[st.card, { borderColor: registered ? P.vert : P.rule, borderWidth: registered ? 2 : 1 }]}
+                    style={[st.card, { borderColor: registered ? P.vert : P.rule, borderWidth: registered ? 2 : 1 }, ludi && st.cardLudi]}
                   >
                     {/* Visual band */}
-                    <View style={[st.band, { backgroundColor: tint }]}>
-                      <Pion tint={tint} kind={kind} w={70} h={70} />
+                    <View style={[st.band, { backgroundColor: tint }, ludi && { height: 104 }]}>
+                      <Pion tint={tint} kind={kind} w={ludi ? 86 : 70} h={ludi ? 86 : 70} />
+                      {ludi && (
+                        <View style={st.ludiBadge}>
+                          <Text style={st.ludiBadgeText}>⭐ SOIRÉE LUDIBRED</Text>
+                        </View>
+                      )}
                       {registered && (
                         <View style={st.registeredBadge}>
                           <Text style={st.registeredBadgeText}>✓ Inscrit·e</Text>
@@ -221,7 +227,7 @@ export default function SessionsScreen() {
                     </View>
 
                     <View style={st.body}>
-                      <Text style={st.name}>{session.name}</Text>
+                      <Text style={[st.name, ludi && { fontSize: 21, lineHeight: 26 }]}>{session.name}</Text>
                       <Text style={st.meta}>📅 {formatDate(session.date)}</Text>
                       <Text style={st.meta}>🕐 {session.startTime}  ·  📍 {session.location}</Text>
                       <Text style={[st.count, { color: P.bleu }]}>
@@ -324,6 +330,9 @@ const st = StyleSheet.create({
   guestBox:       { marginTop: 12 },
   guestInput:     { backgroundColor: "#fef9f0", borderWidth: 1, borderColor: "#ece1cd", borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 8, color: "#1e1610" },
   guestActions:   { flexDirection: "row", gap: 8 },
+  cardLudi:       { borderColor: "#e8a82f", borderWidth: 2.5, backgroundColor: "#fffaf0", elevation: 4, shadowColor: "#e8a82f", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  ludiBadge:      { position: "absolute", bottom: 8, left: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 100, backgroundColor: "rgba(30,22,16,0.85)" },
+  ludiBadgeText:  { fontSize: 10, fontWeight: "800", color: "#ffd77a", letterSpacing: 0.5 },
   guestQuestion:  { fontSize: 13, fontWeight: "600", color: "#1e1610", marginBottom: 8 },
   guestChoices:   { flexDirection: "row", gap: 8, marginBottom: 8 },
   choiceBtn:      { flex: 1, borderWidth: 1.5, borderColor: "#ece1cd", borderRadius: 12, padding: 10, alignItems: "center", backgroundColor: "#fff" },

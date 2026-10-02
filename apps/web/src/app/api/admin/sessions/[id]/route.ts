@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
 
-  const { name, date, location, startTime, imageUrl, info, registrationDeadline } = await req.json();
+  const { name, date, location, startTime, imageUrl, info, registrationDeadline, isLudiBred } = await req.json();
 
   const deadline = parseDeadlineInput(registrationDeadline);
   if (!deadline.ok) return NextResponse.json({ error: deadline.error }, { status: 400 });
@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       imageUrl: imageUrl !== undefined ? (imageUrl || null) : undefined,
       info: info !== undefined ? (info || null) : undefined,
       ...(deadline.value !== undefined && { registrationDeadline: deadline.value }),
+      ...(typeof isLudiBred === "boolean" && { isLudiBred }),
     },
   });
 
