@@ -427,7 +427,7 @@ export default function EmailSettingsPage() {
                 <p className="text-xs mb-2" style={{ color: "var(--p-ink3)" }}>
                   {logDate
                     ? `Emails du ${new Date(logDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`
-                    : "Emails des 10 derniers jours"}
+                    : logEmail.trim() ? "Emails de toutes les dates" : "Emails des 10 derniers jours"}
                   {logEmail.trim() ? ` · destinataire contenant « ${logEmail.trim()} »` : ""}
                   {!logsLoading && ` · ${logs.length} résultat${logs.length > 1 ? "s" : ""}`}
                 </p>

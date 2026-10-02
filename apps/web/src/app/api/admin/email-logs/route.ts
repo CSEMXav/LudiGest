@@ -26,7 +26,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * GET /api/admin/email-logs?date=YYYY-MM-DD&email=texte
- *  - sans date : les 10 derniers jours
+ *  - sans date ni email : les 10 derniers jours
+ *  - email sans date : toutes les dates
  *  - date      : uniquement ce jour-là (heure de Paris)
  *  - email     : filtre "contient" sur l'adresse du destinataire
  */
@@ -38,15 +39,15 @@ export async function GET(req: NextRequest) {
   const dateParam = searchParams.get("date") ?? "";
   const emailParam = (searchParams.get("email") ?? "").trim();
 
-  let from: Date;
-  let to: Date | null = null;
+  // Date précise → ce jour-là ; email seul → toutes les dates ; rien → 10 derniers jours
+  let range: { gte?: Date; lt?: Date } | undefined;
   if (DATE_RE.test(dateParam)) {
-    from = parisLocalToUtc(dateParam, "00:00");
-    to = new Date(parisLocalToUtc(dateParam, "23:59").getTime() + 60_000);
+    range = { gte: parisLocalToUtc(dateParam, "00:00"), lt: new Date(parisLocalToUtc(dateParam, "23:59").getTime() + 60_000) };
+  } else if (emailParam) {
+    range = undefined;
   } else {
-    from = new Date(Date.now() - DEFAULT_DAYS * 24 * 60 * 60 * 1000);
+    range = { gte: new Date(Date.now() - DEFAULT_DAYS * 24 * 60 * 60 * 1000) };
   }
-  const range = to ? { gte: from, lt: to } : { gte: from };
   const emailFilter = emailParam ? { email: { contains: emailParam, mode: "insensitive" as const } } : null;
 
   try {
