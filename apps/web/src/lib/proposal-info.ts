@@ -115,11 +115,70 @@ function metaContent(html: string, keys: string[]): string | null {
   return null;
 }
 
-/** Image et description de la page (balises OpenGraph / meta). */
-async function fetchLinkMeta(link: string): Promise<{ summary: string | null; coverUrl: string | null }> {
+interface GameSpecs {
+  minAge: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  duration: number | null;
+}
+interface LinkMeta extends GameSpecs {
+  summary: string | null;
+  coverUrl: string | null;
+}
+const NO_META: LinkMeta = { summary: null, coverUrl: null, minAge: null, minPlayers: null, maxPlayers: null, duration: null };
+
+function inRange(n: number, min: number, max: number): number | null {
+  return Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+
+/**
+ * Repère joueurs / durée / âge dans le texte d'une fiche produit française
+ * ("2 à 4 joueurs", "Durée : 45 min", "À partir de 10 ans"…).
+ */
+export function extractSpecsFromText(text: string): GameSpecs {
+  const t = text.replace(/\s+/g, " ");
+  const specs: GameSpecs = { minAge: null, minPlayers: null, maxPlayers: null, duration: null };
+
+  const range = t.match(/(\d{1,2})\s*(?:à|a|-|–|—|\/)\s*(\d{1,3})\s*joueurs?/i)
+    ?? t.match(/joueurs?\s*:?\s*(?:de\s*)?(\d{1,2})\s*(?:à|a|-|–|—)\s*(\d{1,3})/i);
+  if (range) {
+    const min = inRange(Number(range[1]), 1, 99), max = inRange(Number(range[2]), 1, 999);
+    if (min && max && min <= max) { specs.minPlayers = min; specs.maxPlayers = max; }
+  }
+  if (!specs.minPlayers) {
+    const plus = t.match(/(\d{1,2})\s*joueurs?\s*(?:et\s*(?:plus|\+)|\+)/i) ?? t.match(/joueurs?\s*:?\s*(\d{1,2})\s*(?:et\s*plus|\+)/i);
+    const single = t.match(/(?:nombre de joueurs?|joueurs?)\s*:\s*(\d{1,2})\b/i) ?? t.match(/\b(\d{1,2})\s*joueurs?\b/i);
+    if (plus) specs.minPlayers = inRange(Number(plus[1]), 1, 99);
+    else if (single) { specs.minPlayers = inRange(Number(single[1]), 1, 99); specs.maxPlayers = specs.minPlayers; }
+  }
+
+  const hours = t.match(/(?:durée|temps de jeu|partie)[^.\d]{0,40}(\d)\s*h\s*(\d{2})?/i);
+  const minutes = t.match(/(?:durée|temps de jeu|partie)[^.\d]{0,40}(?:\d{1,3}\s*(?:à|-|–)\s*)?(\d{1,3})\s*(?:min|mn|minutes)\b/i)
+    ?? t.match(/\b(?:\d{1,3}\s*(?:à|-|–)\s*)?(\d{1,3})\s*(?:min|mn|minutes)\b/i);
+  if (minutes) specs.duration = inRange(Number(minutes[1]), 1, 999);
+  else if (hours) specs.duration = inRange(Number(hours[1]) * 60 + Number(hours[2] ?? 0), 1, 999);
+
+  const age = t.match(/(?:à partir de|dès|des|âge|age)\s*(?:minimum|conseillé|recommandé)?\s*:?\s*(?:à partir de|dès)?\s*(\d{1,2})\s*(?:ans|\+)/i)
+    ?? t.match(/\b(\d{1,2})\s*ans\s*(?:et\s*(?:plus|\+)|\+)/i)
+    ?? t.match(/\b(\d{1,2})\s*\+\s*ans\b/i);
+  if (age) specs.minAge = inRange(Number(age[1]), 1, 21);
+
+  return specs;
+}
+
+function htmlToText(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<(script|style|noscript|svg|head)\b[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+  );
+}
+
+/** Image, description (balises OpenGraph / meta) et caractéristiques lues sur la page. */
+async function fetchLinkMeta(link: string): Promise<LinkMeta> {
   try {
     const page = await fetchPublicHtml(link);
-    if (!page) return { summary: null, coverUrl: null };
+    if (!page) return NO_META;
     const head = page.html.slice(0, MAX_HTML_BYTES);
     const summary = metaContent(head, ["og:description", "description", "twitter:description"]);
     const image = metaContent(head, ["og:image", "og:image:secure_url", "twitter:image"]);
@@ -130,9 +189,9 @@ async function fetchLinkMeta(link: string): Promise<{ summary: string | null; co
         if (abs.protocol === "https:" || abs.protocol === "http:") coverUrl = abs.toString();
       } catch { /* image illisible */ }
     }
-    return { summary: summary ? summary.slice(0, 1500) : null, coverUrl };
+    return { summary: summary ? summary.slice(0, 1500) : null, coverUrl, ...extractSpecsFromText(htmlToText(page.html)) };
   } catch {
-    return { summary: null, coverUrl: null };
+    return NO_META;
   }
 }
 
@@ -164,7 +223,7 @@ export async function fetchProposalInfo(title: string, link: string | null): Pro
   const bggIdFromLink = link?.match(/boardgamegeek\.com\/boardgame(?:expansion)?\/(\d+)/)?.[1] ?? null;
 
   const [meta, bgg] = await Promise.all([
-    link && !bggIdFromLink ? fetchLinkMeta(link) : Promise.resolve({ summary: null, coverUrl: null }),
+    link && !bggIdFromLink ? fetchLinkMeta(link) : Promise.resolve(NO_META),
     (async () => {
       try {
         const bggId = bggIdFromLink ?? pickBggMatch(title, await searchBGG(title));
@@ -175,12 +234,16 @@ export async function fetchProposalInfo(title: string, link: string | null): Pro
     })(),
   ]);
 
-  if (bgg) {
-    info.bggId = bgg.bggId;
-    info.minAge = bgg.minAge;
+  // Joueurs / durée / âge : BoardGameGeek (données structurées) d'abord, sinon ce qui est lu sur la page du lien
+  info.bggId = bgg?.bggId ?? null;
+  info.minAge = bgg?.minAge ?? meta.minAge;
+  info.duration = bgg?.duration ?? meta.duration;
+  if (bgg?.minPlayers) {
     info.minPlayers = bgg.minPlayers;
     info.maxPlayers = bgg.maxPlayers;
-    info.duration = bgg.duration;
+  } else {
+    info.minPlayers = meta.minPlayers;
+    info.maxPlayers = meta.maxPlayers;
   }
   // La page du lien (souvent en français, bonne édition) prime sur BGG pour le texte et l'image
   info.coverUrl = meta.coverUrl ?? bgg?.coverUrl ?? null;

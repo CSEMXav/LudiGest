@@ -57,6 +57,7 @@ export default function ProposalsPage() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [voting, setVoting] = useState<Record<string, boolean>>({});
+  const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch("/api/proposals")
@@ -104,6 +105,21 @@ export default function ProposalsPage() {
       setError("Erreur réseau.");
     } finally {
       setVoting((v) => ({ ...v, [p.id]: false }));
+    }
+  }
+
+  async function refresh(p: Proposal) {
+    setRefreshing((r) => ({ ...r, [p.id]: true }));
+    setError("");
+    try {
+      const res = await fetch(`/api/proposals/${p.id}/refresh`, { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setProposals((list) => list.map((x) => (x.id === p.id ? d : x)));
+      else setError(d.error ?? "Erreur lors de la recherche d'infos.");
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setRefreshing((r) => ({ ...r, [p.id]: false }));
     }
   }
 
@@ -216,11 +232,15 @@ export default function ProposalsPage() {
       ) : (
         <div className="space-y-3">
           {sorted.map((p) => {
-            const meta = [
-              p.minPlayers && p.maxPlayers ? (p.minPlayers === p.maxPlayers ? `${p.minPlayers} joueur${p.minPlayers > 1 ? "s" : ""}` : `${p.minPlayers}–${p.maxPlayers} joueurs`) : null,
-              p.duration ? `${p.duration} min` : null,
-              p.minAge ? `${p.minAge}+` : null,
-            ].filter(Boolean).join(" · ");
+            const players = !p.minPlayers ? null
+              : !p.maxPlayers ? `${p.minPlayers}+ joueurs`
+              : p.minPlayers === p.maxPlayers ? `${p.minPlayers} joueur${p.minPlayers > 1 ? "s" : ""}`
+              : `${p.minPlayers} à ${p.maxPlayers} joueurs`;
+            const specs = [
+              { icon: "👥", label: "Nombre de joueurs", value: players },
+              { icon: "⏱", label: "Durée d'une partie", value: p.duration ? `${p.duration} min` : null },
+              { icon: "🎂", label: "Âge conseillé", value: p.minAge ? `Dès ${p.minAge} ans` : null },
+            ];
             return (
               <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-4 flex gap-4">
                 <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center text-2xl">
@@ -243,7 +263,17 @@ export default function ProposalsPage() {
                       {catConfig[p.category]?.label ?? p.category}
                     </span>
                   </div>
-                  {meta && <p className="text-xs text-gray-500 mt-0.5">{meta}</p>}
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {specs.map((sp) => (
+                      <span
+                        key={sp.label}
+                        title={sp.label}
+                        className={`text-xs px-2 py-0.5 rounded-full ${sp.value ? "bg-gray-100 text-gray-700 font-medium" : "bg-gray-50 text-gray-400"}`}
+                      >
+                        {sp.icon} {sp.value ?? "—"}
+                      </span>
+                    ))}
+                  </div>
                   {p.summary && <p className="text-sm text-gray-600 mt-1.5 line-clamp-3">{p.summary}</p>}
                   <div className="flex items-center gap-3 flex-wrap mt-2 text-xs text-gray-400">
                     <span>Proposé par {p.proposedBy} le {formatDate(p.createdAt)}</span>
@@ -251,6 +281,16 @@ export default function ProposalsPage() {
                       <a href={p.link} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
                         🔗 {hostOf(p.link)}
                       </a>
+                    )}
+                    {p.canDelete && (
+                      <button
+                        onClick={() => refresh(p)}
+                        disabled={refreshing[p.id]}
+                        title="Relancer la recherche des infos (joueurs, durée, âge, image)"
+                        className="text-gray-500 hover:underline disabled:opacity-50"
+                      >
+                        {refreshing[p.id] ? "Recherche…" : "↻ Actualiser les infos"}
+                      </button>
                     )}
                     {p.canDelete && (
                       <button onClick={() => remove(p)} className="text-red-500 hover:underline">Supprimer</button>
