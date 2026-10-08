@@ -158,7 +158,7 @@ export function extractSpecsFromText(text: string): GameSpecs {
   if (minutes) specs.duration = inRange(Number(minutes[1]), 1, 999);
   else if (hours) specs.duration = inRange(Number(hours[1]) * 60 + Number(hours[2] ?? 0), 1, 999);
 
-  const age = t.match(/(?:à partir de|dès|des|âge|age)\s*(?:minimum|conseillé|recommandé)?\s*:?\s*(?:à partir de|dès)?\s*(\d{1,2})\s*(?:ans|\+)/i)
+  const age = t.match(/(?:à partir de|dès|âge|age)\s*(?:minimum|conseillé|recommandé)?\s*:?\s*(?:à partir de|dès)?\s*(\d{1,2})\s*(?:ans|\+)/i)
     ?? t.match(/\b(\d{1,2})\s*ans\s*(?:et\s*(?:plus|\+)|\+)/i)
     ?? t.match(/\b(\d{1,2})\s*\+\s*ans\b/i);
   if (age) specs.minAge = inRange(Number(age[1]), 1, 21);
