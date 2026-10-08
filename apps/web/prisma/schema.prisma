@@ -35,6 +35,8 @@ model User {
   privateInvitations     PrivateSessionInvitation[]
   gameWaitlists          GameWaitlist[]
   sessionReminderLogs    SessionReminderLog[]
+  gameProposals          GameProposal[]
+  gameProposalVotes      GameProposalVote[]
 }
 
 model EmailVerification {
@@ -259,5 +261,43 @@ model SessionReminderLog {
 
   @@unique([sessionId, userId, daysBefore])
   @@index([sessionId])
+  @@index([userId])
+}
+
+model GameProposal {
+  id         String   @id @default(cuid())
+  title      String
+  category   String   @default("famille")
+  link       String?
+  summary    String?
+  coverUrl   String?
+  bggId      String?
+  minAge     Int?
+  minPlayers Int?
+  maxPlayers Int?
+  duration   Int?
+  location   String   @default("Joinville")
+  userId     String
+  createdAt  DateTime @default(now())
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes GameProposalVote[]
+
+  @@index([location])
+  @@index([userId])
+}
+
+model GameProposalVote {
+  id         String   @id @default(cuid())
+  proposalId String
+  userId     String
+  value      Int
+  createdAt  DateTime @default(now())
+
+  proposal GameProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+  @@index([proposalId])
   @@index([userId])
 }

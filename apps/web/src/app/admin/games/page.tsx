@@ -386,6 +386,139 @@ function QuickAddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
   );
 }
 
+interface AssignUser {
+  id: string;
+  name: string;
+  email: string;
+  suspended: boolean;
+  activeLoans: number;
+}
+
+function todayIso() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" });
+}
+
+function AssignLoanModal({ game, onClose, onAssigned }: { game: GameDTO; onClose: () => void; onAssigned: (message: string) => void }) {
+  const [users, setUsers] = useState<AssignUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [filter, setFilter] = useState("");
+  const [userId, setUserId] = useState("");
+  const [borrowedAt, setBorrowedAt] = useState(todayIso());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/users")
+      .then((r) => r.json())
+      .then((data: AssignUser[]) => {
+        const list = (Array.isArray(data) ? data : []).filter((u) => !u.suspended);
+        list.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+        setUsers(list);
+      })
+      .catch(() => setError("Erreur de chargement des utilisateurs."))
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  const q = filter.trim().toLowerCase();
+  const visible = q ? users.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) : users;
+  const selectedUser = users.find((u) => u.id === userId);
+  const dueLabel = borrowedAt
+    ? new Date(new Date(borrowedAt + "T12:00:00Z").getTime() + 28 * 86400000).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+    : "";
+
+  async function submit() {
+    if (!userId || !borrowedAt) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/loans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId: game.id, userId, borrowedAt }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error ?? "Erreur lors de l'enregistrement."); return; }
+      onAssigned(d.emailSent ? `✓ Emprunté par ${d.userName} — email envoyé` : `✓ Emprunté par ${d.userName} — ⚠ email non envoyé`);
+      onClose();
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Mettre en emprunt — {game.name}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Emprunteur</label>
+            <input
+              type="search"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filtrer par nom ou email…"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 mb-2"
+              autoFocus
+            />
+            <div className="border border-gray-200 rounded-lg max-h-56 overflow-y-auto divide-y divide-gray-100">
+              {loadingUsers ? (
+                <p className="px-3 py-4 text-sm text-gray-400 text-center">Chargement…</p>
+              ) : visible.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-gray-400 text-center">Aucun utilisateur.</p>
+              ) : (
+                visible.map((u) => (
+                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer text-sm ${userId === u.id ? "bg-red-50" : "hover:bg-gray-50"}`}>
+                    <input type="radio" name="assign-user" checked={userId === u.id} onChange={() => setUserId(u.id)} className="accent-[#C8102E]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{u.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                    </div>
+                    {u.activeLoans > 0 && <span className="text-xs text-gray-400 flex-shrink-0">{u.activeLoans} en cours</span>}
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">Date d&apos;emprunt</label>
+            <input
+              type="date"
+              value={borrowedAt}
+              max={todayIso()}
+              onChange={(e) => setBorrowedAt(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+            />
+            {dueLabel && <p className="text-xs text-gray-500 mt-1">Retour prévu le {dueLabel} (28 jours).</p>}
+          </div>
+
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+            📧 {selectedUser ? selectedUser.name : "L'utilisateur"} recevra un email l&apos;informant qu&apos;un administrateur lui a attribué cet emprunt à la date choisie.
+          </p>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Annuler
+          </button>
+          <button onClick={submit} disabled={saving || !userId || !borrowedAt}
+            className="px-5 py-2 text-sm bg-[#C8102E] text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+            {saving ? "Enregistrement..." : "Enregistrer l'emprunt"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STATUS_FILTERS: { value: "" | "AVAILABLE" | "BORROWED" | "SUSPENDED"; label: string }[] = [
   { value: "", label: "Tous" },
   { value: "AVAILABLE", label: "Disponible" },
@@ -588,6 +721,7 @@ export default function AdminGamesPage() {
   const [sort, setSort]         = useState("name_asc");
   const [enriching, setEnriching] = useState<Record<string, boolean>>({});
   const [editingGame, setEditingGame] = useState<GameDTO | null>(null);
+  const [assigningGame, setAssigningGame] = useState<GameDTO | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showNewGamesEmail, setShowNewGamesEmail] = useState(false);
   const [bulkTranslating, setBulkTranslating] = useState(false);
@@ -916,6 +1050,14 @@ export default function AdminGamesPage() {
                         ✏ Modifier
                       </button>
                       <button
+                        onClick={() => setAssigningGame(g)}
+                        disabled={g.status !== "AVAILABLE"}
+                        className="text-xs px-2.5 py-1 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-40 transition-colors"
+                        title="Enregistrer un emprunt au nom d'un utilisateur"
+                      >
+                        🤝 Emprunt
+                      </button>
+                      <button
                         onClick={() => enrich(g)}
                         disabled={enriching[g.id]}
                         className="text-xs px-2.5 py-1 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-40 transition-colors"
@@ -959,6 +1101,14 @@ export default function AdminGamesPage() {
           game={editingGame}
           onClose={() => setEditingGame(null)}
           onSaved={() => { setEditingGame(null); loadGames(); }}
+        />
+      )}
+
+      {assigningGame && (
+        <AssignLoanModal
+          game={assigningGame}
+          onClose={() => setAssigningGame(null)}
+          onAssigned={(message) => { setMessages((m) => ({ ...m, [assigningGame.id]: message })); loadGames(); }}
         />
       )}
 

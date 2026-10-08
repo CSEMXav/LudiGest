@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import type { LoanDTO } from "@ludigest/types";
 
 interface ReminderLog {
-  type: "reminder" | "overdue" | "overdue_manual";
+  type: "reminder" | "overdue" | "overdue_manual" | "admin_assigned";
   sentAt: string;
 }
 
@@ -82,7 +82,7 @@ function ReminderIcon({ reminders }: { reminders: ReminderLog[] }) {
                       {r.type === "overdue" || r.type === "overdue_manual" ? "⚠️" : "📧"}
                     </span>
                     <span>
-                      <span className="font-medium">{r.type === "overdue" ? "Retard auto" : r.type === "overdue_manual" ? "Retard manuel" : "Rappel préventif"}</span>
+                      <span className="font-medium">{r.type === "overdue" ? "Retard auto" : r.type === "overdue_manual" ? "Retard manuel" : r.type === "admin_assigned" ? "Emprunt attribué par un admin" : "Rappel préventif"}</span>
                       <br />
                       <span className="text-gray-400">{formatDateTime(r.sentAt)}</span>
                     </span>

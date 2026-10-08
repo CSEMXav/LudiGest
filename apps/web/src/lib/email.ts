@@ -342,6 +342,40 @@ export async function sendGameReportEmail(to: string, adminName: string, reporte
   });
 }
 
+/** Emprunt enregistré par un administrateur au nom d'un membre. */
+export async function sendAdminAssignedLoanEmail(to: string, name: string, gameName: string, borrowedAt: Date, dueAt: Date, gameId: string): Promise<void> {
+  const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
+  const borrowedStr = fmt(borrowedAt);
+  const dueStr = fmt(dueAt);
+
+  const resend = getResend();
+  if (!resend) {
+    console.log(`
+📧 [DEV] Emprunt attribué par un admin pour ${to} : "${gameName}" le ${borrowedStr}
+`);
+    return;
+  }
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🎲 Un emprunt vous a été attribué : "${gameName}"`,
+    html: emailLayout({
+      title: "Un emprunt vous a été attribué",
+      heroUrl: null,
+      bodyHtml: p(`Bonjour <strong>${escapeHtml(name)}</strong>,`)
+        + p("Un administrateur de la ludothèque a enregistré l'emprunt suivant à votre nom :")
+        + infoBoxHtml([
+          { icon: "🎲", label: "Jeu :", value: escapeHtml(gameName) },
+          { icon: "📅", label: "Date d'emprunt :", value: escapeHtml(borrowedStr) },
+          { icon: "⏳", label: "À rendre avant le :", value: escapeHtml(dueStr) },
+        ])
+        + p("Vous retrouvez cet emprunt dans la rubrique « Emprunts » de l'application. Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur de la ludothèque."),
+      ctaUrl: `${getSiteUrl()}/games/${gameId}`,
+      ctaLabel: "Voir le jeu",
+    }),
+  });
+}
+
 type LoanVars = { userName: string; gameName: string; dueAt: string; gameUrl?: string | null };
 type EmailConfigRow = Awaited<ReturnType<typeof prisma.emailConfig.findUnique>> | null;
 

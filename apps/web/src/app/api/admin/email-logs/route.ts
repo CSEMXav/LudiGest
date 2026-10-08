@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
   reminder: "Rappel avant échéance",
   overdue: "Retard après échéance",
   overdue_manual: "Retard (rappel admin)",
+  admin_assigned: "Emprunt attribué par un admin",
   SESSION_INVITE: "Invitation session",
   SESSION_REMINDER: "Rappel session",
   SESSION_UPDATE: "Session mise à jour",

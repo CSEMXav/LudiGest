@@ -19,6 +19,7 @@ const ADMIN_TABS = [
   { href: "/admin/loans",          label: "Emprunts" },
   { href: "/admin/users",          label: "Utilisateurs" },
   { href: "/admin/sessions",       label: "Sessions" },
+  { href: "/admin/proposals",      label: "Futurs achats" },
   { href: "/admin/email-settings", label: "Emails" },
   { href: "/admin/import",         label: "Import" },
 ];
