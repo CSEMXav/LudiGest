@@ -61,10 +61,19 @@ export async function POST(req: NextRequest) {
 
   const users = await prisma.user.findMany({
     where: recipientWhere,
-    select: { id: true, email: true, name: true, firstName: true },
+    select: { id: true, email: true, name: true, firstName: true, pushToken: true },
   });
 
+  const closesStr = window.closesAt
+    ? window.closesAt.toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })
+    : null;
+  const notifTitle = "🛒 Futurs achats : proposez et votez";
+  const notifMessage = closesStr
+    ? `Proposez des jeux et votez pour les futurs achats de la ludothèque jusqu'au ${closesStr}.`
+    : "Proposez des jeux et votez pour les futurs achats de la ludothèque.";
+
   let emailsSent = 0;
+  const pushTokens: string[] = [];
   // Envoi par lots pour ne pas saturer l'API email
   const BATCH = 20;
   for (let i = 0; i < users.length; i += BATCH) {
@@ -72,15 +81,35 @@ export async function POST(req: NextRequest) {
       try {
         await sendProposalsOpenEmail(user.email, { userName: user.firstName ?? user.name, closesAt: window.closesAt });
         emailsSent++;
-        // Trace pour le journal d'envoi
+        // Notification dans l'appli (sert aussi de trace pour le journal d'envoi et d'anti-doublon)
         await prisma.userNotification.create({
-          data: { userId: user.id, type: "PROPOSALS_OPEN", title: "🛒 Futurs achats : proposez et votez", message: "Vous pouvez proposer des jeux et voter pour les futurs achats de la ludothèque." },
+          data: { userId: user.id, type: "PROPOSALS_OPEN", title: notifTitle, message: notifMessage },
         }).catch(() => {});
+        if (user.pushToken) pushTokens.push(user.pushToken);
       } catch (err) {
         console.error(`Failed to send proposals email to ${user.email}:`, err);
       }
     }));
   }
 
-  return NextResponse.json({ success: true, emailsSent, failed: users.length - emailsSent, recipients: users.length });
+  // Notification push (Expo) sur le téléphone des membres qui viennent d'être prévenus par email
+  let pushSent = 0;
+  if (pushTokens.length > 0) {
+    try {
+      const messages = pushTokens.map((token) => ({ to: token, title: notifTitle, body: notifMessage, data: { type: "proposals_open" } }));
+      for (let i = 0; i < messages.length; i += 100) {
+        const chunk = messages.slice(i, i + 100);
+        const res = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(chunk),
+        });
+        if (res.ok) pushSent += chunk.length;
+      }
+    } catch (err) {
+      console.error("Push notification error:", err);
+    }
+  }
+
+  return NextResponse.json({ success: true, emailsSent, pushSent, failed: users.length - emailsSent, recipients: users.length });
 }

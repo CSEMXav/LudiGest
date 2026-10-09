@@ -62,7 +62,7 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
       else if (mode === "test") setMsg("✓ Email de test envoyé à " + d.sentTo);
       else {
         if (d.failed > 0) setError(`${d.failed} email(s) n'ont pas pu être envoyés. Cliquez à nouveau sur « Envoyer » pour les membres restants.`);
-        setMsg(`✓ Email envoyé à ${d.emailsSent} membre(s) sur ${d.recipients}`);
+        setMsg(`✓ Email envoyé à ${d.emailsSent} membre(s) sur ${d.recipients}, ${d.pushSent ?? 0} notification(s) push`);
         refreshCounts();
       }
     } catch {
@@ -77,10 +77,10 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
   return (
     <div className="pt-4 border-t border-gray-100 space-y-3">
       <div>
-        <h3 className="font-semibold text-gray-900 text-sm">📧 Prévenir les membres par email</h3>
+        <h3 className="font-semibold text-gray-900 text-sm">📧 Prévenir les membres (email + notification)</h3>
         <p className="text-sm text-gray-500 mt-0.5">
           {isOpen
-            ? "Envoie aux membres de cette ludothèque un email les invitant à proposer des jeux et à voter jusqu'à la date de fermeture. Un membre déjà prévenu pour cette période ne le reçoit pas une seconde fois."
+            ? "Envoie aux membres de cette ludothèque un email les invitant à proposer des jeux et à voter jusqu'à la date de fermeture. Ils reçoivent aussi une notification dans l'application (et sur leur téléphone s'ils ont activé les notifications push). Un membre déjà prévenu pour cette période n'est pas recontacté."
             : "Disponible lorsque la page est ouverte aux membres (période d'ouverture en cours)."}
         </p>
       </div>

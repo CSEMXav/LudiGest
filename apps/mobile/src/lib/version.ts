@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 
 /** Version de l'application (même numéro « v1.xx » que le site). À incrémenter à chaque livraison. */
-export const APP_VERSION = "1.42";
+export const APP_VERSION = "1.43";
 
 const SITE_URL =
   (Constants.expoConfig?.extra?.apiUrl as string) ||

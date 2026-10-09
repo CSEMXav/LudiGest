@@ -53,6 +53,8 @@ export default function RootLayout() {
         router.push(`/game/${data.gameId}`);
       } else if (data?.type === "session_reminder") {
         router.push("/(tabs)/sessions");
+      } else if (data?.type === "proposals_open") {
+        router.push("/(tabs)/proposals");
       }
     });
 
