@@ -11,8 +11,40 @@ export function loadProposal(id: string) {
   });
 }
 
-export function toProposalDTO(p: ProposalRow, viewer: { id: string; role: string }) {
+export type LibraryMatch = { id: string; name: string };
+export type LibraryMatcher = (p: { title: string; bggId: string | null }) => LibraryMatch | null;
+
+function normalizeTitle(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
+ * Repère les propositions qui correspondent à un jeu déjà présent dans la ludothèque :
+ * même fiche BoardGameGeek, ou même nom (sans tenir compte de la casse, des accents et de la ponctuation).
+ */
+export async function getLibraryMatcher(location: string): Promise<LibraryMatcher> {
+  const games = await prisma.game.findMany({ where: { location }, select: { id: true, name: true, bggId: true } });
+  const byName = new Map<string, LibraryMatch>();
+  const byBgg = new Map<string, LibraryMatch>();
+  for (const g of games) {
+    const match = { id: g.id, name: g.name };
+    const key = normalizeTitle(g.name);
+    if (key && !byName.has(key)) byName.set(key, match);
+    if (g.bggId && !byBgg.has(g.bggId)) byBgg.set(g.bggId, match);
+  }
+  return (p) => byName.get(normalizeTitle(p.title)) ?? (p.bggId ? byBgg.get(p.bggId) : undefined) ?? null;
+}
+
+/** Charge une proposition et la met en forme pour l'utilisateur (avec le repérage "déjà à la ludothèque"). */
+export async function loadProposalDTO(id: string, viewer: { id: string; role: string }) {
+  const p = await loadProposal(id);
+  if (!p) return null;
+  return toProposalDTO(p, viewer, await getLibraryMatcher(p.location));
+}
+
+export function toProposalDTO(p: ProposalRow, viewer: { id: string; role: string }, inLibrary?: LibraryMatcher) {
   return {
+    inLibrary: inLibrary ? inLibrary(p) : null,
     id: p.id,
     title: p.title,
     category: p.category,

@@ -278,13 +278,29 @@ model GameProposal {
   duration   Int?
   location   String   @default("Joinville")
   userId     String
+  archiveId  String?
   createdAt  DateTime @default(now())
 
-  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes GameProposalVote[]
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  archive ProposalArchive?   @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  votes   GameProposalVote[]
 
   @@index([location])
   @@index([userId])
+  @@index([archiveId])
+}
+
+model ProposalArchive {
+  id         String    @id @default(cuid())
+  name       String
+  location   String
+  opensAt    DateTime?
+  closesAt   DateTime?
+  archivedAt DateTime  @default(now())
+
+  proposals GameProposal[]
+
+  @@index([location])
 }
 
 model GameProposalVote {

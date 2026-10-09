@@ -29,6 +29,8 @@ interface Proposal {
   downVotes: number;
   myVote: number;
   canDelete: boolean;
+  /** Jeu correspondant déjà présent dans la ludothèque, le cas échéant. */
+  inLibrary: { id: string; name: string } | null;
 }
 
 const SORTS: { value: "score" | "recent" | "name"; label: string }[] = [
@@ -98,7 +100,7 @@ export function ProposalsBoard() {
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setError(d.error ?? "Erreur lors de l'ajout."); return; }
       setProposals((list) => [d, ...list]);
-      setMsg(d.infoFound ? `✓ « ${d.title} » ajouté — infos récupérées automatiquement.` : `✓ « ${d.title} » ajouté — aucune info trouvée automatiquement.`);
+      setMsg(d.inLibrary ? `✓ « ${d.title} » ajouté — attention, ce jeu est déjà à la ludothèque.` : d.infoFound ? `✓ « ${d.title} » ajouté — infos récupérées automatiquement.` : `✓ « ${d.title} » ajouté — aucune info trouvée automatiquement.`);
       setTitle(""); setCategory(""); setLink("");
     } catch {
       setError("Erreur réseau.");
@@ -310,7 +312,18 @@ export function ProposalsBoard() {
             if (view === "grid") {
               return (
                 <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col">
-                  <div className="aspect-square bg-gray-50 flex items-center justify-center text-4xl p-2">{cover}</div>
+                  <div className="relative aspect-square bg-gray-50 flex items-center justify-center text-4xl p-2">
+                    {cover}
+                    {p.inLibrary && (
+                      <a
+                        href={`/games/${p.inLibrary.id}`}
+                        title={`Déjà à la ludothèque : ${p.inLibrary.name}`}
+                        className="absolute top-0 inset-x-0 bg-amber-400 text-amber-950 text-xs font-bold text-center py-1 hover:bg-amber-300"
+                      >
+                        ✓ Déjà à la ludothèque
+                      </a>
+                    )}
+                  </div>
                   <div className="p-3 flex flex-col gap-2 flex-1">
                     <h3 className="font-semibold text-sm text-gray-900 leading-snug line-clamp-2" title={p.title}>
                       {p.link ? (
@@ -361,6 +374,14 @@ export function ProposalsBoard() {
                       </span>
                     ))}
                   </div>
+                  {p.inLibrary && (
+                    <a
+                      href={`/games/${p.inLibrary.id}`}
+                      className="block mt-2 text-sm font-medium rounded-lg px-3 py-1.5 bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200"
+                    >
+                      ✓ Ce jeu est déjà à la ludothèque{p.inLibrary.name !== p.title ? ` (${p.inLibrary.name})` : ""} — voir la fiche
+                    </a>
+                  )}
                   {p.summary && <p className="text-sm text-gray-600 mt-1.5 line-clamp-3">{p.summary}</p>}
                   <div className="flex items-center gap-3 flex-wrap mt-2 text-xs text-gray-400">
                     <span>Proposé par {p.proposedBy} le {formatDate(p.createdAt)}</span>

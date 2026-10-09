@@ -214,14 +214,165 @@ function OpeningSettings() {
   );
 }
 
+interface ArchivedProposal {
+  id: string;
+  title: string;
+  category: string;
+  link: string | null;
+  proposedBy: string;
+  upVotes: number;
+  downVotes: number;
+  inLibrary: { id: string; name: string } | null;
+}
+interface ArchiveDTO {
+  id: string;
+  name: string;
+  archivedAt: string;
+  opensAt: string | null;
+  closesAt: string | null;
+  proposals: ArchivedProposal[];
+}
+
+function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
+}
+
+function Archives({ onArchived }: { onArchived: () => void }) {
+  const [archives, setArchives] = useState<ArchiveDTO[]>([]);
+  const [name, setName] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+
+  function load() {
+    fetch("/api/proposals/archive")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setArchives(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }
+  useEffect(load, []);
+
+  async function archive() {
+    setBusy(true); setError(""); setMsg("");
+    try {
+      const res = await fetch("/api/proposals/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error ?? "Erreur lors de l'archivage."); return; }
+      setMsg(`✓ ${d.archived} proposition(s) archivée(s) dans « ${d.name} ». La page est remise à zéro.`);
+      setName("");
+      load();
+      onArchived();
+    } catch {
+      setError("Erreur réseau.");
+    } finally {
+      setBusy(false); setConfirming(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5 mt-6 space-y-4">
+      <div>
+        <h2 className="font-semibold text-gray-900">Archiver la session</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Conserve les propositions en cours et leurs votes dans une archive, puis remet la page à zéro pour une future session : liste vide et dates d&apos;ouverture effacées (la page n&apos;est plus visible des membres).
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2 items-center">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={80}
+          placeholder="Nom de la session (ex : Achats automne 2026)"
+          aria-label="Nom de la session à archiver"
+          className="flex-1 min-w-[220px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+        />
+        <button
+          onClick={() => setConfirming(true)}
+          disabled={busy}
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          🗄 Archiver et remettre à zéro
+        </button>
+      </div>
+      {confirming && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm bg-gray-50 border border-gray-200">
+          <span className="flex-1 font-medium text-gray-900">
+            Archiver toutes les propositions en cours et fermer la page aux membres ? Les votes sont conservés dans l&apos;archive.
+          </span>
+          <button onClick={() => setConfirming(false)} className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-300 text-gray-700">Non</button>
+          <button onClick={archive} disabled={busy} className="px-3 py-1 rounded-full text-xs font-bold text-white bg-[#C8102E] disabled:opacity-50">
+            {busy ? "Archivage…" : "Oui, archiver"}
+          </button>
+        </div>
+      )}
+      {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+      {msg && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{msg}</p>}
+
+      {archives.length > 0 && (
+        <div className="pt-4 border-t border-gray-100 space-y-2">
+          <h3 className="font-semibold text-gray-900 text-sm">Sessions archivées</h3>
+          {archives.map((a) => (
+            <details key={a.id} className="border border-gray-200 rounded-lg">
+              <summary className="cursor-pointer px-4 py-2.5 text-sm flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-semibold text-gray-900">{a.name}</span>
+                <span className="text-xs text-gray-500">
+                  {a.proposals.length} proposition{a.proposals.length > 1 ? "s" : ""} · archivée le {formatDay(a.archivedAt)}
+                  {a.opensAt ? ` · ouverte du ${formatDay(a.opensAt)}${a.closesAt ? ` au ${formatDay(a.closesAt)}` : ""}` : ""}
+                </span>
+              </summary>
+              <div className="overflow-x-auto border-t border-gray-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Jeu</th>
+                      <th className="px-4 py-2 text-right">👍</th>
+                      <th className="px-4 py-2 text-right">👎</th>
+                      <th className="px-4 py-2 text-left">Proposé par</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {a.proposals.map((p) => (
+                      <tr key={p.id}>
+                        <td className="px-4 py-2">
+                          {p.link ? (
+                            <a href={p.link} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-900 hover:text-[#C8102E] hover:underline">{p.title}</a>
+                          ) : (
+                            <span className="font-medium text-gray-900">{p.title}</span>
+                          )}
+                          {p.inLibrary && <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">Déjà à la ludothèque</span>}
+                        </td>
+                        <td className="px-4 py-2 text-right tabular-nums font-semibold text-green-700">{p.upVotes}</td>
+                        <td className="px-4 py-2 text-right tabular-nums font-semibold text-red-600">{p.downVotes}</td>
+                        <td className="px-4 py-2 text-gray-600">{p.proposedBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminProposalsPage() {
   // Les dates et la liste sont propres à chaque ludothèque : on recharge au changement de site
   const { data: session } = useSession();
   const location = session?.user.location;
+  // Après un archivage, la liste et les dates repartent de zéro
+  const [generation, setGeneration] = useState(0);
   return (
     <>
-      <OpeningSettings key={`settings-${location}`} />
-      <ProposalsBoard key={`board-${location}`} />
+      <OpeningSettings key={`settings-${location}-${generation}`} />
+      <ProposalsBoard key={`board-${location}-${generation}`} />
+      <Archives key={`archives-${location}`} onArchived={() => setGeneration((g) => g + 1)} />
     </>
   );
 }

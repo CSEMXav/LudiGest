@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, StyleSheet, TextInput, ActivityIndicator, RefreshControl,
   TouchableOpacity, Image, Alert, Linking, KeyboardAvoidingView, Platform,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { apiGet, apiPost, apiFetch } from "@/lib/api";
 import { getStoredUser } from "@/lib/auth";
 import { PhoneHeader } from "@/components/PhoneHeader";
@@ -47,6 +48,7 @@ interface Proposal {
   downVotes: number;
   myVote: number;
   canDelete: boolean;
+  inLibrary: { id: string; name: string } | null;
 }
 
 interface WindowDTO {
@@ -65,6 +67,7 @@ function playersLabel(p: Proposal): string | null {
 }
 
 export default function ProposalsScreen() {
+  const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [access, setAccess] = useState<"loading" | "open" | "closed">("loading");
   const [closesAt, setClosesAt] = useState<string | null>(null);
@@ -278,6 +281,11 @@ export default function ProposalsScreen() {
                       <View key={s} style={st.specPill}><Text style={st.specText}>{s}</Text></View>
                     ))}
                   </View>
+                  {p.inLibrary ? (
+                    <TouchableOpacity onPress={() => router.push(`/game/${p.inLibrary!.id}`)} style={st.libraryBanner}>
+                      <Text style={st.libraryText}>✓ Déjà à la ludothèque — voir la fiche</Text>
+                    </TouchableOpacity>
+                  ) : null}
                   {p.summary ? <Text style={st.summary} numberOfLines={2}>{p.summary}</Text> : null}
                   <View style={st.actions}>
                     <Text style={st.meta} numberOfLines={1}>Par {p.proposedBy}</Text>
@@ -326,6 +334,8 @@ const st = StyleSheet.create({
   catPillText:     { fontSize: 10, fontWeight: "700", color: "#fff" },
   specPill:        { paddingVertical: 2, paddingHorizontal: 7, borderRadius: 100, backgroundColor: "#f4efe6" },
   specText:        { fontSize: 10, fontWeight: "600", color: "#5b4d40" },
+  libraryBanner:   { marginTop: 6, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 8, backgroundColor: "#fef3c7", borderWidth: 1, borderColor: "#fcd34d" },
+  libraryText:     { fontSize: 11, fontWeight: "700", color: "#78350f" },
   summary:         { fontSize: 11, color: "#5b4d40", marginTop: 5, lineHeight: 15 },
   actions:         { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 6 },
   meta:            { flex: 1, fontSize: 10, color: "#9a8b7c" },

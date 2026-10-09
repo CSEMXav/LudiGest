@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { fetchProposalInfo } from "@/lib/proposal-info";
-import { PROPOSALS_CLOSED_ERROR, canAccessProposals, loadProposal, toProposalDTO } from "@/lib/proposals";
+import { PROPOSALS_CLOSED_ERROR, canAccessProposals, loadProposalDTO } from "@/lib/proposals";
 
 export const maxDuration = 30;
 
@@ -36,6 +36,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   });
 
-  const proposal = await loadProposal(params.id);
-  return NextResponse.json(toProposalDTO(proposal!, user));
+  return NextResponse.json(await loadProposalDTO(params.id, user));
 }

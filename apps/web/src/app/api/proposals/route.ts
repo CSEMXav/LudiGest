@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { fetchProposalInfo, normalizeLink } from "@/lib/proposal-info";
-import { PROPOSAL_CATEGORIES, PROPOSALS_CLOSED_ERROR, canAccessProposals, loadProposal, toProposalDTO } from "@/lib/proposals";
+import { PROPOSAL_CATEGORIES, PROPOSALS_CLOSED_ERROR, canAccessProposals, getLibraryMatcher, loadProposalDTO, toProposalDTO } from "@/lib/proposals";
 
 // La récupération des infos (page du lien + BoardGameGeek) peut prendre quelques secondes
 export const maxDuration = 30;
@@ -22,12 +22,13 @@ export async function GET(req: NextRequest) {
   if (!(await canAccessProposals(user))) return NextResponse.json({ error: PROPOSALS_CLOSED_ERROR }, { status: 403 });
 
   const proposals = await prisma.gameProposal.findMany({
-    where: { location: user.location },
+    where: { location: user.location, archiveId: null },
     include: { user: { select: { name: true } }, votes: { select: { userId: true, value: true } } },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(proposals.map((p) => toProposalDTO(p, user)));
+  const inLibrary = await getLibraryMatcher(user.location);
+  return NextResponse.json(proposals.map((p) => toProposalDTO(p, user, inLibrary)));
 }
 
 /** POST /api/proposals — tout membre peut proposer un jeu : { title, category, link? } */
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   const duplicate = await prisma.gameProposal.findFirst({
-    where: { location: user.location, title: { equals: title, mode: "insensitive" } },
+    where: { location: user.location, archiveId: null, title: { equals: title, mode: "insensitive" } },
   });
   if (duplicate) {
     return NextResponse.json({ error: "Ce jeu a déjà été proposé — vous pouvez voter pour lui dans la liste." }, { status: 409 });
@@ -64,10 +65,10 @@ export async function POST(req: NextRequest) {
   const created = await prisma.gameProposal.create({
     data: { title, category, link, location: user.location, userId: user.id, ...info },
   });
-  const proposal = await loadProposal(created.id);
+  const proposal = await loadProposalDTO(created.id, user);
 
   return NextResponse.json(
-    { ...toProposalDTO(proposal!, user), infoFound: !!(info.summary || info.coverUrl || info.minPlayers) },
+    { ...proposal!, infoFound: !!(info.summary || info.coverUrl || info.minPlayers) },
     { status: 201 }
   );
 }
