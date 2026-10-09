@@ -33,6 +33,8 @@ Application de gestion de ludothèque pour la BRED. Disponible en version **web*
 | Changement de ludothèque (lieu) depuis le compte | ✅ | ✅ |
 | Déconnexion | ✅ | ✅ |
 | Authentification mobile via token JWT (Bearer) | — | ✅ |
+| Connexion mobile conservée 90 jours et renouvelée automatiquement à chaque ouverture de l'appli | — | ✅ |
+| Retour à l'écran de connexion si la session n'est plus valable (au lieu d'écrans vides) | — | ✅ |
 
 ---
 
@@ -259,6 +261,13 @@ Toutes les fonctionnalités utilisateur sont disponibles. Les fonctions admin ou
 - Pull-to-refresh sur les listes
 - Scanner natif (caméra Android)
 - Lien vers "Comment ça marche" (ouvre le navigateur)
+- Accueil : emprunts, prochaine session et suggestions chargés indépendamment (un appel en échec ne vide plus tout l'écran)
+
+**Mise à jour de l'application**
+- L'application est distribuée en APK depuis la page `/download` du site (pas de Play Store)
+- Bandeau « Nouvelle version disponible (v…) » sur l'accueil dès qu'un APK plus récent est publié ; un appui ouvre la page de téléchargement
+- Section « Version de l'application » dans "Mon compte" : version installée, dernière version disponible, bouton de téléchargement, « Vérifier à nouveau »
+- La version publiée est lue dans le fichier `app-version.json` du site, mis à jour à chaque nouvel APK
 
 ---
 
@@ -287,10 +296,12 @@ Liste des jeux proposés pour un futur achat de la ludothèque, avec votes des m
 | Proposer un jeu (titre, catégorie, lien optionnel) | ✅ | ✅ |
 | Voter 👍 / 👎 avec compteurs | ✅ | ✅ |
 | Supprimer une proposition (auteur ou admin) | ✅ | ✅ |
+| Bandeau « déjà à la ludothèque » sur une proposition | ✅ | ✅ |
 | Actualiser les infos d'une proposition (auteur ou admin) | ✅ | — |
 | Tri : les plus appréciés, plus récents, A → Z | ✅ | — |
 | Affichage liste / vignettes | ✅ | — |
 | Réglage de la période d'ouverture et email d'annonce (admin) | ✅ | — |
+| Archivage d'une session, consultation et suppression des archives (admin) | ✅ | — |
 
 **Accès**
 - Admin : `/admin/proposals` (onglet **Futurs achats** du menu admin), accessible en permanence
@@ -305,6 +316,12 @@ Liste des jeux proposés pour un futur achat de la ludothèque, avec votes des m
   - sur BoardGameGeek (par le titre) en complément, avec traduction du résumé en français
 - Si rien n'est trouvé, la proposition est créée quand même
 - Les durées lues sur une boutique sont parfois des tranches (« moins de 30 mn », « 4 h et plus ») : valeur indicative
+
+**Jeu déjà à la ludothèque**
+- Une proposition est signalée par un bandeau quand un jeu de la même ludothèque porte le même nom (sans tenir compte de la casse, des accents et de la ponctuation) ou la même fiche BoardGameGeek
+- Le bandeau mène à la fiche du jeu ; en mode vignettes, c'est un ruban en haut de la photo
+- Le signalement apparaît aussi au moment de l'ajout ; la proposition est créée quand même
+- Une extension n'est pas confondue avec son jeu de base
 
 **Votes**
 - Un vote par membre et par proposition : 👍 ou 👎
@@ -330,6 +347,14 @@ Liste des jeux proposés pour un futur achat de la ludothèque, avec votes des m
 - Précise que la fonctionnalité est disponible sur le site et que l'application mobile doit être mise à jour (lien vers `/download`)
 - Envoi tracé dans le journal des emails (« Annonce futurs achats »)
 
+**Archivage d'une session** *(admin)*
+- « Archiver et remettre à zéro » : toutes les propositions en cours et leurs votes sont conservés dans une archive nommée (nom libre, sinon « Session archivée le … »)
+- La page repart de zéro pour une future session : liste vide, dates d'ouverture et de fermeture effacées (la page n'est plus visible des membres jusqu'à la prochaine période)
+- « Sessions archivées » : chaque archive est consultable, avec les jeux classés par votes, les compteurs 👍 / 👎, l'auteur et le lien
+- Les archives sont en lecture seule (plus de vote possible) et visibles des admins uniquement
+- Un jeu archivé peut être proposé à nouveau lors d'une session suivante
+- « Supprimer cette archive » : suppression définitive de l'archive, de ses propositions et de leurs votes, après confirmation
+
 ---
 
 ## Intégrations externes
@@ -340,9 +365,9 @@ Liste des jeux proposés pour un futur achat de la ludothèque, avec votes des m
 | **Pages des boutiques en ligne** | Lecture de la photo, de la description et des caractéristiques d'un jeu proposé, à partir du lien fourni |
 | **Neon PostgreSQL** | Base de données en production |
 | **Vercel** | Hébergement web |
-| **EAS Build** | Compilation de l'APK Android |
+| **EAS Build** | Compilation de l'APK Android (profil `preview`), publié ensuite sur la page `/download` du site |
 | **Email (SMTP)** | Rappels et relances d'emprunt |
 
 ---
 
-*Document généré le 01/05/2026 (v0.42) — mis à jour le 09/10/2026 pour LudiGest v1.32 : emprunt attribué par un admin (section 7) et futurs achats (section 13).*
+*Document généré le 01/05/2026 (v0.42) — mis à jour le 09/10/2026 pour LudiGest v1.38 : emprunt attribué par un admin (section 7), connexion mobile et mise à jour de l'application (sections 1 et 11), futurs achats (section 13).*
