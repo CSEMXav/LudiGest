@@ -7,7 +7,8 @@ import Svg, { Polygon } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, saveLocation, logout, updateStoredUser } from "@/lib/auth";
-import { apiGet, apiPatch } from "@/lib/api";
+import { apiGet, apiPatch, refreshSession } from "@/lib/api";
+import { checkForUpdate, DOWNLOAD_URL, APP_VERSION, type UpdateInfo } from "@/lib/version";
 import { registerPushToken } from "@/lib/push";
 import { LOCATIONS } from "@ludigest/types";
 import type { StoredUser } from "@/lib/auth";
@@ -104,6 +105,16 @@ export default function AccountScreen() {
   }
 
   useEffect(() => { load(); }, []);
+
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  async function checkUpdate() {
+    setCheckingUpdate(true);
+    setUpdate(await checkForUpdate());
+    setCheckingUpdate(false);
+  }
+  useEffect(() => { checkUpdate(); }, []);
+
   const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, []);
 
   async function changeLocation(loc: string) {
@@ -112,6 +123,8 @@ export default function AccountScreen() {
     try {
       await apiPatch("/api/user/location", { location: loc });
       await saveLocation(loc);
+      // Le jeton porte la ludothèque : on le renouvelle pour que le serveur utilise la nouvelle
+      await refreshSession();
       setUser((u) => u ? { ...u, location: loc } : u);
     } catch (err: any) {
       Alert.alert("Erreur", err.message);
@@ -314,6 +327,29 @@ export default function AccountScreen() {
             ))}
           </View>
         )}
+
+        {/* Version de l'application */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Version de l&apos;application</Text>
+          <Text style={s.cardDesc}>
+            Version installée : v{APP_VERSION}
+            {update?.latest ? `\nDernière version disponible : v${update.latest}` : ""}
+          </Text>
+          <Text style={[s.cardDesc, { fontWeight: "700", color: update?.updateAvailable ? P.primary : P.ink2 }]}>
+            {checkingUpdate || !update ? "Vérification…"
+              : update.updateAvailable ? "⬇️ Une nouvelle version est disponible."
+              : update.latest ? "✓ Votre application est à jour."
+              : "Impossible de vérifier pour le moment."}
+          </Text>
+          <TouchableOpacity style={s.saveBtn} onPress={() => Linking.openURL(DOWNLOAD_URL).catch(() => {})}>
+            <Text style={s.saveBtnText}>
+              {update?.updateAvailable ? "Télécharger la nouvelle version" : "Ouvrir la page de téléchargement"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={checkUpdate} disabled={checkingUpdate} style={{ alignItems: "center", paddingTop: 10 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: P.ink3 }}>Vérifier à nouveau</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Notifications push */}
         <View style={s.card}>

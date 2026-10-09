@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { APP_VERSION } from "@/lib/version";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, Linking,
 } from "react-native";
@@ -61,7 +62,7 @@ export default function LoginScreen() {
         <Text style={s.emoji}>🎲</Text>
         <Text style={s.title}>LudiGest</Text>
         <Text style={s.subtitle}>Ludothèque CSEM</Text>
-        <Text style={s.version}>v1.32</Text>
+        <Text style={s.version}>v{APP_VERSION}</Text>
 
         <TextInput
           style={s.input}

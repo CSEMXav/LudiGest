@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Linking,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +9,7 @@ import Svg, { Polygon, G } from "react-native-svg";
 import { apiGet, apiPost } from "@/lib/api";
 import { getStoredUser, getStoredLocation, updateStoredUser } from "@/lib/auth";
 import { Pion, CAT_PION } from "@/components/Pion";
+import { checkForUpdate, DOWNLOAD_URL } from "@/lib/version";
 import type { GameDTO, LoanDTO, GameSessionDTO } from "@ludigest/types";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -68,7 +69,12 @@ export default function HomeTab() {
   const [upcomingSession, setUpcomingSession] = useState<GameSessionDTO | null>(null);
   const [suggestions, setSuggestions] = useState<GameDTO[]>([]);
 
+  const [newVersion, setNewVersion] = useState<string | null>(null);
+
   useFocusEffect(useCallback(() => { load(); }, []));
+  useEffect(() => {
+    checkForUpdate().then((u) => setNewVersion(u.updateAvailable ? u.latest : null));
+  }, []);
 
   async function load(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
@@ -84,19 +90,28 @@ export default function HomeTab() {
     }
     if (user?.name) applyName(user.name);
 
+    // Chaque bloc est chargé indépendamment : un appel en échec ne vide plus tout l'accueil,
+    // et le bloc concerné garde son contenu précédent.
+    const [loansR, sessionsR, gamesR, profileR] = await Promise.allSettled([
+      apiGet<LoanDTO[]>("/api/loans?all=true"),
+      apiGet<GameSessionDTO[]>("/api/sessions"),
+      apiGet<GameDTO[]>(`/api/games?location=${encodeURIComponent(loc)}&status=AVAILABLE`),
+      apiGet<{ name: string }>("/api/user/profile"),
+    ]);
     try {
-      const [loans, sessions, games, profile] = await Promise.all([
-        apiGet<LoanDTO[]>("/api/loans?all=true"),
-        apiGet<GameSessionDTO[]>("/api/sessions"),
-        apiGet<GameDTO[]>(`/api/games?location=${encodeURIComponent(loc)}&status=AVAILABLE`),
-        apiGet<{ name: string }>("/api/user/profile"),
-      ]);
-      setActiveLoans(loans.filter((l) => !l.returnedAt));
-      const upcoming = sessions
-        .filter((s) => new Date(s.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
-      setUpcomingSession(upcoming);
-      setSuggestions(games.sort(() => Math.random() - 0.5).slice(0, 8));
+      if (loansR.status === "fulfilled" && Array.isArray(loansR.value)) {
+        setActiveLoans(loansR.value.filter((l) => !l.returnedAt));
+      }
+      if (sessionsR.status === "fulfilled" && Array.isArray(sessionsR.value)) {
+        const upcoming = sessionsR.value
+          .filter((s) => new Date(s.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
+        setUpcomingSession(upcoming);
+      }
+      if (gamesR.status === "fulfilled" && Array.isArray(gamesR.value)) {
+        setSuggestions([...gamesR.value].sort(() => Math.random() - 0.5).slice(0, 8));
+      }
+      const profile = profileR.status === "fulfilled" ? profileR.value : null;
       if (profile?.name && profile.name !== user?.name) {
         applyName(profile.name);
         await updateStoredUser({ name: profile.name });
@@ -155,6 +170,21 @@ export default function HomeTab() {
             <Text style={s.searchPlaceholder}>Chercher un jeu…</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Nouvelle version disponible */}
+        {newVersion && (
+          <TouchableOpacity
+            style={s.updateBanner}
+            activeOpacity={0.85}
+            onPress={() => Linking.openURL(DOWNLOAD_URL).catch(() => {})}
+          >
+            <Text style={s.updateIcon}>⬇️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.updateTitle}>Nouvelle version disponible (v{newVersion})</Text>
+              <Text style={s.updateText}>Touchez pour télécharger la mise à jour.</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Tiles */}
         <View style={s.tilesRow}>
@@ -274,6 +304,10 @@ export default function HomeTab() {
 }
 
 const s = StyleSheet.create({
+  updateBanner: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 14, padding: 12, borderRadius: 14, backgroundColor: "#fde2d2", borderWidth: 1.5, borderColor: "#d24a1f" },
+  updateIcon:   { fontSize: 20 },
+  updateTitle:  { fontSize: 13, fontWeight: "700", color: "#d24a1f" },
+  updateText:   { fontSize: 11, color: "#5b4d40", marginTop: 1 },
   hero:             { backgroundColor: "#1e1610", paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: "hidden" },
   heroTop:          { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   heroLogo:         { flexDirection: "row", alignItems: "center", gap: 8 },

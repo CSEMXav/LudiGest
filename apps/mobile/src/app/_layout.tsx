@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
-import { getToken } from "@/lib/auth";
+import { getToken, clearAuth } from "@/lib/auth";
 import { registerPushToken } from "@/lib/push";
+import { refreshSession } from "@/lib/api";
 import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
@@ -18,13 +19,19 @@ export default function RootLayout() {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    getToken().then((token) => {
-      if (token) {
-        router.replace("/(tabs)");
-        registerPushToken();
-      } else {
+    getToken().then(async (token) => {
+      if (!token) {
         router.replace("/(auth)/login");
+        return;
       }
+      // À chaque ouverture, on renouvelle le jeton : la session ne s'éteint plus au bout de quelques jours
+      if ((await refreshSession()) === "expired") {
+        await clearAuth();
+        router.replace("/(auth)/login");
+        return;
+      }
+      router.replace("/(tabs)");
+      registerPushToken();
     });
   }, []);
 

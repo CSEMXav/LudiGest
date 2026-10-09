@@ -18,6 +18,10 @@ export async function saveAuth(token: string, user: StoredUser) {
   await SecureStore.setItemAsync(LOCATION_KEY, user.location);
 }
 
+export async function saveToken(token: string) {
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
 }

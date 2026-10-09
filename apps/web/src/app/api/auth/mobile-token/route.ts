@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
+import { signMobileToken } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -22,17 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Identifiants invalides." }, { status: 401 });
   }
 
-  const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
-  const token = await new SignJWT({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    location: user.location,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .sign(secret);
+  const token = await signMobileToken(user);
 
   return NextResponse.json({
     token,
