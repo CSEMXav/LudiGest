@@ -75,6 +75,8 @@ export interface UserAdminDTO {
   totalLoans: number;
   activeLoans: number;
   lateReturns: number;
+  /** Emprunts non rendus dont l'échéance est dépassée au moment de l'affichage. */
+  currentLate?: number;
 }
 
 export interface GameSessionDTO {

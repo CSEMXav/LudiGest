@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  const now = new Date();
+
   return NextResponse.json(
     users.map((u) => ({
       id: u.id,
@@ -40,6 +42,8 @@ export async function GET(req: NextRequest) {
       location: u.location,
       totalLoans: u._count.loans,
       activeLoans: u.loans.filter((l) => !l.returnedAt).length,
+      // Retards en cours : emprunts non rendus dont l'échéance est dépassée à l'instant de l'affichage
+      currentLate: u.loans.filter((l) => !l.returnedAt && new Date(l.dueAt) < now).length,
       lateReturns: u.loans.filter(
         (l) => l.returnedAt
           ? new Date(l.returnedAt) > new Date(l.dueAt)

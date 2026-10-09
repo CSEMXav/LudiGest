@@ -18,11 +18,22 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-type SortKey = "name" | "location" | "totalLoans" | "activeLoans" | "lateReturns" | "status" | "createdAt";
+type SortKey = "name" | "location" | "totalLoans" | "activeLoans" | "currentLate" | "lateReturns" | "role" | "status" | "createdAt";
+type LoanFilter = "all" | "active" | "late";
+
+const LOAN_FILTER_LABELS: Record<LoanFilter, string> = {
+  all: "Tous les emprunts",
+  active: "Emprunts en cours",
+  late: "Retards en cours",
+};
+
+function isLateNow(l: { dueAt: string; returnedAt: string | null }) {
+  return !l.returnedAt && new Date(l.dueAt) < new Date();
+}
 type SortDir = "asc" | "desc";
 
-function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => void }) {
-  const [loans, setLoans] = useState<LoanItem[]>([]);
+function UserLoansModal({ user, filter, onClose }: { user: UserAdminDTO; filter: LoanFilter; onClose: () => void }) {
+  const [allLoans, setLoans] = useState<LoanItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,13 +42,18 @@ function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => 
       .then((d) => { setLoans(Array.isArray(d) ? d : []); setLoading(false); });
   }, [user.id]);
 
+  const loans = filter === "late" ? allLoans.filter(isLateNow)
+    : filter === "active" ? allLoans.filter((l) => !l.returnedAt)
+    : allLoans;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
             <h2 className="font-semibold text-gray-900">{user.name}</h2>
             <p className="text-xs text-gray-500">{user.email}</p>
+            <p className="text-xs font-semibold mt-1 text-[#C8102E]">{LOAN_FILTER_LABELS[filter]}{!loading ? ` (${loans.length})` : ""}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
         </div>
@@ -45,7 +61,9 @@ function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => 
           {loading ? (
             <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />)}</div>
           ) : loans.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">Aucun emprunt.</p>
+            <p className="text-gray-400 text-center py-8">
+              {filter === "late" ? "Aucun retard en cours." : filter === "active" ? "Aucun emprunt en cours." : "Aucun emprunt."}
+            </p>
           ) : (
             <div className="space-y-3">
               {loans.map((l) => (
@@ -58,7 +76,15 @@ function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => 
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{l.gameName}</p>
+                    <a
+                      href={`/games/${l.gameId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Ouvrir la fiche du jeu"
+                      className="font-medium text-gray-900 truncate block hover:text-[#C8102E] hover:underline"
+                    >
+                      {l.gameName} ↗
+                    </a>
                     <p className="text-xs text-gray-500">
                       Du {formatDate(l.borrowedAt)}
                       {l.returnedAt ? ` au ${formatDate(l.returnedAt)}` : ` · À rendre le ${formatDate(l.dueAt)}`}
@@ -67,6 +93,8 @@ function UserLoansModal({ user, onClose }: { user: UserAdminDTO; onClose: () => 
                   </div>
                   {l.returnedAt
                     ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full self-start">Rendu</span>
+                    : isLateNow(l)
+                    ? <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full self-start">En retard</span>
                     : <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full self-start">En cours</span>
                   }
                 </div>
@@ -141,7 +169,7 @@ function EditUserModal({ user, onClose, onSaved }: { user: UserAdminDTO; onClose
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserAdminDTO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<UserAdminDTO | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ user: UserAdminDTO; filter: LoanFilter } | null>(null);
   const [editUser, setEditUser] = useState<UserAdminDTO | null>(null);
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -233,7 +261,9 @@ export default function AdminUsersPage() {
       else if (sortKey === "location") { va = a.location; vb = b.location; }
       else if (sortKey === "totalLoans") { va = a.totalLoans; vb = b.totalLoans; }
       else if (sortKey === "activeLoans") { va = a.activeLoans; vb = b.activeLoans; }
+      else if (sortKey === "currentLate") { va = a.currentLate ?? 0; vb = b.currentLate ?? 0; }
       else if (sortKey === "lateReturns") { va = a.lateReturns; vb = b.lateReturns; }
+      else if (sortKey === "role") { va = a.role; vb = b.role; }
       else if (sortKey === "createdAt") { va = a.createdAt; vb = b.createdAt; }
       else { va = a.suspended ? 1 : 0; vb = b.suspended ? 1 : 0; }
 
@@ -280,7 +310,7 @@ export default function AdminUsersPage() {
       />
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[1000px]">
           <thead className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase">
             <tr>
               <th className="text-left px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("name")}>
@@ -300,10 +330,15 @@ export default function AdminUsersPage() {
               <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("activeLoans")}>
                 En cours <SortIcon k="activeLoans" />
               </th>
-              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("lateReturns")}>
-                Retards <SortIcon k="lateReturns" />
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("currentLate")} title="Emprunts non rendus dont la date de retour est dépassée aujourd'hui">
+                Retards en cours <SortIcon k="currentLate" />
               </th>
-              <th className="text-center px-4 py-3 font-semibold text-gray-600">Rôle</th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("lateReturns")} title="Tous les retards, y compris les jeux rendus en retard par le passé">
+                Retards (total) <SortIcon k="lateReturns" />
+              </th>
+              <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("role")}>
+                Rôle <SortIcon k="role" />
+              </th>
               <th className="text-center px-4 py-3 cursor-pointer select-none" onClick={() => toggleSort("status")}>
                 Statut <SortIcon k="status" />
               </th>
@@ -318,7 +353,7 @@ export default function AdminUsersPage() {
               >
                 <td className="px-4 py-3">
                   <button
-                    onClick={() => setSelectedUser(u)}
+                    onClick={() => setSelectedUser({ user: u, filter: "all" })}
                     className="text-left hover:text-[#C8102E] transition-colors"
                   >
                     <p className="font-medium text-gray-900">
@@ -339,7 +374,29 @@ export default function AdminUsersPage() {
                 <td className="px-4 py-3 text-center font-medium text-gray-700">{u.totalLoans}</td>
                 <td className="px-4 py-3 text-center">
                   {u.activeLoans > 0
-                    ? <span className="inline-block bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-medium">{u.activeLoans}</span>
+                    ? (
+                      <button
+                        onClick={() => setSelectedUser({ user: u, filter: "active" })}
+                        title="Voir les jeux en cours d'emprunt"
+                        className="inline-block bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full text-xs font-medium hover:bg-orange-200 underline decoration-dotted"
+                      >
+                        {u.activeLoans}
+                      </button>
+                    )
+                    : <span className="text-gray-400">0</span>
+                  }
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {(u.currentLate ?? 0) > 0
+                    ? (
+                      <button
+                        onClick={() => setSelectedUser({ user: u, filter: "late" })}
+                        title="Voir les jeux en retard"
+                        className="inline-block bg-red-600 text-white px-2.5 py-0.5 rounded-full text-xs font-bold hover:bg-red-700 underline decoration-dotted"
+                      >
+                        {u.currentLate}
+                      </button>
+                    )
                     : <span className="text-gray-400">0</span>
                   }
                 </td>
@@ -416,7 +473,7 @@ export default function AdminUsersPage() {
       </div>
 
       {selectedUser && (
-        <UserLoansModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+        <UserLoansModal user={selectedUser.user} filter={selectedUser.filter} onClose={() => setSelectedUser(null)} />
       )}
       {editUser && (
         <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={loadUsers} />
