@@ -37,6 +37,13 @@ const SORTS: { value: "score" | "recent" | "name"; label: string }[] = [
   { value: "name",   label: "A → Z" },
 ];
 
+type ViewMode = "list" | "grid";
+const VIEWS: { value: ViewMode; label: string }[] = [
+  { value: "list", label: "☰ Liste" },
+  { value: "grid", label: "▦ Vignettes" },
+];
+const VIEW_STORAGE_KEY = "ludigest.proposals.view";
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -57,6 +64,16 @@ export function ProposalsBoard() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [voting, setVoting] = useState<Record<string, boolean>>({});
+  const [view, setView] = useState<ViewMode>("list");
+
+  // Le mode d'affichage choisi est mémorisé sur l'appareil
+  useEffect(() => {
+    try { if (localStorage.getItem(VIEW_STORAGE_KEY) === "grid") setView("grid"); } catch { /* stockage indisponible */ }
+  }, []);
+  function changeView(v: ViewMode) {
+    setView(v);
+    try { localStorage.setItem(VIEW_STORAGE_KEY, v); } catch { /* stockage indisponible */ }
+  }
   const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -221,6 +238,20 @@ export function ProposalsBoard() {
             {s.label}
           </button>
         ))}
+        <div className="ml-auto flex rounded-lg border border-gray-300 overflow-hidden" role="group" aria-label="Mode d'affichage">
+          {VIEWS.map((v) => (
+            <button
+              key={v.value}
+              onClick={() => changeView(v.value)}
+              aria-pressed={view === v.value}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${
+                view === v.value ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -230,38 +261,94 @@ export function ProposalsBoard() {
           Aucune proposition pour l&apos;instant. Soyez le premier à suggérer un jeu !
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className={view === "grid" ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3" : "space-y-3"}>
           {sorted.map((p) => {
             const players = !p.minPlayers ? null
               : !p.maxPlayers ? `${p.minPlayers}+ joueurs`
               : p.minPlayers === p.maxPlayers ? `${p.minPlayers} joueur${p.minPlayers > 1 ? "s" : ""}`
               : `${p.minPlayers} à ${p.maxPlayers} joueurs`;
             const specs = [
-              { icon: "👥", label: "Nombre de joueurs", value: players },
-              { icon: "⏱", label: "Durée d'une partie", value: p.duration ? `${p.duration} min` : null },
-              { icon: "🎂", label: "Âge conseillé", value: p.minAge ? `Dès ${p.minAge} ans` : null },
+              { icon: "👥", label: "Nombre de joueurs", value: players, short: players?.replace(/ joueurs?/, " j.") },
+              { icon: "⏱", label: "Durée d'une partie", value: p.duration ? `${p.duration} min` : null, short: p.duration ? `${p.duration} min` : null },
+              { icon: "🎂", label: "Âge conseillé", value: p.minAge ? `Dès ${p.minAge} ans` : null, short: p.minAge ? `${p.minAge}+` : null },
             ];
+            const category = (
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${catConfig[p.category]?.color ?? "bg-gray-200 text-gray-700"}`}>
+                {catConfig[p.category]?.label ?? p.category}
+              </span>
+            );
+            const cover = p.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={p.coverUrl}
+                alt={p.title}
+                referrerPolicy="no-referrer"
+                className={`w-full h-full ${view === "grid" ? "object-contain" : "object-cover"}`}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : "🎲";
+            const voteButton = (value: 1 | -1) => {
+              const on = p.myVote === value;
+              const up = value === 1;
+              return (
+                <button
+                  onClick={() => vote(p, value)}
+                  disabled={voting[p.id]}
+                  aria-pressed={on}
+                  title={on ? "Retirer mon vote" : up ? "J'aimerais ce jeu" : "Pas intéressé"}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors disabled:opacity-50 ${view === "grid" ? "flex-1" : ""} ${
+                    on
+                      ? up ? "bg-green-600 text-white border-green-600" : "bg-red-600 text-white border-red-600"
+                      : `border-gray-300 text-gray-700 bg-white ${up ? "hover:border-green-500" : "hover:border-red-500"}`
+                  }`}
+                >
+                  {up ? "👍" : "👎"} <span className="tabular-nums">{up ? p.upVotes : p.downVotes}</span>
+                </button>
+              );
+            };
+
+            if (view === "grid") {
+              return (
+                <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col">
+                  <div className="aspect-square bg-gray-50 flex items-center justify-center text-4xl p-2">{cover}</div>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    <h3 className="font-semibold text-sm text-gray-900 leading-snug line-clamp-2" title={p.title}>
+                      {p.link ? (
+                        <a href={p.link} target="_blank" rel="noopener noreferrer" className="hover:text-[#C8102E] hover:underline">{p.title}</a>
+                      ) : p.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {category}
+                      {specs.filter((sp) => sp.short).map((sp) => (
+                        <span key={sp.label} title={`${sp.label} : ${sp.value}`} className="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium whitespace-nowrap">
+                          {sp.icon} {sp.short}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-1.5 mt-auto pt-1">
+                      {voteButton(1)}
+                      {voteButton(-1)}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-4 flex gap-4">
+                <div className="flex flex-col gap-1.5 flex-shrink-0 justify-center">
+                  {voteButton(1)}
+                  {voteButton(-1)}
+                </div>
+
                 <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center text-2xl">
-                  {p.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.coverUrl}
-                      alt={p.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                  ) : "🎲"}
+                  {cover}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-gray-900">{p.title}</h3>
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${catConfig[p.category]?.color ?? "bg-gray-200 text-gray-700"}`}>
-                      {catConfig[p.category]?.label ?? p.category}
-                    </span>
+                    {category}
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {specs.map((sp) => (
@@ -296,31 +383,6 @@ export function ProposalsBoard() {
                       <button onClick={() => remove(p)} className="text-red-500 hover:underline">Supprimer</button>
                     )}
                   </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5 flex-shrink-0 justify-center">
-                  <button
-                    onClick={() => vote(p, 1)}
-                    disabled={voting[p.id]}
-                    aria-pressed={p.myVote === 1}
-                    title={p.myVote === 1 ? "Retirer mon vote" : "J'aimerais ce jeu"}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors disabled:opacity-50 ${
-                      p.myVote === 1 ? "bg-green-600 text-white border-green-600" : "border-gray-300 text-gray-700 bg-white hover:border-green-500"
-                    }`}
-                  >
-                    👍 <span className="tabular-nums">{p.upVotes}</span>
-                  </button>
-                  <button
-                    onClick={() => vote(p, -1)}
-                    disabled={voting[p.id]}
-                    aria-pressed={p.myVote === -1}
-                    title={p.myVote === -1 ? "Retirer mon vote" : "Pas intéressé"}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors disabled:opacity-50 ${
-                      p.myVote === -1 ? "bg-red-600 text-white border-red-600" : "border-gray-300 text-gray-700 bg-white hover:border-red-500"
-                    }`}
-                  >
-                    👎 <span className="tabular-nums">{p.downVotes}</span>
-                  </button>
                 </div>
               </div>
             );
