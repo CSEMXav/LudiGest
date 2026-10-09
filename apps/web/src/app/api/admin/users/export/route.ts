@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { loans: true } },
-      loans: { where: { returnedAt: null }, select: { id: true } },
+      loans: { where: { returnedAt: null }, select: { id: true, dueAt: true } },
     },
   });
 
+  const now = new Date();
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Utilisateurs");
 
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
     { header: "Date d'inscription", key: "createdAt", width: 20 },
     { header: "Emprunts totaux", key: "totalLoans", width: 16 },
     { header: "Emprunts actifs", key: "activeLoans", width: 16 },
+    { header: "Retards en cours", key: "currentLate", width: 16 },
   ];
 
   ws.getRow(1).font = { bold: true };
@@ -50,6 +52,8 @@ export async function GET(req: NextRequest) {
       createdAt: u.createdAt.toLocaleDateString("fr-FR"),
       totalLoans: u._count.loans,
       activeLoans: u.loans.length,
+      // Emprunts non rendus dont l'échéance est dépassée au moment de l'export
+      currentLate: u.loans.filter((l) => l.dueAt < now).length,
     });
   }
 
