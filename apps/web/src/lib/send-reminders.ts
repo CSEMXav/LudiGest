@@ -149,7 +149,15 @@ export async function runSendReminders(): Promise<ReminderResult> {
       continue;
     }
 
-    await sendConfiguredLoanReminderEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
+    try {
+      await sendConfiguredLoanReminderEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
+    } catch (err) {
+      // Email non accepté : on retire la trace pour que le rappel soit retenté à la prochaine tournée
+      await prisma.loanReminder.deleteMany({ where: { loanId: loan.id, type: "reminder" } }).catch(() => {});
+      details.push(`ÉCHEC rappel ${loan.user.email} / ${loan.game.name} (${err instanceof Error ? err.message : String(err)})`);
+      skipped++;
+      continue;
+    }
     sent++; remindersCount++;
     details.push(`RAPPEL envoyé → ${loan.user.email} (${loan.game.name}, échéance ${dateStr})`);
 
@@ -235,7 +243,13 @@ export async function runSendReminders(): Promise<ReminderResult> {
       continue;
     }
 
-    await sendConfiguredOverdueEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
+    try {
+      await sendConfiguredOverdueEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
+    } catch (err) {
+      details.push(`ÉCHEC retard ${loan.user.email} / ${loan.game.name} (${err instanceof Error ? err.message : String(err)})`);
+      skipped++;
+      continue;
+    }
     sent++; overdueCount++;
     details.push(`RETARD envoyé → ${loan.user.email} (${loan.game.name}, dû le ${dateStr})`);
 

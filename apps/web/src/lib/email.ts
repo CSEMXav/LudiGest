@@ -167,6 +167,54 @@ function getResend() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Envoi : cadence et reprise                                         */
+/* ------------------------------------------------------------------ */
+
+// Resend limite le nombre de requêtes par seconde et répond 429 au-delà ; le SDK ne lève pas
+// d'exception dans ce cas (il renvoie { error }). Tous les envois passent donc par deliver() :
+// file d'attente espacée, nouvelle tentative sur 429 / erreur passagère, et exception si l'email
+// n'est finalement pas accepté — pour que les compteurs et le journal d'envoi restent justes.
+const SEND_INTERVAL_MS = 250;
+const MAX_ATTEMPTS = 6;
+let sendQueue: Promise<unknown> = Promise.resolve();
+let lastSendAt = 0;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type EmailPayload = { from: string; to: string; subject: string; html: string };
+
+async function sendWithRetry(resend: Resend, payload: EmailPayload): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    const wait = lastSendAt + SEND_INTERVAL_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastSendAt = Date.now();
+
+    let failure: { statusCode?: number | null; name?: string; message?: string } | null = null;
+    try {
+      const { error } = await resend.emails.send(payload);
+      failure = error ?? null;
+    } catch (err) {
+      failure = { message: err instanceof Error ? err.message : String(err) };
+    }
+    if (!failure) return;
+
+    const status = failure.statusCode ?? null;
+    const retryable = status === 429 || status === null || status >= 500 || failure.name === "rate_limit_exceeded";
+    if (!retryable || attempt >= MAX_ATTEMPTS) {
+      throw new Error(`Envoi refusé pour ${payload.to} : ${failure.message ?? failure.name ?? "erreur inconnue"}${status ? ` (${status})` : ""}`);
+    }
+    await sleep(status === 429 ? 1100 : 500 * attempt);
+  }
+}
+
+/** Envoie un email en respectant la limite de débit ; lève une exception s'il n'a pas pu être accepté. */
+function deliver(resend: Resend, payload: EmailPayload): Promise<void> {
+  const run = sendQueue.then(() => sendWithRetry(resend, payload));
+  sendQueue = run.catch(() => {});
+  return run;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Compte                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -180,7 +228,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: "Confirmez votre inscription à la ludothèque CSEM",
@@ -204,7 +252,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: "Réinitialisation de votre mot de passe LudiGest",
@@ -233,7 +281,7 @@ export async function sendReminderEmail(to: string, name: string, gameName: stri
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `Rappel : rendez "${gameName}" avant le ${dateStr}`,
@@ -258,7 +306,7 @@ export async function sendOverdueEmail(to: string, name: string, gameName: strin
     console.log(`\n📧 [DEV] Retard pour ${to} : emprunt de "${gameName}" dû le ${dateStr}\n`);
     return;
   }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `⚠ Retard : veuillez rendre "${gameName}"`,
@@ -281,7 +329,7 @@ export async function sendGameAvailableEmail(to: string, name: string, gameName:
     console.log(`\n📧 [DEV] Jeu disponible pour ${to} : "${gameName}"\n`);
     return;
   }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `🎲 "${gameName}" est de nouveau disponible !`,
@@ -302,7 +350,7 @@ export async function sendGameWantedEmail(to: string, borrowerName: string, game
     console.log(`\n📧 [DEV] Jeu convoité pour emprunteur ${to} : "${gameName}"\n`);
     return;
   }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `💡 Quelqu'un attend "${gameName}" — pensez à le rendre !`,
@@ -325,7 +373,7 @@ export async function sendGameReportEmail(to: string, adminName: string, reporte
     console.log(`\n📧 [DEV] Signalement jeu pour ${to} : "${gameName}" — ${reportMessage}\n`);
     return;
   }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `🚨 Signalement jeu : "${gameName}"`,
@@ -355,7 +403,7 @@ export async function sendAdminAssignedLoanEmail(to: string, name: string, gameN
 `);
     return;
   }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `🎲 Un emprunt vous a été attribué : "${gameName}"`,
@@ -399,7 +447,7 @@ export async function sendConfiguredLoanReminderEmail(to: string, vars: LoanVars
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Rappel pour ${to} : "${vars.gameName}" à rendre le ${vars.dueAt}\n`); return; }
-  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir mon emprunt", { title: "Rappel d'emprunt", heroUrl: null }) });
+  await deliver(resend, { from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir mon emprunt", { title: "Rappel d'emprunt", heroUrl: null }) });
 }
 
 /** Retard après échéance, à partir du modèle "Retard après échéance" de la page Paramètres email. */
@@ -416,7 +464,7 @@ export async function sendConfiguredOverdueEmail(to: string, vars: LoanVars, pre
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Retard pour ${to} : "${vars.gameName}" dû le ${vars.dueAt}\n`); return; }
-  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir le jeu", { title: "Retard d'emprunt", heroUrl: null }) });
+  await deliver(resend, { from: FROM, to, subject, html: templateToHtml(bodyText, gameUrl, "Voir le jeu", { title: "Retard d'emprunt", heroUrl: null }) });
 }
 
 export async function sendConfiguredManualOverdueEmail(
@@ -437,7 +485,7 @@ export async function sendConfiguredManualOverdueEmail(
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Retard manuel pour ${to} : "${vars.gameName}"\n`); return; }
-  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, undefined, undefined, { title: "Retard d'emprunt", heroUrl: null }) });
+  await deliver(resend, { from: FROM, to, subject, html: templateToHtml(bodyText, undefined, undefined, { title: "Retard d'emprunt", heroUrl: null }) });
 }
 
 export async function sendConfiguredWaitlistEmail(
@@ -458,7 +506,7 @@ export async function sendConfiguredWaitlistEmail(
 
   const resend = getResend();
   if (!resend) { console.log(`\n📧 [DEV] Waitlist pour ${to} : "${vars.gameName}"\n`); return; }
-  await resend.emails.send({ from: FROM, to, subject, html: templateToHtml(bodyText, vars.gameUrl, "Voir le jeu", { title: "Quelqu'un attend votre jeu", heroUrl: null }) });
+  await deliver(resend, { from: FROM, to, subject, html: templateToHtml(bodyText, vars.gameUrl, "Voir le jeu", { title: "Quelqu'un attend votre jeu", heroUrl: null }) });
 }
 
 /* ------------------------------------------------------------------ */
@@ -474,7 +522,7 @@ export async function sendSessionInviteEmail(to: string, name: string, sessionNa
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `🎲 Session ludique : "${sessionName}" — Inscrivez-vous !`,
@@ -500,7 +548,7 @@ export async function sendSessionReminderEmail(to: string, name: string, session
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `⏰ Rappel : Session ludique "${sessionName}" bientôt !`,
@@ -535,7 +583,7 @@ export async function sendSessionUpdateEmail(
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM,
     to,
     subject: `🎲 Session mise à jour : "${sessionName}" — le ${sessionDate}`,
@@ -583,7 +631,7 @@ export async function sendConfiguredSessionInviteEmail(
     return;
   }
 
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM, to, subject,
     html: templateToHtml(bodyText, vars.registerUrl, "Je m'inscris", {
       title: vars.sessionName,
@@ -614,7 +662,7 @@ export async function sendConfiguredSessionReminderEmail(
 
   const resend = getResend();
   if (!resend) { console.log(`[DEV] Rappel session pour ${to}: ${vars.sessionName}`); return; }
-  await resend.emails.send({
+  await deliver(resend, {
     from: FROM, to, subject,
     html: templateToHtml(bodyText, vars.sessionUrl, "Voir la session", {
       title: `Rappel : ${vars.sessionName}`,
@@ -718,7 +766,7 @@ export async function sendNewGamesEmail(
     console.log(`\n📧 [DEV] Nouveaux jeux pour ${to} : ${games.map((g) => g.name).join(", ")}\n`);
     return;
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await deliver(resend, { from: FROM, to, subject, html });
 }
 
 /* ------------------------------------------------------------------ */
@@ -759,5 +807,5 @@ export async function sendProposalsOpenEmail(to: string, vars: { userName: strin
     console.log(`\n📧 [DEV] Annonce futurs achats pour ${to}\n`);
     return;
   }
-  await resend.emails.send({ from: FROM, to, subject, html });
+  await deliver(resend, { from: FROM, to, subject, html });
 }

@@ -32,11 +32,25 @@ export async function POST(req: NextRequest) {
 
   const adminUser = await prisma.user.findUnique({ where: { id: admin.id }, select: { email: true, name: true, firstName: true } });
   const adminName = adminUser?.firstName ?? adminUser?.name ?? "Admin";
-  const recipientWhere = { suspended: false, emailVerified: true, location: admin.location };
+  // Les membres déjà prévenus pour cette période d'ouverture ne reçoivent pas l'email une seconde fois :
+  // relancer l'envoi ne touche que ceux qui ne l'ont pas encore eu.
+  const recipientWhere = {
+    suspended: false,
+    emailVerified: true,
+    location: admin.location,
+    notifications: { none: { type: "PROPOSALS_OPEN", createdAt: { gte: window.opensAt ?? undefined } } },
+  };
 
   if (mode === "preview") {
-    const recipients = await prisma.user.count({ where: recipientWhere });
-    return NextResponse.json({ ...renderProposalsOpenEmail({ userName: adminName, closesAt: window.closesAt }), recipients });
+    const [recipients, total] = await Promise.all([
+      prisma.user.count({ where: recipientWhere }),
+      prisma.user.count({ where: { suspended: false, emailVerified: true, location: admin.location } }),
+    ]);
+    return NextResponse.json({
+      ...renderProposalsOpenEmail({ userName: adminName, closesAt: window.closesAt }),
+      recipients,
+      alreadyNotified: total - recipients,
+    });
   }
 
   if (mode === "test") {
@@ -68,5 +82,5 @@ export async function POST(req: NextRequest) {
     }));
   }
 
-  return NextResponse.json({ success: true, emailsSent, recipients: users.length });
+  return NextResponse.json({ success: true, emailsSent, failed: users.length - emailsSent, recipients: users.length });
 }

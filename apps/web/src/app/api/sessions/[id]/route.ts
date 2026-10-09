@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { sendSessionUpdateEmail } from "@/lib/email";
 import { parseDeadlineInput, sessionStartUtc, formatDeadlineFr } from "@/lib/session-utils";
 
+// Les envois d'emails sont cadencés (limite de débit du service) : on laisse le temps de tous les traiter
+export const maxDuration = 60;
+
 async function getAuthInfo(req: NextRequest): Promise<{ userId: string; role: "USER" | "ADMIN" } | null> {
   const mobilePayload = await verifyMobileToken(req);
   if (mobilePayload) return { userId: mobilePayload.id, role: mobilePayload.role };

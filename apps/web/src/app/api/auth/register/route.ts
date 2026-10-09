@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     data: { userId: user.id, token, expiresAt },
   });
 
-  await sendVerificationEmail(user.email, firstName, token, new URL(req.url).origin);
+  await sendVerificationEmail(user.email, firstName, token, new URL(req.url).origin)
+    .catch((err) => console.error("Email de vérification non envoyé :", err));
 
   return NextResponse.json({ success: true }, { status: 201 });
 }

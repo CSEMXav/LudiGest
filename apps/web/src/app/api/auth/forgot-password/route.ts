@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt } });
 
-  await sendPasswordResetEmail(user.email, user.firstName ?? user.name, token);
+  await sendPasswordResetEmail(user.email, user.firstName ?? user.name, token)
+    .catch((err) => console.error("Email de réinitialisation non envoyé :", err));
 
   return NextResponse.json({ success: true });
 }

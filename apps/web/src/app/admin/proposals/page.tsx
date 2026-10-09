@@ -32,7 +32,18 @@ function statusOf(w: WindowDTO): { label: string; className: string } {
 
 function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
   const [busy, setBusy] = useState<"" | "preview" | "test" | "send">("");
-  const [preview, setPreview] = useState<{ subject: string; html: string; recipients: number } | null>(null);
+  const [preview, setPreview] = useState<{ subject: string; html: string; recipients: number; alreadyNotified: number } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Nombre de membres restant à prévenir (ceux qui ont déjà reçu l'email ne le reçoivent pas deux fois)
+  function refreshCounts() {
+    if (!isOpen) return;
+    fetch("/api/proposals/announce", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "preview" }) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setPreview(d); })
+      .catch(() => {});
+  }
+  useEffect(refreshCounts, [isOpen]);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
@@ -47,9 +58,13 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setError(d.error ?? "Erreur lors de l'envoi."); return; }
-      if (mode === "preview") setPreview(d);
+      if (mode === "preview") { setPreview(d); setShowPreview(true); }
       else if (mode === "test") setMsg("✓ Email de test envoyé à " + d.sentTo);
-      else setMsg(`✓ Email envoyé à ${d.emailsSent} membre(s) sur ${d.recipients}`);
+      else {
+        if (d.failed > 0) setError(`${d.failed} email(s) n'ont pas pu être envoyés. Cliquez à nouveau sur « Envoyer » pour les membres restants.`);
+        setMsg(`✓ Email envoyé à ${d.emailsSent} membre(s) sur ${d.recipients}`);
+        refreshCounts();
+      }
     } catch {
       setError("Erreur réseau.");
     } finally {
@@ -65,7 +80,7 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
         <h3 className="font-semibold text-gray-900 text-sm">📧 Prévenir les membres par email</h3>
         <p className="text-sm text-gray-500 mt-0.5">
           {isOpen
-            ? "Envoie à tous les membres de cette ludothèque un email les invitant à proposer des jeux et à voter jusqu'à la date de fermeture."
+            ? "Envoie aux membres de cette ludothèque un email les invitant à proposer des jeux et à voter jusqu'à la date de fermeture. Un membre déjà prévenu pour cette période ne le reçoit pas une seconde fois."
             : "Disponible lorsque la page est ouverte aux membres (période d'ouverture en cours)."}
         </p>
       </div>
@@ -78,12 +93,19 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
         </button>
         <button
           onClick={() => setConfirming(true)}
-          disabled={!isOpen || !!busy}
+          disabled={!isOpen || !!busy || preview?.recipients === 0}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          {busy === "send" ? "Envoi en cours…" : "📧 Envoyer à tous les membres"}
+          {busy === "send" ? "Envoi en cours… (jusqu'à 30 s)"
+            : preview && preview.alreadyNotified > 0 ? `📧 Envoyer aux ${preview.recipients} membre(s) restant(s)`
+            : "📧 Envoyer à tous les membres"}
         </button>
       </div>
+      {isOpen && preview && (
+        <p className="text-xs text-gray-500">
+          {preview.alreadyNotified} membre(s) déjà prévenu(s) pour cette période · {preview.recipients} restant(s) à prévenir.
+        </p>
+      )}
       {confirming && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm bg-gray-50 border border-gray-200">
           <span className="flex-1 font-medium text-gray-900">
@@ -95,11 +117,11 @@ function AnnounceEmail({ isOpen }: { isOpen: boolean }) {
       )}
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
       {msg && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{msg}</p>}
-      {preview && (
+      {preview && showPreview && (
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-2 text-sm bg-gray-50 border-b border-gray-200">
             <span className="flex-1 truncate text-gray-900"><strong>Objet :</strong> {preview.subject} — {preview.recipients} destinataire(s)</span>
-            <button onClick={() => setPreview(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            <button onClick={() => setShowPreview(false)} className="text-gray-400 hover:text-gray-600">✕</button>
           </div>
           <iframe title="Aperçu de l'email" srcDoc={preview.html} className="w-full" style={{ height: 480, border: "none", background: "#fff" }} />
         </div>

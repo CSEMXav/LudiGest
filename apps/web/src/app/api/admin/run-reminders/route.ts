@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { runSendReminders } from "@/lib/send-reminders";
 
+// Les envois d'emails sont cadencés (limite de débit du service) : on laisse le temps de tous les traiter
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "ADMIN") {

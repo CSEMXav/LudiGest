@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSessionReminderEmail } from "@/lib/email";
 
+// Les envois d'emails sont cadencés (limite de débit du service) : on laisse le temps de tous les traiter
+export const maxDuration = 60;
+
 async function requireAdmin(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== "ADMIN") return null;

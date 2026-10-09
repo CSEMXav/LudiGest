@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { renderNewGamesEmail, sendNewGamesEmail, type NewGameCard } from "@/lib/email";
 
+// Les envois d'emails sont cadencés (limite de débit du service) : on laisse le temps de tous les traiter
+export const maxDuration = 60;
+
 type Mode = "preview" | "test" | "send";
 
 async function requireAdmin() {
