@@ -720,3 +720,43 @@ export async function sendNewGamesEmail(
   }
   await resend.emails.send({ from: FROM, to, subject, html });
 }
+
+/* ------------------------------------------------------------------ */
+/*  Futurs achats                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Annonce aux membres : la page "Futurs achats" est ouverte aux propositions et aux votes. */
+export function renderProposalsOpenEmail(vars: { userName: string; closesAt: Date | null }): { subject: string; html: string } {
+  const siteUrl = getSiteUrl();
+  const closesStr = vars.closesAt
+    ? vars.closesAt.toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })
+    : null;
+  const subject = "🛒 Futurs achats de la ludothèque : proposez et votez !";
+  const html = emailLayout({
+    title: "Quels jeux pour la ludothèque ?",
+    preheader: closesStr ? `Propositions et votes ouverts jusqu'au ${closesStr}` : "Proposez des jeux et votez pour vos préférés",
+    bodyHtml: p(`Bonjour <strong>${escapeHtml(vars.userName)}</strong>,`)
+      + p("La ludothèque prépare ses prochains achats et votre avis compte ! Sur la page « Futurs achats », vous pouvez :")
+      + infoBoxHtml([
+        { icon: "💡", label: "Proposer", value: "un jeu que vous aimeriez voir à la ludothèque" },
+        { icon: "👍", label: "Voter", value: "pour ou contre les jeux déjà proposés" },
+      ])
+      + (closesStr
+        ? p(`Propositions et votes sont ouverts <strong>jusqu'au ${escapeHtml(closesStr)}</strong>.`)
+        : p("Propositions et votes sont ouverts dès maintenant."))
+      + p("Vos propositions et vos votes aideront à choisir les prochains jeux de la ludothèque."),
+    ctaUrl: `${siteUrl}/proposals`,
+    ctaLabel: "Proposer et voter",
+  });
+  return { subject, html };
+}
+
+export async function sendProposalsOpenEmail(to: string, vars: { userName: string; closesAt: Date | null }): Promise<void> {
+  const { subject, html } = renderProposalsOpenEmail(vars);
+  const resend = getResend();
+  if (!resend) {
+    console.log(`\n📧 [DEV] Annonce futurs achats pour ${to}\n`);
+    return;
+  }
+  await resend.emails.send({ from: FROM, to, subject, html });
+}

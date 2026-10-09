@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
   SESSION_UPDATE: "Session mise à jour",
   GAME_REPORT: "Signalement jeu",
   NEW_GAMES: "Nouveaux jeux",
+  PROPOSALS_OPEN: "Annonce futurs achats",
 };
 
 const DEFAULT_DAYS = 10;
