@@ -18,6 +18,7 @@ Application de gestion de ludothèque pour la BRED. Disponible en version **web*
 10. [Espace Admin — Paramètres email](#10-espace-admin--paramètres-email)
 11. [Application mobile](#11-application-mobile)
 12. [Pages d'information](#12-pages-dinformation)
+13. [Futurs achats](#13-futurs-achats)
 
 ---
 
@@ -151,6 +152,15 @@ Accessible depuis `/admin/games`.
   - Enrichir via BoardGameGeek (photo, résumé, joueurs, durée, âge)
   - Suspendre / Réactiver
   - Supprimer
+  - **Mettre en emprunt** au nom d'un membre (jeux disponibles uniquement)
+
+**Mettre en emprunt** *(modal)*
+- Choix du membre dans la liste (filtre par nom ou email, comptes suspendus exclus)
+- Choix de la date d'emprunt : aujourd'hui ou une date antérieure
+- Date de retour calculée à 4 semaines après la date choisie
+- La limite de 5 emprunts simultanés ne s'applique pas à cette action
+- Email dédié envoyé au membre : un administrateur lui a attribué l'emprunt du jeu, avec la date d'emprunt et la date de retour
+- Envoi tracé dans le journal des emails
 
 **Ajout rapide d'un jeu** *(modal)*
 - Nom + catégorie + ID BGG optionnel
@@ -187,8 +197,10 @@ Accessible depuis `/admin/loans`.
 - Forcer le retour (marquer comme rendu sans action utilisateur)
 
 **Suivi des rappels**
-- Historique de tous les emails envoyés par emprunt (type, date)
+- Historique de tous les emails envoyés par emprunt (type, date), y compris l'email « emprunt attribué par un admin »
 - Affiché en tooltip / popover
+
+> Un emprunt peut aussi être créé par un admin au nom d'un membre depuis la gestion des jeux (voir section 7).
 
 ---
 
@@ -238,6 +250,7 @@ Toutes les fonctionnalités utilisateur sont disponibles. Les fonctions admin ou
 | 🎲 Liste des jeux | Tous |
 | 📷 Emprunter un jeu (scanner) | Tous |
 | 📚 Mes emprunts | Tous |
+| 🛒 Achats (futurs achats) | Tous pendant la période d'ouverture — Admin en permanence |
 | ⚙️ Admin | Admin uniquement |
 
 **Spécificités mobile**
@@ -264,11 +277,67 @@ Toutes les fonctionnalités utilisateur sont disponibles. Les fonctions admin ou
 
 ---
 
+## 13. Futurs achats
+
+Liste des jeux proposés pour un futur achat de la ludothèque, avec votes des membres. Les propositions, les votes et la période d'ouverture sont propres à chaque ludothèque (Joinville / La Rapée).
+
+| Fonctionnalité | Web | Mobile |
+|---|:---:|:---:|
+| Liste des propositions avec photo, catégorie, joueurs, durée, âge conseillé | ✅ | ✅ |
+| Proposer un jeu (titre, catégorie, lien optionnel) | ✅ | ✅ |
+| Voter 👍 / 👎 avec compteurs | ✅ | ✅ |
+| Supprimer une proposition (auteur ou admin) | ✅ | ✅ |
+| Actualiser les infos d'une proposition (auteur ou admin) | ✅ | — |
+| Tri : les plus appréciés, plus récents, A → Z | ✅ | — |
+| Affichage liste / vignettes | ✅ | — |
+| Réglage de la période d'ouverture et email d'annonce (admin) | ✅ | — |
+
+**Accès**
+- Admin : `/admin/proposals` (onglet **Futurs achats** du menu admin), accessible en permanence
+- Membres : `/proposals` (entrée **Futurs achats** du menu) et onglet **Achats** de l'application mobile, visibles uniquement pendant la période d'ouverture
+- Hors période, les membres ne peuvent ni consulter, ni proposer, ni voter
+
+**Proposer un jeu**
+- Titre (obligatoire), catégorie (obligatoire), lien vers une page d'achat ou de présentation (optionnel)
+- Un même titre ne peut être proposé qu'une fois par ludothèque
+- À la validation, recherche automatique des informations du jeu :
+  - sur la page du lien : photo, description, nombre de joueurs, durée, âge conseillé
+  - sur BoardGameGeek (par le titre) en complément, avec traduction du résumé en français
+- Si rien n'est trouvé, la proposition est créée quand même
+- Les durées lues sur une boutique sont parfois des tranches (« moins de 30 mn », « 4 h et plus ») : valeur indicative
+
+**Votes**
+- Un vote par membre et par proposition : 👍 ou 👎
+- Re-cliquer sur son vote le retire ; cliquer sur l'autre pouce le change
+- Compteurs de pouces en l'air et en bas affichés sur chaque proposition
+
+**Affichage** *(web)*
+- Mode **liste** : votes en début de ligne, photo, infos, résumé, auteur, lien, actions
+- Mode **vignettes** : photo en grand, titre, catégorie, joueurs / durée / âge et votes — pour voir plus de propositions d'un coup
+- Le mode choisi est mémorisé sur l'appareil
+
+**Période d'ouverture aux membres** *(admin)*
+- Date et heure d'ouverture, date et heure de fermeture (heure de Paris)
+- À l'ouverture, la page devient visible des membres ; à la fermeture, elle ne l'est plus
+- Sans date de fermeture : ouverte sans limite après l'ouverture
+- Sans date d'ouverture : page réservée aux admins
+- Bandeau d'état : ouverte jusqu'au…, ouverture le…, fermée depuis…
+
+**Email d'annonce aux membres** *(admin)*
+- Disponible lorsque la page est ouverte aux membres
+- Aperçu, envoi d'un test à soi-même, envoi à tous les membres actifs de la ludothèque
+- Invite à proposer et à voter jusqu'à la date de fermeture, avec un bouton vers la page
+- Précise que la fonctionnalité est disponible sur le site et que l'application mobile doit être mise à jour (lien vers `/download`)
+- Envoi tracé dans le journal des emails (« Annonce futurs achats »)
+
+---
+
 ## Intégrations externes
 
 | Service | Usage |
 |---|---|
-| **BoardGameGeek API v2** | Récupération automatique : photo, résumé, joueurs, durée, âge (gratuit, sans clé) |
+| **BoardGameGeek API v2** | Récupération automatique : photo, résumé, joueurs, durée, âge (gratuit, sans clé) — jeux du catalogue et propositions d'achat |
+| **Pages des boutiques en ligne** | Lecture de la photo, de la description et des caractéristiques d'un jeu proposé, à partir du lien fourni |
 | **Neon PostgreSQL** | Base de données en production |
 | **Vercel** | Hébergement web |
 | **EAS Build** | Compilation de l'APK Android |
@@ -276,4 +345,4 @@ Toutes les fonctionnalités utilisateur sont disponibles. Les fonctions admin ou
 
 ---
 
-*Document généré le 01/05/2026 — LudiGest v0.42*
+*Document généré le 01/05/2026 (v0.42) — mis à jour le 09/10/2026 pour LudiGest v1.32 : emprunt attribué par un admin (section 7) et futurs achats (section 13).*
