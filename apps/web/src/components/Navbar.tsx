@@ -39,6 +39,20 @@ export function Navbar() {
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
+  // "Futurs achats" n'apparaît dans le menu que pendant la période d'ouverture définie par l'admin
+  const [proposalsOpen, setProposalsOpen] = useState(false);
+  const sessionLocation = session?.user?.location;
+  useEffect(() => {
+    if (!sessionLocation) return;
+    fetch("/api/proposals/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setProposalsOpen(!!d?.isOpen))
+      .catch(() => {});
+  }, [sessionLocation, pathname]);
+  const navItems = proposalsOpen
+    ? [...NAV_ITEMS, { label: "Futurs achats", href: "/proposals", id: "proposals" }]
+    : NAV_ITEMS;
+
   async function switchLocation(loc: string) {
     setSwitching(true);
     try {
@@ -91,7 +105,7 @@ export function Navbar() {
         {/* Pill nav */}
         {session && (
           <nav className="flex items-center gap-1 ml-6">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const active = isActive(item.href, item.id);
               return (
                 <Link
@@ -269,7 +283,7 @@ export function Navbar() {
             <p className="text-xs mt-0.5" style={{ color: "var(--p-ink3)" }}>{session.user.email}</p>
           </div>
           <nav className="px-3 py-2 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const active = isActive(item.href, item.id);
               return (
                 <Link

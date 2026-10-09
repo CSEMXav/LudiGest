@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { fetchProposalInfo } from "@/lib/proposal-info";
-import { loadProposal, toProposalDTO } from "@/lib/proposals";
+import { PROPOSALS_CLOSED_ERROR, canAccessProposals, loadProposal, toProposalDTO } from "@/lib/proposals";
 
 export const maxDuration = 30;
 
@@ -13,6 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const session = await getServerSession(authOptions);
   const user = session?.user ?? (await verifyMobileToken(req));
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if (!(await canAccessProposals(user))) return NextResponse.json({ error: PROPOSALS_CLOSED_ERROR }, { status: 403 });
 
   const current = await prisma.gameProposal.findUnique({ where: { id: params.id } });
   if (!current) return NextResponse.json({ error: "Proposition introuvable." }, { status: 404 });

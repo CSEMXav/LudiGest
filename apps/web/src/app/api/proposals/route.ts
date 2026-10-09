@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { fetchProposalInfo, normalizeLink } from "@/lib/proposal-info";
-import { PROPOSAL_CATEGORIES, loadProposal, toProposalDTO } from "@/lib/proposals";
+import { PROPOSAL_CATEGORIES, PROPOSALS_CLOSED_ERROR, canAccessProposals, loadProposal, toProposalDTO } from "@/lib/proposals";
 
 // La récupération des infos (page du lien + BoardGameGeek) peut prendre quelques secondes
 export const maxDuration = 30;
@@ -19,6 +19,7 @@ async function getUser(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if (!(await canAccessProposals(user))) return NextResponse.json({ error: PROPOSALS_CLOSED_ERROR }, { status: 403 });
 
   const proposals = await prisma.gameProposal.findMany({
     where: { location: user.location },
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if (!(await canAccessProposals(user))) return NextResponse.json({ error: PROPOSALS_CLOSED_ERROR }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   const title = typeof body.title === "string" ? body.title.trim() : "";

@@ -301,3 +301,10 @@ model GameProposalVote {
   @@index([proposalId])
   @@index([userId])
 }
+
+model ProposalSettings {
+  location  String    @id
+  opensAt   DateTime?
+  closesAt  DateTime?
+  updatedAt DateTime  @updatedAt
+}
