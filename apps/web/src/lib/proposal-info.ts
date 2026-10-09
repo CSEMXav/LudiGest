@@ -137,33 +137,64 @@ function inRange(n: number, min: number, max: number): number | null {
  */
 export function extractSpecsFromText(text: string): GameSpecs {
   const t = text.replace(/\s+/g, " ");
-  const specs: GameSpecs = { minAge: null, minPlayers: null, maxPlayers: null, duration: null };
 
-  const range = t.match(/(\d{1,2})\s*(?:à|a|-|–|—|\/)\s*(\d{1,3})\s*joueurs?/i)
-    ?? t.match(/joueurs?\s*:?\s*(?:de\s*)?(\d{1,2})\s*(?:à|a|-|–|—)\s*(\d{1,3})/i);
-  if (range) {
-    const min = inRange(Number(range[1]), 1, 99), max = inRange(Number(range[2]), 1, 999);
-    if (min && max && min <= max) { specs.minPlayers = min; specs.maxPlayers = max; }
+  // Toutes les mentions candidates, avec leur position dans la page
+  const players: { pos: number; min: number; max: number | null }[] = [];
+  for (const m of Array.from(t.matchAll(/(\d{1,2})\s*(?:à|a|-|–|—|\/)\s*(\d{1,3})\s*joueurs?|joueurs?\s*:?\s*(?:de\s*)?(\d{1,2})\s*(?:à|a|-|–|—)\s*(\d{1,3})/gi))) {
+    const min = inRange(Number(m[1] ?? m[3]), 1, 99), max = inRange(Number(m[2] ?? m[4]), 1, 999);
+    if (min && max && min <= max) players.push({ pos: m.index, min, max });
   }
-  if (!specs.minPlayers) {
-    const plus = t.match(/(\d{1,2})\s*joueurs?\s*(?:et\s*(?:plus|\+)|\+)/i) ?? t.match(/joueurs?\s*:?\s*(\d{1,2})\s*(?:et\s*plus|\+)/i);
-    const single = t.match(/(?:nombre de joueurs?|joueurs?)\s*:\s*(\d{1,2})\b/i) ?? t.match(/\b(\d{1,2})\s*joueurs?\b/i);
-    if (plus) specs.minPlayers = inRange(Number(plus[1]), 1, 99);
-    else if (single) { specs.minPlayers = inRange(Number(single[1]), 1, 99); specs.maxPlayers = specs.minPlayers; }
+  for (const m of Array.from(t.matchAll(/\b(\d{1,2})\s*joueurs?\s*(?:et\s*(?:plus|\+)|\+)|joueurs?\s*:?\s*(\d{1,2})\s*(?:et\s*plus|\+)/gi))) {
+    const min = inRange(Number(m[1] ?? m[2]), 1, 99);
+    if (min) players.push({ pos: m.index, min, max: null });
+  }
+  if (players.length === 0) {
+    for (const m of Array.from(t.matchAll(/(?:nombre de joueurs?|joueurs?)\s*:\s*(\d{1,2})\b|\b(\d{1,2})\s*joueurs?\b/gi))) {
+      const n = inRange(Number(m[1] ?? m[2]), 1, 99);
+      if (n) players.push({ pos: m.index, min: n, max: n });
+    }
   }
 
-  const hours = t.match(/(?:durée|temps de jeu|partie)[^.\d]{0,40}(\d)\s*h\s*(\d{2})?/i);
-  const minutes = t.match(/(?:durée|temps de jeu|partie)[^.\d]{0,40}(?:\d{1,3}\s*(?:à|-|–)\s*)?(\d{1,3})\s*(?:min|mn|minutes)\b/i)
-    ?? t.match(/\b(?:\d{1,3}\s*(?:à|-|–)\s*)?(\d{1,3})\s*(?:min|mn|minutes)\b/i);
-  if (minutes) specs.duration = inRange(Number(minutes[1]), 1, 999);
-  else if (hours) specs.duration = inRange(Number(hours[1]) * 60 + Number(hours[2] ?? 0), 1, 999);
+  const durations: { pos: number; value: number }[] = [];
+  for (const m of Array.from(t.matchAll(/\b(?:\d{1,3}\s*(?:à|-|–)\s*)?(\d{1,3})\s*(?:min|mn|minutes)\b/gi))) {
+    const v = inRange(Number(m[1]), 1, 999);
+    if (v) durations.push({ pos: m.index, value: v });
+  }
+  for (const m of Array.from(t.matchAll(/\b(\d)\s*h(?:\s*(\d{2}))?\b/gi))) {
+    const v = inRange(Number(m[1]) * 60 + Number(m[2] ?? 0), 1, 999);
+    if (v) durations.push({ pos: m.index, value: v });
+  }
 
-  const age = t.match(/(?:à partir de|dès|âge|age)\s*(?:minimum|conseillé|recommandé)?\s*:?\s*(?:à partir de|dès)?\s*(\d{1,2})\s*(?:ans|\+)/i)
-    ?? t.match(/\b(\d{1,2})\s*ans\s*(?:et\s*(?:plus|\+)|\+)/i)
-    ?? t.match(/\b(\d{1,2})\s*\+\s*ans\b/i);
-  if (age) specs.minAge = inRange(Number(age[1]), 1, 21);
+  let ages: { pos: number; value: number }[] = [];
+  for (const m of Array.from(t.matchAll(/(?:à partir de|dès|[âa]ge\s*(?:minimum|conseillé|recommandé)?\s*:?)\s*(\d{1,2})\s*(?:ans|\+)|\b(\d{1,2})\s*ans\s*(?:et\s*(?:plus|\+)|\+)|\b(\d{1,2})\s*\+(?!\s*\d)/gi))) {
+    const v = inRange(Number(m[1] ?? m[2] ?? m[3]), 1, 21);
+    // "ne convient pas aux enfants de moins de 3 ans" n'est pas un âge conseillé
+    if (v && !/moins de\s*$/i.test(t.slice(Math.max(0, m.index - 12), m.index))) ages.push({ pos: m.index, value: v });
+  }
+  // Les menus de boutique listent "à partir de 1 an, 2 ans, 3 ans…" : on écarte ces énumérations
+  ages = ages.filter((a) => !ages.some((b) => b !== a && b.value !== a.value && Math.abs(b.pos - a.pos) < 60));
 
-  return specs;
+  // La fiche du jeu regroupe joueurs / durée / âge : on retient le groupe le plus complet et le plus serré
+  const NEAR = 300;
+  const nearest = <T extends { pos: number }>(list: T[], pos: number): T | undefined =>
+    list.filter((x) => Math.abs(x.pos - pos) <= NEAR).sort((a, b) => Math.abs(a.pos - pos) - Math.abs(b.pos - pos))[0];
+
+  let best: { count: number; span: number; specs: GameSpecs } | null = null;
+  for (const p of players) {
+    const age = nearest(ages, p.pos);
+    const dur = nearest(durations, p.pos);
+    const count = 1 + (age ? 1 : 0) + (dur ? 1 : 0);
+    const span = Math.max(age ? Math.abs(age.pos - p.pos) : 0, dur ? Math.abs(dur.pos - p.pos) : 0);
+    if (!best || count > best.count || (count === best.count && span < best.span)) {
+      best = { count, span, specs: { minPlayers: p.min, maxPlayers: p.max, minAge: age?.value ?? null, duration: dur?.value ?? null } };
+    }
+  }
+  if (best) return best.specs;
+
+  // Pas de nombre de joueurs sur la page : on n'accepte que des mentions explicites
+  const explicitAge = ages.find((a) => /^(?:à partir de|dès|[âa]ge)/i.test(t.slice(a.pos, a.pos + 12)));
+  const explicitDuration = durations.find((d) => /(?:durée|temps de jeu|partie)[^.]{0,40}$/i.test(t.slice(Math.max(0, d.pos - 50), d.pos)));
+  return { minPlayers: null, maxPlayers: null, minAge: explicitAge?.value ?? null, duration: explicitDuration?.value ?? null };
 }
 
 function htmlToText(html: string): string {
@@ -234,16 +265,16 @@ export async function fetchProposalInfo(title: string, link: string | null): Pro
     })(),
   ]);
 
-  // Joueurs / durée / âge : BoardGameGeek (données structurées) d'abord, sinon ce qui est lu sur la page du lien
+  // Joueurs / durée / âge : la fiche du lien (édition réellement proposée) d'abord, sinon BoardGameGeek
   info.bggId = bgg?.bggId ?? null;
-  info.minAge = bgg?.minAge ?? meta.minAge;
-  info.duration = bgg?.duration ?? meta.duration;
-  if (bgg?.minPlayers) {
-    info.minPlayers = bgg.minPlayers;
-    info.maxPlayers = bgg.maxPlayers;
-  } else {
+  info.minAge = meta.minAge ?? bgg?.minAge ?? null;
+  info.duration = meta.duration ?? bgg?.duration ?? null;
+  if (meta.minPlayers) {
     info.minPlayers = meta.minPlayers;
     info.maxPlayers = meta.maxPlayers;
+  } else {
+    info.minPlayers = bgg?.minPlayers ?? null;
+    info.maxPlayers = bgg?.maxPlayers ?? null;
   }
   // La page du lien (souvent en français, bonne édition) prime sur BGG pour le texte et l'image
   info.coverUrl = meta.coverUrl ?? bgg?.coverUrl ?? null;
