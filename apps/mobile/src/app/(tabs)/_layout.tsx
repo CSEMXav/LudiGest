@@ -3,6 +3,7 @@ import { Tabs, useRouter } from "expo-router";
 import { TouchableOpacity, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser } from "@/lib/auth";
+import { apiGet } from "@/lib/api";
 import { Pion } from "@/components/Pion";
 
 export default function TabsLayout() {
@@ -12,8 +13,14 @@ export default function TabsLayout() {
   // le bas de l'écran : on ajoute leur hauteur sous la barre d'onglets.
   const insets = useSafeAreaInsets();
 
+  // L'onglet "Achats" n'apparaît que pendant la période d'ouverture définie par l'admin
+  const [proposalsOpen, setProposalsOpen] = useState(false);
+
   useEffect(() => {
     getStoredUser().then((u) => { if (u?.role === "ADMIN") setIsAdmin(true); });
+    apiGet<{ isOpen: boolean }>("/api/proposals/settings")
+      .then((w) => setProposalsOpen(!!w.isOpen))
+      .catch(() => {});
   }, []);
 
   return (
@@ -87,6 +94,15 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarLabel: "Membres",
           tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="meeple" w={24} h={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="proposals"
+        options={{
+          headerShown: false,
+          href: proposalsOpen || isAdmin ? undefined : null,
+          tabBarLabel: "Achats",
+          tabBarIcon: ({ focused }) => <Pion tint={focused ? "#d24a1f" : "#9a8b7c"} kind="card" w={24} h={24} />,
         }}
       />
       <Tabs.Screen

@@ -744,7 +744,8 @@ export function renderProposalsOpenEmail(vars: { userName: string; closesAt: Dat
       + (closesStr
         ? p(`Propositions et votes sont ouverts <strong>jusqu'au ${escapeHtml(closesStr)}</strong>.`)
         : p("Propositions et votes sont ouverts dès maintenant."))
-      + p("Vos propositions et vos votes aideront à choisir les prochains jeux de la ludothèque."),
+      + p("Vos propositions et vos votes aideront à choisir les prochains jeux de la ludothèque.")
+      + p(`<strong>À noter :</strong> cette fonctionnalité est disponible sur le site <a href="${siteUrl}/proposals" style="color:${BRAND.primary};font-weight:bold;text-decoration:none">${escapeHtml(siteUrl.replace(/^https?:\/\//, ""))}</a>. Pour l'utiliser dans l'application mobile, il faut installer la dernière version : <a href="${siteUrl}/download" style="color:${BRAND.primary};font-weight:bold;text-decoration:none">mettre à jour l'application</a>.`),
     ctaUrl: `${siteUrl}/proposals`,
     ctaLabel: "Proposer et voter",
   });
