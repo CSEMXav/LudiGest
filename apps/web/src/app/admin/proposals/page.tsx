@@ -274,6 +274,22 @@ function Archives({ onArchived }: { onArchived: () => void }) {
     }
   }
 
+  async function removeArchive(a: ArchiveDTO) {
+    if (!confirm(`Supprimer définitivement l'archive « ${a.name} » ?
+
+Ses ${a.proposals.length} proposition(s) et leurs votes seront perdus. Cette action est irréversible.`)) return;
+    setError(""); setMsg("");
+    try {
+      const res = await fetch(`/api/proposals/archive/${a.id}`, { method: "DELETE" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error ?? "Erreur lors de la suppression."); return; }
+      setArchives((list) => list.filter((x) => x.id !== a.id));
+      setMsg(`✓ Archive « ${a.name} » supprimée.`);
+    } catch {
+      setError("Erreur réseau.");
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 mt-6 space-y-4">
       <div>
@@ -353,6 +369,14 @@ function Archives({ onArchived }: { onArchived: () => void }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="px-4 py-2.5 border-t border-gray-100 text-right">
+                <button
+                  onClick={() => removeArchive(a)}
+                  className="text-xs px-2.5 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  Supprimer cette archive
+                </button>
               </div>
             </details>
           ))}
