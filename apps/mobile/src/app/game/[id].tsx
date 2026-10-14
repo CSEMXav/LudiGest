@@ -9,9 +9,9 @@ import { Pion, CAT_PION } from "@/components/Pion";
 
 const CAT_CONFIG: Record<string, { label: string; color: string }> = {
   escape:   { label: "Escape",   color: "#d24a1f" },
-  famille:  { label: "Famille",  color: "#e8a82f" },
+  famille:  { label: "Famille",  color: "#f4c430" },
   ambiance: { label: "Ambiance", color: "#286b7a" },
-  enfant:   { label: "Enfant",   color: "#f4c430" },
+  enfant:   { label: "Enfant",   color: "#e8a82f" },
   "initié": { label: "Initié",   color: "#5b4d40" },
   expert:   { label: "Expert",   color: "#6a8f3c" },
 };

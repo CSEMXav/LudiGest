@@ -4,8 +4,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Comment ça marche — LudiGest" };
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string; icon: string; circle: string }> = {
-  enfant:   { label: "Enfant",   color: "#92400E", bg: "#fef3c7", icon: "🧸",        circle: "#F59E0B" },
-  famille:  { label: "Famille",  color: "#3F6212", bg: "#f7fee7", icon: "👨‍👩‍👧‍👦",    circle: "#84CC16" },
+  enfant:   { label: "Enfant",   color: "#9A3412", bg: "#ffedd5", icon: "🧸",        circle: "#F97316" },
+  famille:  { label: "Famille",  color: "#854D0E", bg: "#fef9c3", icon: "👨‍👩‍👧‍👦",    circle: "#EAB308" },
   ambiance: { label: "Ambiance", color: "#fff",    bg: "#1e3a8a", icon: "🎉",         circle: "#1e3a8a" },
   escape:   { label: "Escape",   color: "#fff",    bg: "#C8102E", icon: "🔐",         circle: "#C8102E" },
   "initié": { label: "Initié",   color: "#374151", bg: "#f3f4f6", icon: "🧠",         circle: "#6B7280" },

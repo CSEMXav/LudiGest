@@ -5,9 +5,9 @@ import type { GameCategory } from "@ludigest/types";
 
 const CATEGORIES: { value: GameCategory; label: string; color: string }[] = [
   { value: "escape",   label: "Escape",   color: "bg-red-500 text-white"    },
-  { value: "famille",  label: "Famille",  color: "bg-orange-400 text-white" },
+  { value: "famille",  label: "Famille",  color: "bg-yellow-400 text-white" },
   { value: "ambiance", label: "Ambiance", color: "bg-blue-500 text-white"   },
-  { value: "enfant",   label: "Enfant",   color: "bg-yellow-400 text-white" },
+  { value: "enfant",   label: "Enfant",   color: "bg-orange-400 text-white" },
   { value: "initié",   label: "Initié",   color: "bg-gray-500 text-white"   },
   { value: "expert",   label: "Expert",   color: "bg-green-500 text-white"  },
 ];

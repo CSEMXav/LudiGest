@@ -6,9 +6,9 @@ export const LOCATIONS: LudiLocation[] = ["Joinville", "La Rapée"];
 
 export const CATEGORY_CONFIG: Record<GameCategory, { label: string; bg: string; text: string; border: string }> = {
   escape:   { label: "Escape",   bg: "bg-red-500",    text: "text-white", border: "border-l-red-500" },
-  famille:  { label: "Famille",  bg: "bg-orange-400", text: "text-white", border: "border-l-orange-400" },
+  famille:  { label: "Famille",  bg: "bg-yellow-400", text: "text-white", border: "border-l-yellow-400" },
   ambiance: { label: "Ambiance", bg: "bg-blue-500",   text: "text-white", border: "border-l-blue-500" },
-  enfant:   { label: "Enfant",   bg: "bg-yellow-400", text: "text-white", border: "border-l-yellow-400" },
+  enfant:   { label: "Enfant",   bg: "bg-orange-400", text: "text-white", border: "border-l-orange-400" },
   "initié": { label: "Initié",   bg: "bg-gray-500",   text: "text-white", border: "border-l-gray-500" },
   expert:   { label: "Expert",   bg: "bg-green-500",  text: "text-white", border: "border-l-green-500" },
 };

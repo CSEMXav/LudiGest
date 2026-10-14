@@ -35,9 +35,9 @@ function groupByName(games: GameDTO[]): GameGroup[] {
 
 const CAT_CONFIG: Record<string, { label: string; color: string }> = {
   escape:   { label: "Escape",   color: "#d24a1f" },
-  famille:  { label: "Famille",  color: "#e8a82f" },
+  famille:  { label: "Famille",  color: "#f4c430" },
   ambiance: { label: "Ambiance", color: "#286b7a" },
-  enfant:   { label: "Enfant",   color: "#f4c430" },
+  enfant:   { label: "Enfant",   color: "#e8a82f" },
   "initié": { label: "Initié",   color: "#5b4d40" },
   expert:   { label: "Expert",   color: "#6a8f3c" },
 };
@@ -120,32 +120,41 @@ export default function GamesTab() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [location, setLocation] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Numéro de la dernière requête : une réponse plus ancienne arrivée en retard est ignorée
+  const loadSeq = useRef(0);
+  const filtersRef = useRef({ search, status, category });
+  filtersRef.current = { search, status, category };
 
   useEffect(() => {
     getStoredUser().then((u) => { if (u?.role === "ADMIN") setIsAdmin(true); });
     getStoredLocation().then(setLocation);
   }, []);
 
+  // Retour sur l'écran : on recharge avec les filtres courants (la frappe, elle, passe par le délai ci-dessous)
   useFocusEffect(
     useCallback(() => {
-      load(search, status, category);
-    }, [search, status, category])
+      const f = filtersRef.current;
+      load(f.search, f.status, f.category);
+    }, [])
   );
 
   async function load(q: string, s: string, cat: string, isRefresh = false) {
+    const seq = ++loadSeq.current;
     if (isRefresh) setRefreshing(true); else setLoading(true);
     const loc = await getStoredLocation();
     setLocation(loc);
     const params = new URLSearchParams();
-    if (q) params.set("search", q);
+    if (q.trim()) params.set("search", q.trim());
     if (s) params.set("status", s);
     if (cat) params.set("category", cat);
     params.set("location", loc);
     try {
       const data = await apiGet<GameDTO[]>(`/api/games?${params}`);
-      setGames(data);
+      if (seq !== loadSeq.current) return;
+      setGames(Array.isArray(data) ? data : []);
     } catch {
-      setGames([]);
+      // Erreur passagère : on garde la liste affichée plutôt que de la vider
+      if (seq !== loadSeq.current) return;
     }
     setLoading(false);
     setRefreshing(false);

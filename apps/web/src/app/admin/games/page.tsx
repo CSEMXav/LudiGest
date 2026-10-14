@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { BarcodeInputScanner } from "@/components/BarcodeInputScanner";
 import type { GameDTO, GameCategory } from "@ludigest/types";
@@ -8,9 +8,9 @@ import type { GameDTO, GameCategory } from "@ludigest/types";
 const STATUS_LABELS = { AVAILABLE: "Disponible", BORROWED: "Emprunté", SUSPENDED: "Suspendu" };
 const CATEGORIES: { value: GameCategory; label: string; color: string }[] = [
   { value: "escape",   label: "Escape",   color: "bg-red-500 text-white"    },
-  { value: "famille",  label: "Famille",  color: "bg-orange-400 text-white" },
+  { value: "famille",  label: "Famille",  color: "bg-yellow-400 text-white" },
   { value: "ambiance", label: "Ambiance", color: "bg-blue-500 text-white"   },
-  { value: "enfant",   label: "Enfant",   color: "bg-yellow-400 text-white" },
+  { value: "enfant",   label: "Enfant",   color: "bg-orange-400 text-white" },
   { value: "initié",   label: "Initié",   color: "bg-gray-500 text-white"   },
   { value: "expert",   label: "Expert",   color: "bg-green-500 text-white"  },
 ];
@@ -730,13 +730,30 @@ export default function AdminGamesPage() {
 
   const currentLocation = session?.user.location;
 
+  // Recherche différée : pas de requête à chaque lettre, et seule la dernière réponse est prise en compte
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+  const loadSeq = useRef(0);
+
   async function loadGames() {
+    const seq = ++loadSeq.current;
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (filterStatus) params.set("status", filterStatus);
     if (filterCategory) params.set("category", filterCategory);
-    const res = await fetch(`/api/games?${params}`);
-    let data: GameDTO[] = await res.json();
+    let data: GameDTO[];
+    try {
+      const res = await fetch(`/api/games?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+    } catch {
+      if (seq === loadSeq.current) setLoading(false);
+      return;
+    }
+    if (seq !== loadSeq.current || !Array.isArray(data)) return;
     if (sort === "name_desc") data = [...data].sort((a, b) => b.name.localeCompare(a.name, "fr"));
     else if (sort === "recent") data = [...data].sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
     else data = [...data].sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -744,7 +761,7 @@ export default function AdminGamesPage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadGames(); }, [search, filterStatus, filterCategory, sort, currentLocation]);
+  useEffect(() => { loadGames(); }, [debouncedSearch, filterStatus, filterCategory, sort, currentLocation]);
 
   async function toggleSuspend(game: GameDTO) {
     const newStatus = game.status === "SUSPENDED" ? "AVAILABLE" : "SUSPENDED";
@@ -760,17 +777,28 @@ export default function AdminGamesPage() {
   async function deleteGame(game: GameDTO) {
     if (!confirm(`Supprimer "${game.name}" définitivement ?`)) return;
     const res = await fetch(`/api/games/${game.id}`, { method: "DELETE" });
-    const d = await res.json();
-    if (!res.ok) setMessages((m) => ({ ...m, [game.id]: d.error ?? "Erreur" }));
-    else loadGames();
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { loadGames(); return; }
+    if (res.status === 409 && d.hasHistory) {
+      // Le jeu a déjà été emprunté : on ne peut le supprimer qu'avec son historique
+      if (confirm(`${d.error}\n\nSupprimer quand même "${game.name}" ET cet historique ? Cette action est irréversible.`)) {
+        await forceDeleteGame(game, true);
+      }
+      return;
+    }
+    const error = d.error ?? "La suppression a échoué.";
+    setMessages((m) => ({ ...m, [game.id]: error }));
+    alert(error);
   }
 
-  async function forceDeleteGame(game: GameDTO) {
-    if (!confirm(`⚠ Supprimer "${game.name}" ET tout son historique d'emprunts ? Cette action est irréversible.`)) return;
+  async function forceDeleteGame(game: GameDTO, confirmed = false) {
+    if (!confirmed && !confirm(`⚠ Supprimer "${game.name}" ET tout son historique d'emprunts ? Cette action est irréversible.`)) return;
     const res = await fetch(`/api/games/${game.id}?force=1`, { method: "DELETE" });
-    const d = await res.json();
-    if (!res.ok) setMessages((m) => ({ ...m, [game.id]: d.error ?? "Erreur" }));
-    else loadGames();
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) { loadGames(); return; }
+    const error = d.error ?? "La suppression a échoué.";
+    setMessages((m) => ({ ...m, [game.id]: error }));
+    alert(error);
   }
 
   async function changeCategory(game: GameDTO, category: string) {

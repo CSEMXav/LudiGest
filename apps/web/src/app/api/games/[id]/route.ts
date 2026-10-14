@@ -121,6 +121,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "Ce jeu est actuellement emprunté." }, { status: 409 });
   }
 
+  if (!force) {
+    // Un jeu déjà emprunté ne peut pas être supprimé sans son historique : on l'explique au lieu d'échouer
+    const pastLoans = await prisma.loan.count({ where: { gameId: params.id } });
+    if (pastLoans > 0) {
+      return NextResponse.json(
+        { error: `Ce jeu a ${pastLoans} emprunt${pastLoans > 1 ? "s" : ""} dans son historique.`, hasHistory: true, loans: pastLoans },
+        { status: 409 }
+      );
+    }
+    // Les avis n'ont pas de sens sans le jeu : ils sont supprimés avec lui
+    await prisma.rating.deleteMany({ where: { gameId: params.id } });
+  }
+
   if (force) {
     // Delete loan reminders first (via loans), then loans, then ratings, then game
     const loans = await prisma.loan.findMany({ where: { gameId: params.id }, select: { id: true } });
@@ -132,6 +145,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await prisma.rating.deleteMany({ where: { gameId: params.id } });
   }
 
-  await prisma.game.delete({ where: { id: params.id } });
+  try {
+    await prisma.game.delete({ where: { id: params.id } });
+  } catch (err) {
+    console.error("Suppression du jeu impossible :", err);
+    return NextResponse.json({ error: "Suppression impossible : ce jeu est encore lié à d'autres données." }, { status: 409 });
+  }
   return NextResponse.json({ success: true });
 }

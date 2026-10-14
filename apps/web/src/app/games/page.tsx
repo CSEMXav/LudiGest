@@ -9,9 +9,9 @@ import type { GameDTO, GameCategory } from "@ludigest/types";
 
 const CATEGORIES: { value: GameCategory; label: string; color: string }[] = [
   { value: "escape",   label: "Escape",   color: "#d24a1f" },
-  { value: "famille",  label: "Famille",  color: "#e8a82f" },
+  { value: "famille",  label: "Famille",  color: "#f4c430" },
   { value: "ambiance", label: "Ambiance", color: "#286b7a" },
-  { value: "enfant",   label: "Enfant",   color: "#f4c430" },
+  { value: "enfant",   label: "Enfant",   color: "#e8a82f" },
   { value: "initié",   label: "Initié",   color: "#5b4d40" },
   { value: "expert",   label: "Expert",   color: "#6a8f3c" },
 ];
@@ -149,6 +149,14 @@ export default function GamesPage() {
 
   const hasActiveFilters = !!(category || minStars || durationFilter || players || fromDate || toDate);
 
+  // La recherche n'est lancée qu'après une courte pause dans la frappe (sinon une requête par lettre)
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+  const [loadError, setLoadError] = useState(false);
+
   function toggleView(mode: "grid" | "list") {
     setViewMode(mode);
     localStorage.setItem("gamesViewMode", mode);
@@ -162,9 +170,9 @@ export default function GamesPage() {
     setCategory(""); setMinStars(""); setDurationFilter(""); setPlayers(""); setFromDate(""); setToDate("");
   }
 
-  const loadGames = useCallback(() => {
+  const loadGames = useCallback((signal?: AbortSignal) => {
     const params = new URLSearchParams();
-    if (search)      params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (status)      params.set("status", status);
     if (category)    params.set("category", category);
     if (minStars)    params.set("minStars", minStars);
@@ -178,12 +186,30 @@ export default function GamesPage() {
     if (toDate)      params.set("toDate", toDate);
 
     setLoading(true);
-    fetch(`/api/games?${params}`)
-      .then((r) => r.json())
-      .then((data) => { setGames(Array.isArray(data) ? data : []); setLoading(false); });
-  }, [search, status, category, minStars, durationFilter, players, fromDate, toDate, session?.user.location]);
+    fetch(`/api/games?${params}`, { signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        setGames(Array.isArray(data) ? data : []);
+        setLoadError(false);
+        setLoading(false);
+      })
+      .catch((err) => {
+        // Requête remplacée par une plus récente : on ignore sa réponse
+        if (err?.name === "AbortError") return;
+        // Erreur réseau ou serveur : on garde la liste précédente et on le signale
+        setLoadError(true);
+        setLoading(false);
+      });
+  }, [debouncedSearch, status, category, minStars, durationFilter, players, fromDate, toDate, session?.user.location]);
 
-  useEffect(() => { loadGames(); }, [loadGames]);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadGames(controller.signal);
+    return () => controller.abort();
+  }, [loadGames]);
 
   const sortedGames = [...games].sort((a, b) => {
     switch (sortBy) {
@@ -507,6 +533,11 @@ export default function GamesPage() {
       )}
 
       {/* ── Grille / liste ── */}
+      {loadError && (
+        <p className="text-sm rounded-lg px-3 py-2 mb-3" style={{ background: "var(--p-primary-soft)", color: "var(--p-primary)" }}>
+          La recherche n&apos;a pas pu aboutir, réessayez dans un instant.
+        </p>
+      )}
       {loading ? (
         viewMode === "grid" ? (
           <div className={`grid ${cols} gap-4`}>

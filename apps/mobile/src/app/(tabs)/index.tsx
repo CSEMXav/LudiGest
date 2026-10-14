@@ -16,8 +16,8 @@ const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Sa
 const TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
 
 const CAT_COLOR: Record<string, string> = {
-  escape: "#d24a1f", famille: "#e8a82f", ambiance: "#286b7a",
-  enfant: "#f4c430", "initié": "#5b4d40", expert: "#6a8f3c",
+  escape: "#d24a1f", famille: "#f4c430", ambiance: "#286b7a",
+  enfant: "#e8a82f", "initié": "#5b4d40", expert: "#6a8f3c",
 };
 
 function hashTint(name: string): string {

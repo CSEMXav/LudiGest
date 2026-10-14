@@ -23,9 +23,9 @@ const P = {
 
 const CATEGORIES: { value: string; label: string; color: string }[] = [
   { value: "escape",   label: "Escape",   color: "#ef4444" },
-  { value: "famille",  label: "Famille",  color: "#fb923c" },
+  { value: "famille",  label: "Famille",  color: "#facc15" },
   { value: "ambiance", label: "Ambiance", color: "#3b82f6" },
-  { value: "enfant",   label: "Enfant",   color: "#facc15" },
+  { value: "enfant",   label: "Enfant",   color: "#fb923c" },
   { value: "initié",   label: "Initié",   color: "#6b7280" },
   { value: "expert",   label: "Expert",   color: "#22c55e" },
 ];

@@ -8,10 +8,10 @@ import { apiPost, ApiError } from "@/lib/api";
 import type { GameCategory } from "@ludigest/types";
 
 const CATEGORIES: { key: GameCategory; label: string; color: string }[] = [
-  { key: "famille",  label: "Famille",  color: "#f97316" },
+  { key: "famille",  label: "Famille",  color: "#eab308" },
   { key: "initié",   label: "Initié",   color: "#6b7280" },
   { key: "expert",   label: "Expert",   color: "#16a34a" },
-  { key: "enfant",   label: "Enfant",   color: "#eab308" },
+  { key: "enfant",   label: "Enfant",   color: "#f97316" },
   { key: "ambiance", label: "Ambiance", color: "#3b82f6" },
   { key: "escape",   label: "Escape",   color: "#ef4444" },
 ];
