@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameSessionDTO, GameSessionRegistrationDTO } from "@ludigest/types";
 
 const TINTS = ["#d24a1f", "#e8a82f", "#6a8f3c", "#286b7a", "#c54a7a", "#3a5a8c"];
@@ -314,9 +314,14 @@ export default function AdminSessionsPage() {
 
   useEffect(() => { load(); }, []);
 
-  function flash(id: string, msg: string) {
+  const flashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  /** Affiche un message sur la ligne de la session ; durée 0 = reste affiché (envoi en cours). */
+  function flash(id: string, msg: string, durationMs = 3000) {
+    clearTimeout(flashTimers.current[id]);
     setActionMsg((m) => ({ ...m, [id]: msg }));
-    setTimeout(() => setActionMsg((m) => { const n = { ...m }; delete n[id]; return n; }), 3000);
+    if (durationMs > 0) {
+      flashTimers.current[id] = setTimeout(() => setActionMsg((m) => { const n = { ...m }; delete n[id]; return n; }), durationMs);
+    }
   }
 
   async function deleteSession(s: AdminSession) {
@@ -330,11 +335,17 @@ export default function AdminSessionsPage() {
   }
 
   async function sendInvite(s: AdminSession) {
-    flash(s.id, "Envoi en cours…");
+    flash(s.id, "Envoi en cours… (jusqu'à 30 s, ne pas relancer)", 0);
     try {
       const res = await fetch(`/api/admin/sessions/${s.id}/invite`, { method: "POST" });
-      if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} email(s), ${d.pushSent} push envoyés`); }
-      else { flash(s.id, "Erreur lors de l'envoi."); }
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        flash(s.id, `✓ ${d.emailsSent} email(s), ${d.pushSent} push envoyés`
+          + (d.alreadyInvited ? ` · ${d.alreadyInvited} déjà invité(s) aujourd'hui` : "")
+          + (d.failed ? ` · ⚠ ${d.failed} échec(s), relancez plus tard` : ""), 10000);
+      } else {
+        flash(s.id, d.error ?? "Erreur lors de l'envoi.", 10000);
+      }
     } catch {
       flash(s.id, "Erreur réseau.");
     }
@@ -342,7 +353,7 @@ export default function AdminSessionsPage() {
 
   async function sendReminder(s: AdminSession) {
     if (s.registrationCount === 0) { flash(s.id, "Aucun inscrit."); return; }
-    flash(s.id, "Envoi en cours…");
+    flash(s.id, "Envoi en cours… (jusqu'à 30 s, ne pas relancer)", 0);
     try {
       const res = await fetch(`/api/admin/sessions/${s.id}/remind`, { method: "POST" });
       if (res.ok) { const d = await res.json(); flash(s.id, `✓ ${d.emailsSent} rappel(s) envoyé(s)`); }

@@ -782,7 +782,7 @@ export default function AdminGamesPage() {
     if (res.status === 409 && d.hasHistory) {
       // Le jeu a déjà été emprunté : on ne peut le supprimer qu'avec son historique
       if (confirm(`${d.error}\n\nSupprimer quand même "${game.name}" ET cet historique ? Cette action est irréversible.`)) {
-        await forceDeleteGame(game, true);
+        await forceDeleteGame(game);
       }
       return;
     }
@@ -791,8 +791,8 @@ export default function AdminGamesPage() {
     alert(error);
   }
 
-  async function forceDeleteGame(game: GameDTO, confirmed = false) {
-    if (!confirmed && !confirm(`⚠ Supprimer "${game.name}" ET tout son historique d'emprunts ? Cette action est irréversible.`)) return;
+  // Appelée par « Supprimer » après confirmation, quand le jeu a un historique d'emprunts
+  async function forceDeleteGame(game: GameDTO) {
     const res = await fetch(`/api/games/${game.id}?force=1`, { method: "DELETE" });
     const d = await res.json().catch(() => ({}));
     if (res.ok) { loadGames(); return; }
@@ -1106,13 +1106,6 @@ export default function AdminGamesPage() {
                         className="text-xs px-2.5 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-40 transition-colors"
                       >
                         Supprimer
-                      </button>
-                      <button
-                        onClick={() => forceDeleteGame(g)}
-                        className="text-xs px-2.5 py-1 border border-red-400 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                        title="Supprimer le jeu ET tout l'historique d'emprunts (temporaire)"
-                      >
-                        🗑 + historique
                       </button>
                     </div>
                   </td>

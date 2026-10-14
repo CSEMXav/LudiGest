@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendConfiguredLoanReminderEmail, sendConfiguredManualOverdueEmail } from "@/lib/email";
+import { sendConfiguredLoanReminderEmail, sendConfiguredManualOverdueEmail, isAlreadySentToday } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -27,14 +27,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const dateStr = loan.dueAt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
-  if (isOverdue) {
-    await sendConfiguredManualOverdueEmail(loan.user.email, {
-      userName: loan.user.name,
-      gameName: loan.game.name,
-      dueAt: dateStr,
-    });
-  } else {
-    await sendConfiguredLoanReminderEmail(loan.user.email, { userName: loan.user.name, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${process.env.NEXTAUTH_URL ?? ""}/games/${loan.gameId}` });
+  try {
+    if (isOverdue) {
+      await sendConfiguredManualOverdueEmail(loan.user.email, {
+        userName: loan.user.name,
+        gameName: loan.game.name,
+        dueAt: dateStr,
+      });
+    } else {
+      await sendConfiguredLoanReminderEmail(loan.user.email, { userName: loan.user.name, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${process.env.NEXTAUTH_URL ?? ""}/games/${loan.gameId}` });
+    }
+  } catch (err) {
+    if (isAlreadySentToday(err)) {
+      return NextResponse.json({ error: "Ce rappel a déjà été envoyé aujourd'hui à ce membre." }, { status: 409 });
+    }
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Envoi impossible." }, { status: 502 });
   }
 
   // Always update reminderSentAt on the loan (field exists in base schema, used as fallback)

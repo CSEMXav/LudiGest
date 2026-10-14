@@ -324,3 +324,15 @@ model ProposalSettings {
   closesAt  DateTime?
   updatedAt DateTime  @updatedAt
 }
+
+/// Un même email (destinataire + objet) n'est envoyé qu'une fois par jour (heure de Paris).
+model EmailSendLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  day       String
+  createdAt DateTime @default(now())
+
+  @@unique([to, subject, day])
+  @@index([createdAt])
+}

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendSessionInviteEmail } from "@/lib/email";
-import { formatDeadlineFr } from "@/lib/session-utils";
+import { sendSessionInviteEmail, isAlreadySentToday } from "@/lib/email";
+import { formatDeadlineFr, parisLocalToUtc } from "@/lib/session-utils";
 
 // Les envois d'emails sont cadencés (limite de débit du service) : on laisse le temps de tous les traiter
 export const maxDuration = 60;
@@ -24,14 +24,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const registerUrl = `${baseUrl}/sessions`;
 
-  // Get all active, verified users
-  const users = await prisma.user.findMany({
+  // Membres actifs, sauf ceux déjà invités à cette session aujourd'hui (double clic, renvoi…)
+  const startOfDay = parisLocalToUtc(new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" }), "00:00");
+  const alreadyInvited = await prisma.userNotification.findMany({
+    where: { type: "SESSION_INVITE", sessionId: gameSession.id, createdAt: { gte: startOfDay } },
+    select: { userId: true },
+  });
+  const alreadyIds = new Set(alreadyInvited.map((n) => n.userId));
+  const users = (await prisma.user.findMany({
     where: { suspended: false, emailVerified: true },
     select: { id: true, email: true, name: true, firstName: true, pushToken: true },
-  });
+  })).filter((u) => !alreadyIds.has(u.id));
+  if (users.length === 0) {
+    return NextResponse.json({ error: "Tous les membres ont déjà reçu l'invitation à cette session aujourd'hui." }, { status: 409 });
+  }
 
   let emailsSent = 0;
   let pushSent = 0;
+  let failed = 0;
+  // Seuls les membres effectivement prévenus reçoivent la notification et la push ;
+  // un envoi raté pourra être relancé sans recontacter les autres.
+  const notified: typeof users = [];
 
   const dateStr = gameSession.date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   const deadlineStr = gameSession.registrationDeadline ? formatDeadlineFr(gameSession.registrationDeadline) : null;
@@ -53,8 +66,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       );
       emailsSent++;
     } catch (err) {
-      console.error(`Failed to send invite to ${user.email}:`, err);
+      if (!isAlreadySentToday(err)) {
+        failed++;
+        console.error(`Failed to send invite to ${user.email}:`, err);
+        return;
+      }
     }
+    notified.push(user);
     // Save notification record
     try {
       await prisma.userNotification.create({
@@ -72,7 +90,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await Promise.all(emailPromises);
 
   // Send push notifications via Expo Push API
-  const pushTokens = users.map((u) => u.pushToken).filter(Boolean) as string[];
+  const pushTokens = notified.map((u) => u.pushToken).filter(Boolean) as string[];
   if (pushTokens.length > 0) {
     try {
       const dateStr = gameSession.date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
@@ -98,5 +116,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  return NextResponse.json({ success: true, emailsSent, pushSent });
+  return NextResponse.json({ success: true, emailsSent, pushSent, failed, alreadyInvited: alreadyIds.size });
 }

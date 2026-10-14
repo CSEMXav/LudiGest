@@ -199,7 +199,9 @@ async function sendWithRetry(resend: Resend, payload: EmailPayload): Promise<voi
     if (!failure) return;
 
     const status = failure.statusCode ?? null;
-    const retryable = status === 429 || status === null || status >= 500 || failure.name === "rate_limit_exceeded";
+    // Quota journalier ou mensuel atteint : inutile d'insister, l'email ne partira pas aujourd'hui
+    const quota = /quota/i.test(`${failure.name ?? ""} ${failure.message ?? ""}`);
+    const retryable = !quota && (status === 429 || status === null || status >= 500 || failure.name === "rate_limit_exceeded");
     if (!retryable || attempt >= MAX_ATTEMPTS) {
       throw new Error(`Envoi refusé pour ${payload.to} : ${failure.message ?? failure.name ?? "erreur inconnue"}${status ? ` (${status})` : ""}`);
     }
@@ -207,11 +209,57 @@ async function sendWithRetry(resend: Resend, payload: EmailPayload): Promise<voi
   }
 }
 
-/** Envoie un email en respectant la limite de débit ; lève une exception s'il n'a pas pu être accepté. */
-function deliver(resend: Resend, payload: EmailPayload): Promise<void> {
+/** Levée quand le même email (destinataire + objet) a déjà été envoyé aujourd'hui. */
+export class EmailAlreadySentTodayError extends Error {
+  constructor(to: string) {
+    super(`Email déjà envoyé aujourd'hui à ${to}`);
+    this.name = "EmailAlreadySentTodayError";
+  }
+}
+
+export function isAlreadySentToday(err: unknown): boolean {
+  return err instanceof Error && err.name === "EmailAlreadySentTodayError";
+}
+
+function parisDay(d = new Date()): string {
+  return d.toLocaleDateString("en-CA", { timeZone: "Europe/Paris" });
+}
+
+/**
+ * Réserve l'envoi (destinataire, objet, jour) : renvoie l'id de la réservation, ou null si la table
+ * n'est pas disponible. Lève EmailAlreadySentTodayError si le même email est déjà parti aujourd'hui.
+ */
+async function reserveDailySend(payload: EmailPayload): Promise<string | null> {
+  try {
+    const row = await prisma.emailSendLog.create({
+      data: { to: payload.to.toLowerCase(), subject: payload.subject, day: parisDay() },
+      select: { id: true },
+    });
+    return row.id;
+  } catch (err) {
+    if ((err as { code?: string })?.code === "P2002") throw new EmailAlreadySentTodayError(payload.to);
+    console.error("[email] anti-doublon indisponible :", err);
+    return null;
+  }
+}
+
+/**
+ * Envoie un email en respectant la limite de débit ; lève une exception s'il n'a pas pu être accepté.
+ * Par défaut, un même email (destinataire + objet) n'est envoyé qu'une fois par jour, pour éviter les
+ * doublons (double clic, renvoi d'une annonce…) qui consomment le quota journalier. Les emails de compte
+ * (vérification, mot de passe) passent `dedupe: false` car l'utilisateur peut légitimement les redemander.
+ */
+async function deliver(resend: Resend, payload: EmailPayload, opts: { dedupe?: boolean } = {}): Promise<void> {
+  const reservation = opts.dedupe === false ? null : await reserveDailySend(payload);
   const run = sendQueue.then(() => sendWithRetry(resend, payload));
   sendQueue = run.catch(() => {});
-  return run;
+  try {
+    await run;
+  } catch (err) {
+    // Échec : on libère la réservation pour permettre un nouvel essai
+    if (reservation) await prisma.emailSendLog.delete({ where: { id: reservation } }).catch(() => {});
+    throw err;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -239,7 +287,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
       ctaLabel: "Confirmer mon inscription",
       footerNote: "Ce lien expire dans 24 heures. Si vous n'avez pas créé de compte, ignorez cet email.",
     }),
-  });
+  }, { dedupe: false });
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
@@ -264,7 +312,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
       ctaLabel: "Réinitialiser mon mot de passe",
       footerNote: "Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.",
     }),
-  });
+  }, { dedupe: false });
 }
 
 /* ------------------------------------------------------------------ */

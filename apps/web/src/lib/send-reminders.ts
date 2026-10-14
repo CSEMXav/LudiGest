@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendConfiguredLoanReminderEmail, sendConfiguredOverdueEmail, sendConfiguredSessionReminderEmail } from "@/lib/email";
+import { sendConfiguredLoanReminderEmail, sendConfiguredOverdueEmail, sendConfiguredSessionReminderEmail, isAlreadySentToday } from "@/lib/email";
 
 interface PushJob {
   userId: string;
@@ -152,6 +152,11 @@ export async function runSendReminders(): Promise<ReminderResult> {
     try {
       await sendConfiguredLoanReminderEmail(loan.user.email!, { userName: loan.user.name!, gameName: loan.game.name, dueAt: dateStr, gameUrl: `${siteUrl}/games/${loan.gameId}` }, config);
     } catch (err) {
+      if (isAlreadySentToday(err)) {
+        details.push(`DÉJÀ ENVOYÉ aujourd'hui → ${loan.user.email} (${loan.game.name})`);
+        skipped++;
+        continue;
+      }
       // Email non accepté : on retire la trace pour que le rappel soit retenté à la prochaine tournée
       await prisma.loanReminder.deleteMany({ where: { loanId: loan.id, type: "reminder" } }).catch(() => {});
       details.push(`ÉCHEC rappel ${loan.user.email} / ${loan.game.name} (${err instanceof Error ? err.message : String(err)})`);
