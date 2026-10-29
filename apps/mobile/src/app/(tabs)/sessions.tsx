@@ -46,7 +46,13 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
-function isPast(iso: string) { return new Date(iso) < new Date(); }
+/** Session passée une fois son jour écoulé (comparaison sur le jour local : la date est stockée à minuit UTC, comparer l'instant la faisait basculer en "passée" dès 1h du matin le jour J). */
+function isPast(iso: string) {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return iso.slice(0, 10) < today;
+}
 
 export default function SessionsScreen() {
   const [sessions, setSessions] = useState<GameSessionDTO[]>([]);
